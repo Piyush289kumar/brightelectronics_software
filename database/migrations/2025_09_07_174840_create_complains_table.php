@@ -1,0 +1,41 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+return new class extends Migration {
+    /**
+     * Run the migrations.
+     */
+    public function up(): void
+    {
+        Schema::create('complains', function (Blueprint $table) {
+            $table->id();            
+            $table->string('name');
+            $table->string('mobile')->nullable();
+            $table->string('customer_email')->nullable();
+            $table->text('address')->nullable();
+            $table->string('google_map_location')->nullable();
+            $table->string('complain_id')->unique();
+            $table->json('device')->nullable();          // Multi-select devices
+            $table->json('size')->nullable();            // Multi-select sizes
+            $table->json('service_type')->nullable();    // Multi-select services
+            $table->string('first_action_code')->default('NEW');
+            $table->timestamp('rsd_time')->nullable();   // For reschedule visit
+            $table->text('cancel_reason')->nullable();   // For job cancel
+            $table->string('status')->default('Pending');
+            $table->string('pon')->nullable();
+            $table->softDeletes();
+            $table->timestamps();
+        });
+    }
+
+    /**
+     * Reverse the migrations.
+     */
+    public function down(): void
+    {
+        Schema::dropIfExists('complains');
+    }
+};

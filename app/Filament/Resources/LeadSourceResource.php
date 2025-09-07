@@ -20,7 +20,7 @@ class LeadSourceResource extends Resource
 
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
-    protected static ?string $navigationGroup = 'Complains & Jobs';
+    protected static ?string $navigationGroup = 'Leads & Services';
     protected static ?string $pluralLabel = 'Lead Sources';
 
     public static function form(Form $form): Form
