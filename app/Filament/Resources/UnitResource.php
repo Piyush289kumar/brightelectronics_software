@@ -1,0 +1,76 @@
+<?php
+
+namespace App\Filament\Resources;
+
+use App\Filament\Resources\UnitResource\Pages;
+use App\Filament\Resources\UnitResource\RelationManagers;
+use App\Models\Unit;
+use Filament\Forms;
+use Filament\Forms\Form;
+use Filament\Resources\Resource;
+use Filament\Tables;
+use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
+use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
+
+class UnitResource extends Resource
+{
+    protected static ?string $model = Unit::class;
+
+    // protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+     protected static ?string $navigationIcon = 'heroicon-o-cube';
+    protected static ?string $navigationGroup = 'Products & Categories';
+    protected static ?int $navigationSort = 4;
+
+
+    public static function form(Form $form): Form
+    {
+        return $form
+            ->schema([
+                Forms\Components\TextInput::make('name')
+                    ->required()
+                    ->unique(ignoreRecord: true),
+                Forms\Components\TextInput::make('symbol')
+                    ->maxLength(10)
+                    ->nullable(),
+            ]);
+    }
+
+    public static function table(Table $table): Table
+    {
+        return $table
+            ->columns([
+                Tables\Columns\TextColumn::make('name')->searchable(),
+                Tables\Columns\TextColumn::make('symbol'),
+            ])->defaultSort('name')
+            ->filters([
+                //
+            ])
+            ->actions([
+                Tables\Actions\EditAction::make(),
+            ])
+            ->bulkActions([
+                Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\DeleteBulkAction::make(),
+                    ExportBulkAction::make()
+                ]),
+            ]);
+    }
+
+    public static function getRelations(): array
+    {
+        return [
+            //
+        ];
+    }
+
+    public static function getPages(): array
+    {
+        return [
+            'index' => Pages\ListUnits::route('/'),
+            // 'create' => Pages\CreateUnit::route('/create'),
+            // 'edit' => Pages\EditUnit::route('/{record}/edit'),
+        ];
+    }
+}
