@@ -18,6 +18,7 @@ class Complain extends Model
         'customer_email',
         'address',
         'google_map_location',
+        'lead_source_id',
         'complain_id',
         'device',
         'size',
@@ -27,19 +28,38 @@ class Complain extends Model
         'cancel_reason',
         'status',
         'pon',
+        'estimate_repair_amount',
+        'estimate_new_amount',
+        'assigned_by',
+        'assigned_engineers',
     ];
 
     protected $casts = [
-        'device' => 'array',
+        'product_id' => 'array',
         'size' => 'array',
         'service_type' => 'array',
+        'assigned_engineers' => 'array',
     ];
+
+    public function leadSource()
+    {
+        return $this->belongsTo(LeadSource::class);
+    }
+
+    public function products()
+    {
+        return $this->belongsToMany(Product::class);
+    }
+
+    public function assigner()
+    {
+        return $this->belongsTo(User::class, 'assigned_by');
+    }
 
     protected static function boot()
     {
         parent::boot();
 
-        // Automatically generate complain_id if not set
         static::creating(function ($complain) {
             if (empty($complain->complain_id)) {
                 $complain->complain_id = self::generateComplainId($complain->name, $complain->mobile);
@@ -49,7 +69,7 @@ class Complain extends Model
 
     public static function generateComplainId($name, $mobile = null): string
     {
-        $datePart = now()->format('md'); // e.g. 0409
+        $datePart = now()->format('md');
         $namePart = Str::of($name)->trim()->upper()->split('/\s+/')->map(fn($part) => $part)->flatten();
 
         if ($namePart->count() >= 2) {
