@@ -22,6 +22,7 @@ return new class extends Migration
             $table->decimal('gross_amount', 10, 2)->nullable();
             $table->string('incentive_type')->nullable();
             $table->decimal('incentive_amount', 10, 2)->nullable();
+            $table->json('incentive_percentages')->nullable(); // Store {engineer_id => percent}
             $table->decimal('net_profit', 10, 2)->nullable();
             $table->decimal('lead_incentive_amount', 10, 2)->nullable();
             $table->decimal('bright_electronics_profit', 10, 2)->nullable();
