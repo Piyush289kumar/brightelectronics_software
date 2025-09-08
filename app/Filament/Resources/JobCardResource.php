@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Resources\ComplainRelationManagerResource\RelationManagers\JobCardResourceRelationManager;
 use App\Filament\Resources\JobCardResource\Pages;
 use App\Filament\Resources\JobCardResource\RelationManagers;
 use App\Models\JobCard;
@@ -89,7 +90,7 @@ class JobCardResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            JobCardResourceRelationManager::class,
         ];
     }
 

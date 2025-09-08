@@ -77,9 +77,14 @@ class ComplainObserver
     protected function createJobCardIfPkd(Complain $complain): void
     {
         if ($complain->first_action_code === 'PKD' && !$complain->jobCard) {
+            // Get last job id number
+            $lastJob = JobCard::latest('id')->first();
+            $lastNumber = $lastJob ? (int) str_replace('JOB-', '', $lastJob->job_id) : 0;
+            $newNumber = str_pad($lastNumber + 1, 5, '0', STR_PAD_LEFT); // 5 digits, leading zeros
+
             JobCard::create([
                 'complain_id' => $complain->id,
-                'job_id' => 'JOB-' . now()->format('YmdHis'),
+                'job_id' => 'JOB-' . $newNumber,
                 'status' => 'Pending',
                 'amount' => 0,
                 'gst_amount' => 0,
