@@ -2,6 +2,8 @@
 
 namespace App\Providers;
 
+use App\Models\Complain;
+use App\Observers\ComplainObserver;
 use Illuminate\Support\ServiceProvider;
 use App\Models\User;
 use App\Models\StoreInventory;
@@ -27,6 +29,7 @@ class AppServiceProvider extends ServiceProvider
     {
         StoreInventory::observe(StoreInventoryObserver::class);
         Inventory::observe(InventoryObserver::class);
+        Complain::observe(ComplainObserver::class);
         // FilamentDocs::header('filament.header');
         // FilamentDocs::footer('filament.footer');
     }

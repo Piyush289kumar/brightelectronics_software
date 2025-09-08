@@ -14,6 +14,7 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
@@ -180,6 +181,8 @@ class ComplainResource extends Resource
                 Tables\Columns\TextColumn::make('mobile')->label('Phone')->sortable(),
                 Tables\Columns\TextColumn::make('status')->label('Status')->sortable(),
                 Tables\Columns\TextColumn::make('first_action_code')->label('Action Code')->sortable(),
+                Tables\Columns\TextColumn::make('pkd_time')->label('PKD Time')->dateTime(),
+                Tables\Columns\TextColumn::make('visit_time')->label('Visit Time')->dateTime(),
                 Tables\Columns\TextColumn::make('created_at')->label('Created At')->dateTime()->sortable(),
             ])
             ->filters([
@@ -214,6 +217,22 @@ class ComplainResource extends Resource
             'create' => Pages\CreateComplain::route('/create'),
             'edit' => Pages\EditComplain::route('/{record}/edit'),
         ];
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        $query = parent::getEloquentQuery();
+
+        // Hide complains where first_action_code is PKD
+        $query->where('first_action_code', '!=', 'PKD');
+
+        // Example: Restrict by store manager (if needed)
+        $user = Auth::user();
+        if ($user && $user->isStoreManager()) {
+            $query->where('store_id', $user->store_id);
+        }
+
+        return $query;
     }
 
     public static function generateComplainId($name, $mobile = null): string

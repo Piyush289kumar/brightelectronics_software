@@ -24,6 +24,8 @@ return new class extends Migration {
             $table->json('service_type')->nullable(); // Multi-select services
             $table->string('first_action_code')->default('NEW');
             $table->timestamp('rsd_time')->nullable(); // Reschedule visit
+            $table->timestamp('pkd_time')->nullable();
+            $table->timestamp('visit_time')->nullable();
             $table->text('cancel_reason')->nullable(); // Job Cancel reason
             $table->string('status')->default('Pending');
             $table->string('pon')->nullable();
