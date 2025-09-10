@@ -35,7 +35,7 @@ class ComplainResource extends Resource
                 Forms\Components\Section::make('General Information')
                     ->schema([
 
-                        Grid::make(4)->schema([
+                        Grid::make(3)->schema([
                             Forms\Components\TextInput::make('complain_id')
                                 ->label('Complain ID')
                                 ->disabled()
@@ -59,11 +59,14 @@ class ComplainResource extends Resource
                                 ->label('Customer Email')
                                 ->email()
                                 ->maxLength(255),
+
+                            Forms\Components\Textarea::make('address')
+                                ->label('Customer Address')
+                                ->columnSpan(2),
                         ]),
 
 
-                        Forms\Components\Textarea::make('address')
-                            ->label('Customer Address'),
+
                     ])
                     ->columns(1),
 
@@ -214,8 +217,8 @@ class ComplainResource extends Resource
     {
         return [
             'index' => Pages\ListComplains::route('/'),
-            'create' => Pages\CreateComplain::route('/create'),
-            'edit' => Pages\EditComplain::route('/{record}/edit'),
+            // 'create' => Pages\CreateComplain::route('/create'),
+            // 'edit' => Pages\EditComplain::route('/{record}/edit'),
         ];
     }
 
