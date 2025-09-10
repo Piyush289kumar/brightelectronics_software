@@ -119,7 +119,6 @@ class JobCardResource extends Resource
                                     '5% - Pick and Deliver' => '5',
                                     '10% - Branch Service' => '10',
                                 ])
-                                 ->default('5')
                                 ->reactive()
                                 ->required(),
 
@@ -190,24 +189,45 @@ class JobCardResource extends Resource
                 Forms\Components\TextInput::make('lead_incentive_amount')
                     ->label('Lead Incentive Amount')
                     ->disabled()
-                    ->default(function ($get, $record) {
-                        // $record is the current JobCard
-                        $gross = $get('gross_amount') ?? 0;
-
-                        if ($record && $record->complain && $record->complain->leadSource) {
-                            $leadPercent = (float) $record->complain->leadSource->lead_incentive;
-                            return ($leadPercent / 100) * $gross;
-                        }
-
-                        return 0;
-                    })
                     ->reactive()
                     ->afterStateHydrated(function ($state, $set, $get, $record) {
+                        if (!$record)
+                            return;
+
+                        // Ensure complain & leadSource relationship is loaded
+                        $record->load('complain.leadSource');
+
                         $gross = $get('gross_amount') ?? 0;
 
-                        if ($record && $record->complain && $record->complain->leadSource) {
-                            $leadPercent = (float) $record->complain->leadSource->lead_incentive;
-                            $set('lead_incentive_amount', ($leadPercent / 100) * $gross);
+                        if ($record->complain && $record->complain->leadSource) {
+                            $leadPercent = is_numeric($record->complain->leadSource->lead_incentive)
+                                ? (float) $record->complain->leadSource->lead_incentive
+                                : 0;
+
+                            $leadIncentive = ($leadPercent / 100) * $gross;
+                            $set('lead_incentive_amount', $leadIncentive);
+                        } else {
+                            $set('lead_incentive_amount', 0);
+                        }
+                    })
+                    ->afterStateUpdated(function ($state, $set, $get, $record) {
+                        if (!$record)
+                            return;
+
+                        // Ensure complain & leadSource relationship is loaded
+                        $record->load('complain.leadSource');
+
+                        $gross = $get('gross_amount') ?? 0;
+
+                        if ($record->complain && $record->complain->leadSource) {
+                            $leadPercent = is_numeric($record->complain->leadSource->lead_incentive)
+                                ? (float) $record->complain->leadSource->lead_incentive
+                                : 0;
+
+                            $leadIncentive = ($leadPercent / 100) * $gross;
+                            $set('lead_incentive_amount', $leadIncentive);
+                        } else {
+                            $set('lead_incentive_amount', 0);
                         }
                     }),
 
@@ -268,4 +288,10 @@ class JobCardResource extends Resource
             'edit' => Pages\EditJobCard::route('/{record}/edit'),
         ];
     }
+
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()->with(['complain.leadSource']);
+    }
+
 }
