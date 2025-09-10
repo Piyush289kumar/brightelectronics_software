@@ -60,12 +60,14 @@ class JobCardResource extends Resource
                         $set('gross_amount', $gross);
                         $set('gst_amount', $gstAmount);
 
-                        // Calculate total staff incentive from repeater
                         $engineers = $get('incentive_percentages') ?? [];
                         $totalStaff = 0;
 
                         foreach ($engineers as $i => $row) {
-                            $percent = $row['incentive_type'] ?? 0; // percentage selected
+                            $percent = isset($row['incentive_type']) && is_numeric($row['incentive_type'])
+                                ? (float) $row['incentive_type']
+                                : 0;
+
                             $incentive = ($percent / 100) * $gross;
                             $engineers[$i]['incentive_amount'] = $incentive;
                             $totalStaff += $incentive;
@@ -74,12 +76,16 @@ class JobCardResource extends Resource
                         $set('incentive_percentages', $engineers);
                         $set('incentive_amount', $totalStaff);
 
-                        // Lead incentive (optional)
-                        $leadPercent = (float) optional($get('complain')?->leadSource)?->lead_incentive ?? 10;
+                        $leadPercent = 0;
+                        $record = $get('record');
+                        if ($record && $record->complain && $record->complain->leadSource) {
+                            $leadPercent = is_numeric($record->complain->leadSource->lead_incentive)
+                                ? (float) $record->complain->leadSource->lead_incentive
+                                : 0;
+                        }
                         $leadIncentive = ($leadPercent / 100) * $gross;
                         $set('lead_incentive_amount', $leadIncentive);
 
-                        // Net profit and Bright Electronics Profit
                         $netProfit = $gross - $totalStaff - $leadIncentive;
                         $set('net_profit', $netProfit);
                         $set('bright_electronics_profit', $netProfit);
@@ -103,7 +109,9 @@ class JobCardResource extends Resource
                                 ->label('Engineer')
                                 ->options(function () {
                                     return User::role('Engineer')->pluck('name', 'id')->toArray();
-                                }),
+                                })
+                                ->required(),
+
                             Forms\Components\Select::make('incentive_type')
                                 ->label('Incentive Type')
                                 ->options([
@@ -111,7 +119,10 @@ class JobCardResource extends Resource
                                     '5% - Pick and Deliver' => '5',
                                     '10% - Branch Service' => '10',
                                 ])
-                                ->reactive(),
+                                 ->default('5')
+                                ->reactive()
+                                ->required(),
+
                             Forms\Components\TextInput::make('incentive_amount')
                                 ->label('Staff Incentive Amount')
                                 ->disabled()
@@ -120,7 +131,25 @@ class JobCardResource extends Resource
                     ])
                     ->columnSpanFull()
                     ->reactive()
+                    ->afterStateHydrated(function ($state, $set, $get, $record) {
+                        // Only hydrate if state is empty and record has complain assigned engineers
+                        if (empty($state) && $record && $record->complain && is_array($record->complain->assigned_engineers)) {
+                            $assignedEngineers = $record->complain->assigned_engineers;
+                            $newState = [];
+
+                            foreach ($assignedEngineers as $engineerId) {
+                                $newState[] = [
+                                    'engineer_id' => $engineerId,
+                                    'incentive_type' => null, // default value or adjust as needed
+                                    'incentive_amount' => 0,   // initial, will be recalculated after
+                                ];
+                            }
+
+                            $set('incentive_percentages', $newState);
+                        }
+                    })
                     ->afterStateUpdated(function ($state, $set, $get) {
+                        // Recalculate incentives after any change
                         $gross = $get('gross_amount') ?? 0;
                         $engineers = $get('incentive_percentages') ?? [];
                         $totalStaff = 0;
@@ -135,12 +164,8 @@ class JobCardResource extends Resource
                         $set('incentive_percentages', $engineers);
                         $set('incentive_amount', $totalStaff);
 
-                        $gross = $get('gross_amount') ?? 0;
-                        $record = $get('record'); // JobCard record
-            
                         $leadPercent = 0;
-
-                        dd($record->complain, $record->complain?->leadSource);
+                        $record = $get('record');
                         if ($record && $record->complain && $record->complain->leadSource) {
                             $leadPercent = (float) $record->complain->leadSource->lead_incentive;
                         }
