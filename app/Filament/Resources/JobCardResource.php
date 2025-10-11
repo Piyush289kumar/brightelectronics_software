@@ -129,7 +129,7 @@ class JobCardResource extends Resource
                                     '15% - Pick, Branch Service, and Deliver' => '15',
                                     '5% - Pick and Deliver' => '5',
                                     '10% - Branch Service' => '10',
-                                ])
+                                ])->default('10% - Branch Service')
                                 ->reactive()
                                 ->required(),
 
