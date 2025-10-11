@@ -643,7 +643,8 @@ class InvoiceResource extends Resource
                     })
                     ->iconButton()
                     ->tooltip('Print Document'),
-                Tables\Actions\Action::make('receivePayment')->label('')->icon('heroicon-m-banknotes')
+              
+                    Tables\Actions\Action::make('receivePayment')->label('')->icon('heroicon-m-banknotes')
                     ->color('success')
                     ->tooltip('Receive Payment')     // label appears on hover
                     ->form([

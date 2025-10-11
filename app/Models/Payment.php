@@ -73,9 +73,21 @@ class Payment extends Model
     protected static function booted()
     {
         static::saved(function ($payment) {
-            if ($payment->invoice) {
-                $invoice = $payment->invoice;
+            $invoice = $payment->payable;
+            if (!$invoice)
+                return;
 
+            $totalPaid = $invoice->payments()->where('status', 'completed')->sum('amount');
+
+            if ($invoice->document_type === 'purchase') {
+                if ($totalPaid >= $invoice->total_amount) {
+                    $invoice->update(['status' => 'paid']);
+                } elseif ($totalPaid > 0) {
+                    $invoice->update(['status' => 'partial']);
+                } else {
+                    $invoice->update(['status' => 'pending']);
+                }
+            } else {
                 $received = $invoice->amount_received;
                 if ($received >= $invoice->total_amount) {
                     $invoice->update(['status' => 'paid']);
@@ -87,5 +99,6 @@ class Payment extends Model
             }
         });
     }
+
 
 }

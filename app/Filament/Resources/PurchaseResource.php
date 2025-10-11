@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\PurchaseResource\Pages;
 use App\Filament\Resources\EstimateResource\RelationManagers;
 use App\Models\Estimate;
+use App\Models\Payment;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -512,6 +513,18 @@ class PurchaseResource extends Resource
                 Tables\Columns\TextColumn::make('document_date')->date()->sortable(),
                 Tables\Columns\TextColumn::make('due_date')->date()->sortable(),
                 Tables\Columns\TextColumn::make('total_amount')->money('INR')->sortable(),
+                Tables\Columns\TextColumn::make('amount_paid')
+                    ->label('Paid')
+                    ->money('INR')
+                    ->getStateUsing(fn($record) => $record->payments()->where('status', 'completed')->sum('amount'))
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make('balance')
+                    ->label('Remaining')
+                    ->money('INR')
+                    ->getStateUsing(fn($record) => $record->total_amount - $record->payments()->where('status', 'completed')->sum('amount'))
+                    ->sortable(),
+
                 Tables\Columns\TextColumn::make('status')->sortable(),
             ])->defaultSort('created_at', 'desc')
 
@@ -702,6 +715,72 @@ class PurchaseResource extends Resource
                     })
                     ->iconButton()
                     ->tooltip('Print Document'),
+
+
+                Tables\Actions\Action::make('makePayment')
+                    ->label('') // icon only
+                    ->icon('heroicon-m-banknotes')
+                    ->color('warning') // different color for outgoing
+                    ->tooltip('Make Payment') // hover label
+                    ->form([
+                        // Show Total, Paid, Balance as readonly info
+                        Grid::make(3)->schema([
+                            TextInput::make('total_amount')
+                                ->label('Total Amount')
+                                ->disabled()
+                                ->default(fn($record) => $record->total_amount),
+                            TextInput::make('amount_paid')
+                                ->label('Amount Paid')
+                                ->disabled()
+                                ->default(fn($record) => $record->payments()->where('status', 'completed')->sum('amount')),
+                            TextInput::make('balance')
+                                ->label('Balance Due')
+                                ->disabled()
+                                ->default(fn($record) => number_format($record->total_amount - $record->payments()->where('status', 'completed')->sum('amount'), 2)),
+                        ]),
+                        // Amount to pay (default = remaining balance)
+                        TextInput::make('amount')
+                            ->label('Amount to Pay')
+                            ->numeric()
+                            ->required()
+                            ->default(fn($record) => number_format($record->total_amount - $record->payments()->where('status', 'completed')->sum('amount'), 2, '.', ''))
+                            ->maxValue(fn($record) => number_format($record->total_amount - $record->payments()->where('status', 'completed')->sum('amount'), 2, '.', '')),
+                        Grid::make(4)->schema([
+                            DatePicker::make('payment_date')
+                                ->default(now())
+                                ->required(),
+                            Select::make('method')
+                                ->options([
+                                    'cash' => 'Cash',
+                                    'bank' => 'Bank Transfer',
+                                    'upi' => 'UPI',
+                                    'cheque' => 'Cheque',
+                                    'card' => 'Card',
+                                ])
+                                ->required(),
+                            TextInput::make('reference_no')->label('Reference No.'),
+                            TextInput::make('notes')->label('Notes'),
+                        ]),
+                    ])
+                    ->action(function ($record, array $data) {
+                        Payment::create([
+                            'invoice_id' => $record->id,
+                            'payable_id' => $record->id,
+                            'payable_type' => Invoice::class,
+                            'type' => 'outgoing', // for purchases
+                            'amount' => $data['amount'],
+                            'payment_date' => $data['payment_date'],
+                            'method' => $data['method'],
+                            'reference_no' => $data['reference_no'] ?? null,
+                            'notes' => $data['notes'] ?? null,
+                            'status' => 'completed',
+                            'received_by' => auth()->id(),
+                            'created_by' => auth()->id(),
+                        ]);
+                    })
+                    ->visible(fn($record) => $record->status !== 'paid' && $record->document_type === 'purchase'),
+
+
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
             ])
@@ -712,14 +791,12 @@ class PurchaseResource extends Resource
                 ]),
             ]);
     }
-
     public static function getRelations(): array
     {
         return [
-            //
+            \App\Filament\Resources\InvoiceResource\RelationManagers\PaymentsRelationManager::class,
         ];
     }
-
     public static function getPages(): array
     {
         return [

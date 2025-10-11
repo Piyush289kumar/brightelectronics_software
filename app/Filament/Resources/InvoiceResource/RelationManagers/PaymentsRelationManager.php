@@ -8,26 +8,26 @@ use Filament\Forms\Form;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables;
 use Filament\Tables\Table;
+use App\Models\Payment;
 
 class PaymentsRelationManager extends RelationManager
 {
-    protected static string $relationship = 'payments'; // matches Invoice::payments() relation
-
+    protected static string $relationship = 'payments'; // Invoice::payments()
     protected static ?string $recordTitleAttribute = 'amount';
-
-    // ❌ Remove static
 
     public function form(Form $form): Form
     {
+        $isPurchase = $this->ownerRecord->document_type === 'purchase';
+
         return $form
             ->schema([
                 TextInput::make('amount')
-                    ->label('Amount Received')
+                    ->label($isPurchase ? 'Amount to Pay' : 'Amount to Receive')
                     ->numeric()
                     ->required()
                     ->default(fn() => number_format($this->ownerRecord?->balance ?? 0, 2, '.', ''))
                     ->maxValue(fn() => number_format($this->ownerRecord?->balance ?? 0, 2, '.', ''))
-                    ->step(0.01), // allows only 2 decimal places
+                    ->step(0.01),
 
                 Forms\Components\DatePicker::make('payment_date')
                     ->label('Payment Date')
@@ -53,7 +53,6 @@ class PaymentsRelationManager extends RelationManager
             ]);
     }
 
-    // ❌ Remove static
     public function table(Table $table): Table
     {
         return $table
@@ -65,7 +64,26 @@ class PaymentsRelationManager extends RelationManager
                 Tables\Columns\TextColumn::make('status'),
             ])
             ->headerActions([
-                Tables\Actions\CreateAction::make()->label('Receive Payment'),
+                Tables\Actions\CreateAction::make()
+                    ->label(fn() => $this->ownerRecord->document_type === 'purchase' ? 'Make Payment' : 'Receive Payment')
+                    ->action(function ($record, array $data) {
+                        $isPurchase = $record->document_type === 'purchase';
+
+                        Payment::create([
+                            'invoice_id' => $record->id,
+                            'payable_id' => $record->id,
+                            'payable_type' => $record::class,
+                            'type' => $isPurchase ? 'outgoing' : 'incoming',
+                            'amount' => $data['amount'],
+                            'payment_date' => $data['payment_date'],
+                            'method' => $data['method'],
+                            'reference_no' => $data['reference_no'] ?? null,
+                            'notes' => $data['notes'] ?? null,
+                            'status' => 'completed',
+                            'received_by' => auth()->id(),
+                            'created_by' => auth()->id(),
+                        ]);
+                    }),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
