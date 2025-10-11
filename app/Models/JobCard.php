@@ -40,8 +40,9 @@ class JobCard extends Model
 
     public function complain()
     {
-        return $this->belongsTo(Complain::class);
+        return $this->belongsTo(Complain::class, 'complain_id');
     }
+
 
     public function calculateAmounts()
     {

@@ -46,6 +46,7 @@ class Complain extends Model
         return $this->belongsTo(LeadSource::class, 'lead_source_id');
     }
 
+
     public function jobCard()
     {
         return $this->hasOne(JobCard::class);

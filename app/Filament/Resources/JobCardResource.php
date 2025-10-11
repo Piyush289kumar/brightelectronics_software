@@ -15,6 +15,7 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Support\Facades\Log;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 
 class JobCardResource extends Resource
@@ -54,42 +55,52 @@ class JobCardResource extends Resource
                     ->label('Amount')
                     ->numeric()
                     ->reactive()
-                    ->afterStateUpdated(function ($state, $set, $get) {
+                    ->afterStateUpdated(function ($state, $set, $get, $record) {
+                        // Calculate GST and Gross
                         $gstAmount = $state * 0.18;
                         $gross = $state; // amount + 18% GST
                         $set('gross_amount', $gross);
                         $set('gst_amount', $gstAmount);
 
+                        // Calculate engineers' incentives
                         $engineers = $get('incentive_percentages') ?? [];
                         $totalStaff = 0;
-
                         foreach ($engineers as $i => $row) {
                             $percent = isset($row['incentive_type']) && is_numeric($row['incentive_type'])
                                 ? (float) $row['incentive_type']
                                 : 0;
-
                             $incentive = ($percent / 100) * $gross;
                             $engineers[$i]['incentive_amount'] = $incentive;
                             $totalStaff += $incentive;
                         }
-
                         $set('incentive_percentages', $engineers);
                         $set('incentive_amount', $totalStaff);
 
-                        $leadPercent = 0;
-                        $record = $get('record');
-                        if ($record && $record->complain && $record->complain->leadSource) {
-                            $leadPercent = is_numeric($record->complain->leadSource->lead_incentive)
-                                ? (float) $record->complain->leadSource->lead_incentive
-                                : 0;
-                        }
-                        $leadIncentive = ($leadPercent / 100) * $gross;
-                        $set('lead_incentive_amount', $leadIncentive);
-
-                        $netProfit = $gross - $totalStaff - $leadIncentive;
+                        // Net profit after staff incentives
+                        $netProfit = $gross - $totalStaff;
                         $set('net_profit', $netProfit);
-                        $set('bright_electronics_profit', $netProfit);
+
+                        // -------------------------------
+                        // Lead Incentive & Bright Electronics Profit
+                        // -------------------------------
+                        $leadIncentiveAmount = 0;
+
+                        if ($record) {
+                            $record->loadMissing('complain.leadSource');
+
+                            if ($record->complain && $record->complain->leadSource) {
+                                $leadPercent = is_numeric($record->complain->leadSource->lead_incentive)
+                                    ? (float) $record->complain->leadSource->lead_incentive
+                                    : 0;
+
+                                $leadIncentiveAmount = ($netProfit * $leadPercent) / 100;
+                            }
+                        }
+
+                        $set('lead_incentive_amount', $leadIncentiveAmount);
+                        $set('bright_electronics_profit', $netProfit - $leadIncentiveAmount);
                     }),
+
 
                 Forms\Components\TextInput::make('gst_amount')
                     ->label('GST (18%)')
@@ -148,33 +159,37 @@ class JobCardResource extends Resource
                         }
                     })
                     ->afterStateUpdated(function ($state, $set, $get) {
-                        // Recalculate incentives after any change
                         $gross = $get('gross_amount') ?? 0;
+
+                        // Calculate engineers' incentives
                         $engineers = $get('incentive_percentages') ?? [];
                         $totalStaff = 0;
-
                         foreach ($engineers as $i => $row) {
                             $percent = isset($row['incentive_type']) ? (float) $row['incentive_type'] : 0;
                             $incentive = ($percent / 100) * $gross;
                             $engineers[$i]['incentive_amount'] = $incentive;
                             $totalStaff += $incentive;
                         }
-
                         $set('incentive_percentages', $engineers);
                         $set('incentive_amount', $totalStaff);
 
-                        $leadPercent = 0;
-                        $record = $get('record');
-                        if ($record && $record->complain && $record->complain->leadSource) {
-                            $leadPercent = (float) $record->complain->leadSource->lead_incentive;
-                        }
-                        $leadIncentive = ($leadPercent / 100) * $gross;
-                        $set('lead_incentive_amount', $leadIncentive);
-
-                        $netProfit = $gross - $totalStaff - $leadIncentive;
+                        // Net profit after staff incentives
+                        $netProfit = $gross - $totalStaff;
                         $set('net_profit', $netProfit);
-                        $set('bright_electronics_profit', $netProfit);
+
+                        // Lead incentive
+                        $leadPercent = $get('lead_source_details') ? floatval(preg_replace('/[^0-9.]/', '', $get('lead_source_details'))) : 0;
+
+                        
+                        // If you store the lead_incentive_percent separately in the form:
+                        $leadPercent = $get('lead_incentive_percent') ?? 0;
+
+                        $leadIncentiveAmount = ($netProfit * $leadPercent) / 100;
+                        $set('lead_incentive_amount', $leadIncentiveAmount);
+                        $set('bright_electronics_profit', $netProfit - $leadIncentiveAmount);
                     }),
+
+
 
                 Forms\Components\TextInput::make('incentive_amount')
                     ->label('Staff Incentive Amount')
@@ -185,52 +200,29 @@ class JobCardResource extends Resource
                 Forms\Components\TextInput::make('net_profit')
                     ->label('Net Profit')
                     ->disabled(),
-
-                Forms\Components\TextInput::make('lead_incentive_amount')
-                    ->label('Lead Incentive Amount')
+                Forms\Components\TextInput::make('lead_source_details')
+                    ->label('Lead Source Details')
                     ->disabled()
-                    ->reactive()
                     ->afterStateHydrated(function ($state, $set, $get, $record) {
-                        if (!$record)
+                        if (!$record) {
+                            $set('lead_source_details', 'N/A');
                             return;
-
-                        // Ensure complain & leadSource relationship is loaded
-                        $record->load('complain.leadSource');
-
-                        $gross = $get('gross_amount') ?? 0;
-
-                        if ($record->complain && $record->complain->leadSource) {
-                            $leadPercent = is_numeric($record->complain->leadSource->lead_incentive)
-                                ? (float) $record->complain->leadSource->lead_incentive
-                                : 0;
-
-                            $leadIncentive = ($leadPercent / 100) * $gross;
-                            $set('lead_incentive_amount', $leadIncentive);
-                        } else {
-                            $set('lead_incentive_amount', 0);
                         }
-                    })
-                    ->afterStateUpdated(function ($state, $set, $get, $record) {
-                        if (!$record)
-                            return;
-
-                        // Ensure complain & leadSource relationship is loaded
-                        $record->load('complain.leadSource');
-
-                        $gross = $get('gross_amount') ?? 0;
-
+                        $record->loadMissing('complain.leadSource');
                         if ($record->complain && $record->complain->leadSource) {
-                            $leadPercent = is_numeric($record->complain->leadSource->lead_incentive)
+                            $leadName = $record->complain->leadSource->lead_name;
+                            $leadIncentive = is_numeric($record->complain->leadSource->lead_incentive)
                                 ? (float) $record->complain->leadSource->lead_incentive
                                 : 0;
-
-                            $leadIncentive = ($leadPercent / 100) * $gross;
-                            $set('lead_incentive_amount', $leadIncentive);
+                            $set('lead_source_details', "{$leadName} | {$leadIncentive}%");
                         } else {
-                            $set('lead_incentive_amount', 0);
+                            $set('lead_source_details', 'N/A');
                         }
                     }),
 
+                Forms\Components\TextInput::make('lead_incentive_amount')
+                    ->label('Lead Incentive Amount')
+                    ->disabled(),
 
                 Forms\Components\TextInput::make('bright_electronics_profit')
                     ->label('Bright Electronics Profit')
