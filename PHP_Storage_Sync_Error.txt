@@ -1,0 +1,8 @@
+# make sure you're in the project root
+cd /home/u737131820/domains/alluremakeupstudio.com/public_html
+
+# create a symlink: public/storage -> storage/app/public
+ln -s storage/app/public public/storage
+
+# verify
+ls -l public | grep storage
