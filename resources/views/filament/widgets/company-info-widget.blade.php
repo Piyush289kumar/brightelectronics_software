@@ -12,7 +12,7 @@
                 <a href="{{ $companyWeb }}" target="_blank"
                     class="flex items-center gap-2 text-sm font-semibold text-blue-600 hover:underline border border-blue-600 p-3 rounded-xl">
                     <x-heroicon-o-globe-alt class="w-5 h-5" /> <!-- Web icon -->
-                    Visit our website
+                    Visit Profile
                 </a>
             </div>
         </div>

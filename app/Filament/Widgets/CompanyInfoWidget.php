@@ -18,7 +18,7 @@ class CompanyInfoWidget extends Widget
 
     public function mount(): void
     {
-        $this->companyName = 'Vipprow'; // Set your company name here
-        $this->companyWeb = 'https://vipprow.com/'; // Set your company name here
+        $this->companyName = 'Er. Piyush S. Kumar'; // Set your company name here
+        $this->companyWeb = 'https://github.com/Piyush289kumar'; // Set your company name here
     }
 }
