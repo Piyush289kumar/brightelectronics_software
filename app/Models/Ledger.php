@@ -13,6 +13,7 @@ class Ledger extends Model
 
     protected $fillable = [
         'account_id',
+        'store_id',
         'date',
         'transaction_type', // debit / credit
         'amount',
@@ -23,6 +24,10 @@ class Ledger extends Model
     public function account()
     {
         return $this->belongsTo(Account::class);
+    }
+    public function store()
+    {
+        return $this->belongsTo(Store::class);
     }
 
     public function journalEntry()

@@ -25,7 +25,7 @@ class LedgerResource extends Resource
     {
         return $form->schema([
 
-            Grid::make(3)->schema([
+            Grid::make(4)->schema([
                 ToggleButtons::make('transaction_type')
                     ->label('Type')
                     ->options([
@@ -41,9 +41,17 @@ class LedgerResource extends Resource
                     ->default(now())
                     ->label('Transaction Date'),
 
+
+                Forms\Components\Select::make('store_id')
+                    ->relationship('store', 'name') // ✅ Fix here
+                    // ->searchable()
+                    ->preload()
+                    ->required()
+                    ->label('Store'),
+
                 Forms\Components\Select::make('account_id')
                     ->relationship('account', 'account_name') // ✅ Fix here
-                    ->searchable()
+                    // ->searchable()
                     ->preload()
                     ->required()
                     ->label('Account'),
@@ -72,11 +80,12 @@ class LedgerResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('date')->date()->sortable(),
+                Tables\Columns\TextColumn::make('store.name')->label('Store')->searchable()->sortable(),
                 Tables\Columns\TextColumn::make('account.account_name')->label('Account')->searchable(),
                 Tables\Columns\BadgeColumn::make('transaction_type')
                     ->colors([
-                        'success' => 'debit',
-                        'danger' => 'credit',
+                        'success' => 'credit',
+                        'danger' => 'debit',
                     ])
                     ->label('Type'),
 
@@ -87,10 +96,12 @@ class LedgerResource extends Resource
                 Tables\Columns\TextColumn::make('journalEntry.reference')
                     ->label('Reference')
                     ->toggleable(),
-            ])
+            ])->defaultSort('created_at', 'desc')
             ->filters([
+                Tables\Filters\SelectFilter::make('store_id')
+                    ->relationship('store', 'name'),
                 Tables\Filters\SelectFilter::make('account_id')
-                    ->relationship('account', 'account_name')->searchable()
+                    ->relationship('account', 'account_name')
 
             ])
             ->actions([

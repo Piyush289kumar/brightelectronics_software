@@ -13,6 +13,7 @@ return new class extends Migration {
         Schema::create('ledgers', function (Blueprint $table) {
             $table->id();
             $table->foreignId('account_id')->constrained('accounts');
+            $table->foreignId('store_id')->constrained('stores');
             $table->date('date');
 
             // More detailed transaction types
