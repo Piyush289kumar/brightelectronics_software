@@ -1,14 +1,11 @@
 <?php
-
 namespace App\Models;
-
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Traits\HasRoles;
-
 class Invoice extends Model
 {
     use HasFactory, SoftDeletes, HasRoles;
@@ -25,8 +22,9 @@ class Invoice extends Model
         'cgst_amount',
         'sgst_amount',
         'igst_amount',
+        'gst_amount',
         'total_tax',
-        'discount',
+        'discount_amount',
         'total_amount',
         'status',
         'notes',
@@ -34,7 +32,6 @@ class Invoice extends Model
         'created_by',
         'document_path',
     ];
-
     /**
      * Polymorphic relation for billable (customer, vendor, etc.)
      */
@@ -42,44 +39,36 @@ class Invoice extends Model
     {
         return $this->morphTo();
     }
-
     public function items()
     {
         return $this->hasMany(InvoiceItem::class);
     }
-
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
     }
-
     public function destinationStore()
     {
         return $this->belongsTo(Store::class, 'destination_store_id');
     }
-
     public function document()
     {
         return $this->belongsTo(Document::class, 'document_id');
     }
-
     public function payments()
     {
         return $this->hasMany(Payment::class);
     }
-
     public function getAmountReceivedAttribute()
     {
         return $this->payments()
             ->where('status', 'completed')
             ->sum('amount');
     }
-
     public function getBalanceAttribute()
     {
         return $this->total_amount - $this->amount_received;
     }
-
     /**
      * Boot method to auto set created_by and document number
      */
@@ -90,7 +79,6 @@ class Invoice extends Model
             if (empty($invoice->created_by)) {
                 $invoice->created_by = auth()->id();
             }
-
             // Generate unique number if not already set
             if (empty($invoice->number)) {
                 $prefixMap = [
@@ -107,9 +95,7 @@ class Invoice extends Model
                     'payment_voucher' => 'PVN',
                     'transfer_order' => 'TRF', // ✅ Stock transfer prefix
                 ];
-
                 $prefix = $prefixMap[$invoice->document_type] ?? 'DOC';
-
                 // 🔒 Use transaction + lock to prevent duplicates
                 DB::transaction(function () use ($invoice, $prefix) {
                     $lastNumber = static::withTrashed() // Include soft-deleted invoices
@@ -117,19 +103,23 @@ class Invoice extends Model
                         ->lockForUpdate() // prevent race conditions
                         ->orderBy('id', 'desc')
                         ->value('number');
-
                     $next = 1;
                     if ($lastNumber) {
                         // Extract numeric part (INV-0005 → 5)
                         $lastNumeric = (int) str_replace($prefix . '-', '', $lastNumber);
                         $next = $lastNumeric + 1;
                     }
-
-                    $invoice->number = $prefix . '-' . str_pad($next, 4, '0', STR_PAD_LEFT);
+                    // $invoice->number = $prefix . '-' . str_pad($next, 4, '0', STR_PAD_LEFT);
+                    // ✅ For "invoice" document type — use numeric only
+                    if ($invoice->document_type === 'invoice') {
+                        $invoice->number = $next;
+                    } else {
+                        // ✅ For others — keep prefix and padding
+                        $invoice->number = $prefix . '-' . str_pad($next, 4, '0', STR_PAD_LEFT);
+                    }
                 });
             }
         });
-
         static::deleting(function ($invoice) {
             if ($invoice->document) {
                 $invoice->document->delete();
