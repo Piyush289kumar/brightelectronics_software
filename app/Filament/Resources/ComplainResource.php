@@ -62,10 +62,9 @@ class ComplainResource extends Resource
 
                             Forms\Components\Textarea::make('address')
                                 ->label('Customer Address')
+                                ->rows(1)
                                 ->columnSpan(2),
                         ]),
-
-
 
                     ])
                     ->columns(1),
@@ -90,24 +89,24 @@ class ComplainResource extends Resource
                             })
                             ->required(),
 
-                        Forms\Components\MultiSelect::make('product_id')
-                            ->label('Products')
-                            ->options(Product::all()->pluck('name', 'id')->toArray())
-                            ->searchable()
-                            ->hint('Select one or more products'),
+                        // Forms\Components\MultiSelect::make('product_id')
+                        //     ->label('Products')
+                        //     ->options(Product::all()->pluck('name', 'id')->toArray())
+                        //     ->searchable()
+                        //     ->hint('Select one or more products'),
 
-                        Forms\Components\Select::make('size')
-                            ->label('Screen Sizes')
-                            ->options([
-                                '24' => '24 inch',
-                                '32' => '32 inch',
-                                '42' => '42 inch',
-                                '50' => '50 inch',
-                                '55' => '55 inch',
-                                '65' => '65 inch',
-                                '85' => '85 inch',
-                            ])
-                            ->hint('Select applicable screen sizes'),
+                        // Forms\Components\Select::make('size')
+                        //     ->label('Screen Sizes')
+                        //     ->options([
+                        //         '24' => '24 inch',
+                        //         '32' => '32 inch',
+                        //         '42' => '42 inch',
+                        //         '50' => '50 inch',
+                        //         '55' => '55 inch',
+                        //         '65' => '65 inch',
+                        //         '85' => '85 inch',
+                        //     ])
+                        //     ->hint('Select applicable screen sizes'),
 
                         Forms\Components\Select::make('first_action_code')
                             ->label('First Action Code')
@@ -217,8 +216,8 @@ class ComplainResource extends Resource
     {
         return [
             'index' => Pages\ListComplains::route('/'),
-            // 'create' => Pages\CreateComplain::route('/create'),
-            // 'edit' => Pages\EditComplain::route('/{record}/edit'),
+            'create' => Pages\CreateComplain::route('/create'),
+            'edit' => Pages\EditComplain::route('/{record}/edit'),
         ];
     }
 
