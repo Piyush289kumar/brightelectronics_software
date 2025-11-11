@@ -41,11 +41,15 @@ class Complain extends Model
         'assigned_engineers' => 'array',
     ];
 
+    /*
+    |--------------------------------------------------------------------------
+    | Relationships
+    |--------------------------------------------------------------------------
+    */
     public function leadSource()
     {
         return $this->belongsTo(LeadSource::class, 'lead_source_id');
     }
-
 
     public function jobCard()
     {
@@ -62,20 +66,43 @@ class Complain extends Model
         return $this->belongsTo(User::class, 'assigned_by');
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | Boot Hooks
+    |--------------------------------------------------------------------------
+    */
     protected static function boot()
     {
         parent::boot();
 
+        // Assign temporary unique ID before insert (to avoid duplicate)
         static::creating(function ($complain) {
             if (empty($complain->complain_id)) {
-                $complain->complain_id = self::generateComplainId($complain->name, $complain->mobile);
+                $baseId = self::generateBaseComplainId($complain->name, $complain->mobile);
+                // Add microtime for uniqueness before actual ID is known
+                $complain->complain_id = "{$baseId}-" . uniqid();
             }
+        });
+
+        // After insert — replace temp part with actual record ID
+        static::created(function ($complain) {
+            $baseId = self::generateBaseComplainId($complain->name, $complain->mobile);
+            $finalId = "{$baseId}-{$complain->id}";
+
+            // Save final formatted ID quietly
+            $complain->complain_id = strtoupper($finalId);
+            $complain->saveQuietly();
         });
     }
 
-    public static function generateComplainId($name, $mobile = null): string
+    /*
+    |--------------------------------------------------------------------------
+    | Helper Methods
+    |--------------------------------------------------------------------------
+    */
+    public static function generateBaseComplainId($name, $mobile = null): string
     {
-        $datePart = now()->format('md');
+        $datePart = now()->format('md'); // e.g., 1111 for Nov 11
         $namePart = Str::of($name)->trim()->upper()->split('/\s+/')->map(fn($part) => $part)->flatten();
 
         if ($namePart->count() >= 2) {

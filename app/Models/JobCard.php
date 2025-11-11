@@ -16,28 +16,32 @@ class JobCard extends Model
         'status',
         'amount',
         'gst_amount',
+        'expense',
+        'product_id',                // store selected product ids (json)
         'gross_amount',
         'incentive_type',
         'incentive_amount',
-        'incentive_percentages', // json column for individual engineer %
+        'incentive_percentages',     // json column for individual engineer %
         'net_profit',
         'lead_incentive_amount',
+        'lead_incentive_percent',
         'bright_electronics_profit',
         'job_verified_by_admin',
         'note',
     ];
-
     protected $casts = [
+        'product_id' => 'array',
+        'incentive_percentages' => 'array',
         'gross_amount' => 'float',
         'amount' => 'float',
         'gst_amount' => 'float',
+        'expense' => 'float',
         'incentive_amount' => 'float',
-        'incentive_percentages' => 'array',
         'net_profit' => 'float',
         'lead_incentive_amount' => 'float',
+        'lead_incentive_percent' => 'float',
         'bright_electronics_profit' => 'float',
     ];
-
     public function complain()
     {
         return $this->belongsTo(Complain::class, 'complain_id');

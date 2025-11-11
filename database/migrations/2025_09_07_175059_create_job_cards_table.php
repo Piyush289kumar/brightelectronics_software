@@ -4,8 +4,7 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      */
@@ -13,9 +12,10 @@ return new class extends Migration
     {
         Schema::create('job_cards', function (Blueprint $table) {
             $table->id();
-             $table->foreignId('complain_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('complain_id')->constrained()->cascadeOnDelete();
             $table->string('job_id')->unique();
             $table->string('status')->default('Open');
+            $table->json('product_id')->nullable(); // Multi-select devices (Products)
             $table->decimal('amount', 10, 2)->nullable();
             $table->decimal('gst_amount', 10, 2)->nullable();
             $table->decimal('expense', 10, 2)->nullable();

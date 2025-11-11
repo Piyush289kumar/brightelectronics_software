@@ -9,4 +9,8 @@ use Filament\Resources\Pages\CreateRecord;
 class CreateJobCard extends CreateRecord
 {
     protected static string $resource = JobCardResource::class;
+    protected function getRedirectUrl(): string
+    {
+        return $this->getResource()::getUrl('index');
+    }
 }
