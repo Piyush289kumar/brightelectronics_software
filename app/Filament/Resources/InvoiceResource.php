@@ -48,6 +48,7 @@ class InvoiceResource extends Resource
     }
     // (Optional) Add tooltip to the badge
     protected static ?string $navigationBadgeTooltip = 'Total number of invoices';
+    
     public static function form(Form $form): Form
     {
         return $form
