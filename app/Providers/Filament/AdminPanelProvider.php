@@ -74,7 +74,7 @@ class AdminPanelProvider extends PanelProvider
                 FilamentShieldPlugin::make(),
                 \TomatoPHP\FilamentDocs\FilamentDocsPlugin::make(),
                 FilamentLogViewer::make(),
-                \TomatoPHP\FilamentLanguageSwitcher\FilamentLanguageSwitcherPlugin::make(),
+                // \TomatoPHP\FilamentLanguageSwitcher\FilamentLanguageSwitcherPlugin::make(),
             ])
             ->authMiddleware([
                 Authenticate::class,

@@ -34,7 +34,7 @@ class ComplainResource extends Resource
                         Forms\Components\TextInput::make('complain_id')
                             ->label('Complain ID')
                             ->disabled() // Prevent editing
-                            ->helperText('This ID will be generated automatically after saving.') // ✅ Add info text
+                            ->helperText('This ID will be generated automatically.') // ✅ Add info text
                             ->hint('Auto-generated.') // Optional visual hint under label
                             ->hintColor('info')
                             ->dehydrated(true),
@@ -50,6 +50,10 @@ class ComplainResource extends Resource
                             ->maxLength(20)
                             ->required(),
 
+
+                    ]),
+
+                    Grid::make(2)->schema([
                         Forms\Components\TextInput::make('customer_email')
                             ->label('Customer Email')
                             ->email()
@@ -57,9 +61,9 @@ class ComplainResource extends Resource
 
                         Forms\Components\Textarea::make('address')
                             ->label('Customer Address')
-                            ->rows(1)
-                            ->columnSpan(2),
+                            ->rows(1),
                     ]),
+
                 ])
                 ->columns(1),
 
@@ -124,12 +128,13 @@ class ComplainResource extends Resource
                         ->label('Assigned By')
                         ->relationship('assigner', 'name')
                         ->default(fn() => Auth::id())
-                        ->disabled(fn() => !auth()->user()->hasAnyRole(['Admin', 'Store Manager'])),
+                        ->disabled(fn() => !auth()->user()->hasAnyRole(['Administrator', 'Store Manager', 'Team Lead'])),
 
                     Forms\Components\MultiSelect::make('assigned_engineers')
                         ->label('Assigned Engineers')
                         ->options(User::role('Engineer')->pluck('name', 'id')->toArray())
-                        ->disabled(fn() => !auth()->user()->hasAnyRole(['Admin', 'Store Manager'])),
+                        ->disabled(fn() => !auth()->user()->hasAnyRole(['Administrator', 'Store Manager', 'Team Lead'])),
+
 
                     Forms\Components\Select::make('status')
                         ->label('Status')
