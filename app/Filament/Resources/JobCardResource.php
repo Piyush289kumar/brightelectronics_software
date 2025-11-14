@@ -199,7 +199,8 @@ class JobCardResource extends Resource
                                             ->offColor('danger')
                                             ->inline(false)
                                             ->helperText('Enable this switch when the job card is verified by admin.')
-                                            ->dehydrated(),
+                                            ->dehydrated()
+                                            ->disabled(fn() => !auth()->user()->hasAnyRole(['Administrator', 'Store Manager', 'Team Lead'])),
                                     ]),
                                 ])
                                 ->columnSpan(1),
@@ -412,6 +413,15 @@ class JobCardResource extends Resource
             ->actions([
                 Tables\Actions\ActionGroup::make([
                     Tables\Actions\ViewAction::make(),
+                    Tables\Actions\Action::make('toggleVerify')
+                        ->label(fn($record) => $record->job_verified_by_admin ? 'Unverify' : 'Verify')
+                        ->icon(fn($record) => $record->job_verified_by_admin ? 'heroicon-o-x-circle' : 'heroicon-o-check-circle')
+                        ->requiresConfirmation()
+                        ->action(function ($record) {
+                            $record->update(['job_verified_by_admin' => !$record->job_verified_by_admin]);
+                        })
+                        ->color(fn($record) => $record->job_verified_by_admin ? 'danger' : 'success')
+                        ->visible(fn() => auth()->user()->hasAnyRole(['Administrator', 'Store Manager', 'Team Lead'])),
                     Tables\Actions\EditAction::make(),
                     Tables\Actions\DeleteAction::make(),
                 ])->dropdown()->tooltip('Actions')
