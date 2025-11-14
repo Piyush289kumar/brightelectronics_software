@@ -9,6 +9,7 @@ use App\Models\Service;
 use App\Models\User;
 use Filament\Forms;
 use Filament\Forms\Components\Grid;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
@@ -179,9 +180,36 @@ class ComplainResource extends Resource
             ])
             ->defaultSort('created_at', 'desc')
             ->actions([
-                Tables\Actions\ViewAction::make(),
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                Tables\Actions\ActionGroup::make([
+                    Tables\Actions\ViewAction::make(),
+
+                    Tables\Actions\Action::make('updateFirstActionCode')
+                        ->label('Set Action') // short label
+                        ->icon('heroicon-o-cube-transparent') // concise editing icon
+                        ->color('warning')
+                        ->requiresConfirmation()
+                        ->form([
+                            Select::make('first_action_code')
+                                ->label('Action Code') // shorter label
+                                ->options([
+                                    'NEW' => 'NEW',
+                                    'PKD' => 'Picked (PKD)',
+                                    'Visit' => 'Visit',
+                                    'RSD' => 'Reschedule Visit (RSD)',
+                                    'CNC' => 'Call Not Connected (CNC)',
+                                    'Job Cancel' => 'Job Cancel',
+                                ])
+                                ->default(fn($record) => $record->first_action_code)
+                                ->required(),
+                        ])
+                        ->action(function ($record, array $data) {
+                            $record->update(['first_action_code' => $data['first_action_code']]);
+                        })
+                        ->visible(fn() => auth()->user()->hasAnyRole(['Administrator', 'Store Manager', 'Team Lead'])),
+                    Tables\Actions\EditAction::make(),
+                    Tables\Actions\DeleteAction::make(),
+
+                ])->dropdown()->tooltip('Actions')
             ])
             ->bulkActions([
                 Tables\Actions\DeleteBulkAction::make(),
