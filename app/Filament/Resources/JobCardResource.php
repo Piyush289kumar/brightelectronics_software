@@ -228,41 +228,52 @@ class JobCardResource extends Resource
         $amount = round((float) ($get('amount') ?? 0), 2);
         $productIds = $get('product_id') ?? [];
 
-        // Expense = sum of selected product selling prices
+        // Step 1: Product Expense
         $expense = Product::whereIn('id', $productIds)->sum('selling_price');
         $expense = round($expense, 2);
 
-        // GST fixed 18% of amount
+        // Step 2: GST (not affecting price)
         $gstAmount = round(($amount * 18) / 100, 2);
 
-        // Gross = amount - expense (not including GST)
+        // Step 3: Gross = amount - expense
         $gross = round($amount - $expense, 2);
 
         $set('gst_amount', $gstAmount);
         $set('expense', $expense);
         $set('gross_amount', $gross);
 
-        // Lead incentive
+        // Step 4: Lead Incentive
         $leadPercent = round((float) ($get('lead_incentive_percent') ?? 0), 2);
         $leadIncentiveAmount = round(($gross * $leadPercent) / 100, 2);
         $set('lead_incentive_amount', $leadIncentiveAmount);
 
-        // Engineer Incentives
+        // Step 5: Calculate Engineer Incentives sequentially from remaining amount
+        $remainingAfterLead = $gross - $leadIncentiveAmount;
         $engineers = $get('incentive_percentages') ?? [];
-        $totalStaffIncentive = 0;
+        $totalEngineerIncentive = 0;
+        $remaining = $remainingAfterLead;
+
         foreach ($engineers as $i => $row) {
             $percent = isset($row['percent']) ? (float) $row['percent'] : 0;
-            $incentiveAmt = round(($percent / 100) * $gross, 2);
-            $engineers[$i]['amount'] = $incentiveAmt;
-            $totalStaffIncentive += $incentiveAmt;
-        }
-        $set('incentive_percentages', $engineers);
-        $set('incentive_amount', round($totalStaffIncentive, 2));
 
-        // Final Bright Electronics Profit
-        $brightProfit = round($gross - $leadIncentiveAmount - $totalStaffIncentive, 2);
+            // incentive based on remaining amount
+            $incentiveAmt = round(($remaining * $percent) / 100, 2);
+            $engineers[$i]['amount'] = $incentiveAmt;
+
+            // update totals
+            $totalEngineerIncentive += $incentiveAmt;
+            $remaining -= $incentiveAmt; // deduct this engineer's incentive from remaining
+        }
+
+        // Update repeater + totals
+        $set('incentive_percentages', $engineers);
+        $set('incentive_amount', round($totalEngineerIncentive, 2));
+
+        // Step 6: Final Bright Electronics Profit
+        $brightProfit = round($remaining, 2); // remaining after all deductions
         $set('bright_electronics_profit', $brightProfit);
     }
+
 
     public static function table(Table $table): Table
     {
