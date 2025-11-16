@@ -595,12 +595,12 @@ class JobCardResource extends Resource
     /* Hostinger-safe local fonts */
     @font-face {
         font-family: 'Devanagari';
-        src: url('https://billing.vipprow.com/fonts/NotoSansDevanagari-Regular.ttf') format('truetype');
+        src: url('https://seashell-mandrill-170694.hostingersite.com/fonts/NotoSansDevanagari-VariableFont_wdth,wght.ttf') format('truetype');
     }
 
     @font-face {
         font-family: 'Lexend';
-        src: url('https://billing.vipprow.com/fonts/Lexend-Regular.ttf') format('truetype');
+        src: url('https://seashell-mandrill-170694.hostingersite.com/fonts/Lexend-VariableFont_wght.ttf') format('truetype');
     }
 
     body {
