@@ -86,14 +86,83 @@ class JobCardResource extends Resource
                             ->reactive()
                             ->afterStateUpdated(fn($state, $set, $get) => self::recalculateAll($set, $get))
                             ->columnSpan(1),
+
+
+
+
+
+
                         Forms\Components\Select::make('product_id')
                             ->label('Select Products (Expenses)')
-                            ->options(Product::pluck('name', 'id'))
-                            ->multiple()
+                            ->multiple()             // multiple select
                             ->reactive()
-                            ->dehydrated()
+                            ->searchable()
+                            // Search endpoint — returns only in-stock matches
+                            ->getSearchResultsUsing(function (string $search) {
+                                return Product::query()
+                                    ->withSum('storeInventories as stock_qty', 'quantity')
+                                    ->where(function ($q) use ($search) {
+                                        $q->where('name', 'like', "%{$search}%")
+                                            ->orWhere('sku', 'like', "%{$search}%")
+                                            ->orWhere('barcode', 'like', "%{$search}%");
+                                    })
+                                    ->get()
+                                    ->filter(function ($product) {
+                                        return ($product->stock_qty ?? 0) > 0; // only in-stock in search
+                                    })
+                                    ->mapWithKeys(function ($product) {
+                                        $stock = $product->stock_qty ?? 0;
+                                        return [$product->id => "{$product->name} — Stock: {$stock}"];
+                                    })
+                                    ->toArray();
+                            })
+                            // Options shown when the select is opened — only in-stock products
+                            ->options(function () {
+                                return Product::query()
+                                    ->withSum('storeInventories as stock_qty', 'quantity')
+                                    ->get()
+                                    ->filter(fn($p) => ($p->stock_qty ?? 0) > 0)
+                                    ->mapWithKeys(fn($product) => [
+                                        $product->id => "{$product->name} — Stock: {$product->stock_qty}",
+                                    ])
+                                    ->toArray();
+                            })
+                            // Server-side rule to prevent saving out-of-stock products (safety)
+                            ->rules([
+                                function ($attribute, $value, $fail) {
+                                    // $value may be array (multiple) or single id
+                                    $ids = is_array($value) ? $value : [$value];
+
+                                    if (empty($ids)) {
+                                        return; // no selection, nothing to validate here
+                                    }
+
+                                    $outOfStock = Product::query()
+                                        ->withSum('storeInventories as stock_qty', 'quantity')
+                                        ->whereIn('id', $ids)
+                                        ->get()
+                                        ->filter(fn($p) => ($p->stock_qty ?? 0) <= 0);
+
+                                    if ($outOfStock->isNotEmpty()) {
+                                        $names = $outOfStock->pluck('name')->join(', ');
+                                        $fail("The following product(s) are out of stock and cannot be selected: {$names}");
+                                    }
+                                },
+                            ])
                             ->afterStateUpdated(fn($state, $set, $get) => self::recalculateAll($set, $get))
                             ->columnSpan(2),
+
+
+
+
+
+
+
+
+
+
+
+
                     ]),
                     Grid::make(5)->schema([
                         Forms\Components\TextInput::make('expense')
