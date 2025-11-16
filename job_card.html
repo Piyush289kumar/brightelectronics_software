@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+
+    <div class="lead" style="font-family: Arial, sans-serif;">
+
+        <br>
+        <br>
+        <br>
+        <!-- Header -->
+        <div style="text-align:center; padding-top:60px;">
+            <h1 style="font-size: 20px; font-weight: 900; text-align:center; padding-top: 50px;">
+                <strong style="background:#2662fa !important; font-weight:bold; color:#fff; padding: 5px 20px;">JOB CARD</strong>
+            </h1>
+        </div>
+
+        <!-- Date / Job ID / Complain ID -->
+        <table style="width:100%; margin-top:25px; font-size:14px;">
+            <tr>
+                <td style="width:50%; vertical-align:top;">
+                    <p><strong>Date:</strong> <small>$DOCUMENT_DATE</small></p>
+                </td>
+                <td style="width:50%; vertical-align:top; text-align:right;">
+                    <p><strong>Job ID:</strong> <small>$JOB_ID</small></p>
+                    <p><strong>Complain ID:</strong> <small>$COMPLAIN_ID</small></p>
+                    <p><strong>S/S No.:</strong> <small>________________</small></p>
+                </td>
+            </tr>
+        </table>
+
+        <br>
+
+        <!-- Customer Details & Checklist -->
+        <table style="width:100%; margin-top:10px; font-size:14px;">
+            <tr>
+                <!-- LEFT -->
+                <td style="width:70%; vertical-align:top;">
+                    <p><strong>Name:</strong> <small>$CUSTOMER_NAME</small></p>
+                    <p><strong>Mob.:</strong> <small>$CUSTOMER_PHONE</small></p>
+                    <p><strong>Device:</strong> <small>$DEVICE</small></p>
+                    <p><strong>S/NO.:</strong> <small>________________</small></p>
+                    <p><strong>Service Type:</strong> <small>$SERVICES</small></p>
+                    <p><strong>Estimate Repair Amount:</strong> <small>$ESTIMATE_REPAIR_AMOUNT</small></p>
+                    <p><strong>Estimate New Amount:</strong> <small>$ESTIMATE_NEW_AMOUNT</small></p>
+                    <p><strong>Advance Amount:</strong> <small>________________</small></p>
+                    <p><strong>Estimate Delivery Date:</strong> <small>________________</small></p>
+                </td>
+
+                <!-- RIGHT -->
+                <td style="width:30%; vertical-align:top; text-align:right;">
+                    <p><strong>Remote:</strong> <small>$REMOTE</small></p>
+                    <p><strong>Remote Battery:</strong> <small>$REMOTE_BATTERY</small></p>
+                    <p><strong>Adapter:</strong> <small>$ADAPTER</small></p>
+                    <p><strong>Power Cable:</strong> <small>$POWERCABLE</small></p>
+                    <p><strong>Wall Stand:</strong> <small>$WALLSTAND</small></p>
+                    <p><strong>Table Stand:</strong> <small>$TABLE_STAND</small></p>
+                    <p><strong>Box:</strong> <small>$BOX</small></p>
+                </td>
+            </tr>
+        </table>
+
+        <br>
+
+        <!-- Notes -->
+        <table style="width:100%; font-size:14px; margin-top:20px;">
+            <tr>
+                <td>
+                    <h4 style="margin-bottom:5px;">NOTE:</h4>
+                    <ol style="padding-left:18px; line-height:1.5;">
+                        <li>डिलीवरी के दौरान जाॅब कार्ड की हार्ड काॅपी जमा करना अनिवार्य हैं।</li>
+                        <li>रिपेयरिंग करने के दौरान किसी भी नुकसान की हमारी कोई जिम्मेदारी नहीं होगी।</li>
+                        <li>पैनल/स्क्रीन रिपेयरिंग के दौरान टूट-फूट अथवा पिक्चर गायब हो जाने की हमारी कोई जिम्मेदारी
+                            नहीं होगी।</li>
+                        <li>अपने उपकरण को 15 दिन के अंदर उठा ले अन्यथा हमारी कोई जिम्मेदारी नहीं होगी।</li>
+                    </ol>
+                </td>
+            </tr>
+        </table>
+
+        <!-- Signatures -->
+        <table style="width:100%; margin-top:30px; font-size:14px;">
+            <tr>
+                <td style="width:50%; text-align:left;">
+                    <p>__________________</p>
+                    <p>Customer Signatory</p>
+                </td>
+                <td style="width:50%; text-align:right;">
+                    <p>__________________</p>
+                    <p>Authorised Signatory</p>
+                </td>
+            </tr>
+        </table>
+
+    </div>
+
+
+</body>
+
+</html>
