@@ -542,83 +542,109 @@ class JobCardResource extends Resource
                         }),
 
 
-                   Tables\Actions\Action::make('shareJobCard')
-    ->label('Share Job Card')
-    ->color('success')
-    ->icon('heroicon-s-share')
-    ->tooltip('Share Job Card')
-    ->action(function ($record, $livewire) {
 
-        // 1) Fetch Template Body
-        $template = DocumentTemplate::find(15);
-        $body = $template->body;
+                    Tables\Actions\Action::make('shareJobCard')
+                        ->label('Share Job Card')
+                        ->color('success')
+                        ->icon('heroicon-s-share')
+                        ->tooltip('Share Job Card')
+                        ->action(function ($record, $livewire) {
 
-        // Checklist
-        $check = $record->check_list ?? [];
+                            // 1) Fetch Template Body
+                            $template = DocumentTemplate::find(15);
+                            $body = $template->body;
 
-        // 2) Map
-        $map = [
-            '$DOCUMENT_DATE' => now()->format('d-m-Y'),
-            '$JOB_ID' => $record->job_id,
-            '$COMPLAIN_ID' => $record->complain->complain_id ?? '',
-            '$CUSTOMER_NAME' => $record->complain->name ?? '',
-            '$CUSTOMER_PHONE' => $record->complain->mobile ?? '',
-            '$DEVICE' => $record->complain->device ?? '',
-            '$SERVICES' => implode(', ', $record->complain->service_type ?? []),
-            '$ESTIMATE_REPAIR_AMOUNT' => $record->complain->estimate_repair_amount ?? '',
-            '$ESTIMATE_NEW_AMOUNT' => $record->complain->estimate_new_amount ?? '',
+                            // Checklist
+                            $check = $record->check_list ?? [];
 
-            '$REMOTE'         => in_array('Remote', $check) ? '✔' : '✘',
-            '$REMOTE_BATTERY' => in_array('Remote Battery', $check) ? '✔' : '✘',
-            '$ADAPTER'        => in_array('Adapter', $check) ? '✔' : '✘',
-            '$POWERCABLE'     => in_array('Powercable', $check) ? '✔' : '✘',
-            '$WALLSTAND'      => in_array('Wallstand', $check) ? '✔' : '✘',
-            '$TABLE_STAND'    => in_array('Table stand', $check) ? '✔' : '✘',
-            '$BOX'            => in_array('Box', $check) ? '✔' : '✘',
-        ];
+                            // 2) Map Variables
+                            $map = [
+                                '$DOCUMENT_DATE' => now()->format('d-m-Y'),
+                                '$JOB_ID' => $record->job_id,
+                                '$COMPLAIN_ID' => $record->complain->complain_id ?? '',
+                                '$CUSTOMER_NAME' => $record->complain->name ?? '',
+                                '$CUSTOMER_PHONE' => $record->complain->mobile ?? '',
+                                '$DEVICE' => $record->complain->device ?? '',
+                                '$SERVICES' => implode(', ', $record->complain->service_type ?? []),
+                                '$ESTIMATE_REPAIR_AMOUNT' => $record->complain->estimate_repair_amount ?? '',
+                                '$ESTIMATE_NEW_AMOUNT' => $record->complain->estimate_new_amount ?? '',
 
-        foreach ($map as $k => $v) {
-            $body = str_replace($k, $v, $body);
-        }
+                                '$REMOTE' => in_array('Remote', $check) ? '✔' : '✘',
+                                '$REMOTE_BATTERY' => in_array('Remote Battery', $check) ? '✔' : '✘',
+                                '$ADAPTER' => in_array('Adapter', $check) ? '✔' : '✘',
+                                '$POWERCABLE' => in_array('Powercable', $check) ? '✔' : '✘',
+                                '$WALLSTAND' => in_array('Wallstand', $check) ? '✔' : '✘',
+                                '$TABLE_STAND' => in_array('Table stand', $check) ? '✔' : '✘',
+                                '$BOX' => in_array('Box', $check) ? '✔' : '✘',
+                            ];
 
-        // 3) Load Header (Footer removed as per your code)
-        $header = view('filament.header')->render();
+                            foreach ($map as $k => $v) {
+                                $body = str_replace($k, $v, $body);
+                            }
 
-        // 4) Hostinger-safe PDF HTML
-        $html = <<<HTML
+                            // 3) Load header HTML
+                            $header = view('filament.header')->render();
+
+                            // Detect environment
+                            $appUrl = config('app.url'); // local OR Hostinger
+                            $fontBase = rtrim($appUrl, '/') . '/fonts';
+
+                            // 4) SAFE HTML for DomPDF
+                            // 4) SAFE HTML for DomPDF
+                            $html = <<<HTML
 <!DOCTYPE html>
-<html lang="hi">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
+
 <style>
+@font-face {
+    font-family: 'Devanagari';
+    src: url('{$fontBase}/NotoSansDevanagari-Regular.ttf') format('truetype');
+}
 
-    /* Hostinger-safe local fonts */
-    @font-face {
-        font-family: 'Devanagari';
-        src: url('https://seashell-mandrill-170694.hostingersite.com/fonts/NotoSansDevanagari-VariableFont_wdth,wght.ttf') format('truetype');
-    }
+@font-face {
+    font-family: 'Lexend';
+    src: url('{$fontBase}/Lexend-Regular.ttf') format('truetype');
+}
 
-    @font-face {
-        font-family: 'Lexend';
-        src: url('https://seashell-mandrill-170694.hostingersite.com/fonts/Lexend-VariableFont_wght.ttf') format('truetype');
-    }
 
-    body {
-        font-family: 'Devanagari', 'Lexend', Arial, sans-serif;
-        margin: 0;
-        padding: 0;
-        font-size: 14px;
-    }
+/* -------------------- PAGE SETUP -------------------- */
+html, body {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    font-family: 'Devanagari', 'Lexend', Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.35;
+}
 
-    .pdf-header {
-        width: 100%;
-        text-align: center;
-        margin-bottom: 20px;
-    }
+/* Force single A4 page */
+@page {
+    margin: 0;
+}
 
-    .pdf-body {
-        padding: 10px 20px;
-    }
+/* -------------------- HEADER -------------------- */
+.pdf-header {
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    text-align: center;
+}
+
+/* -------------------- BODY -------------------- */
+.pdf-body {
+     width: 100%;
+    padding-left: 15px;
+    padding-right: 15px;
+    margin: 0;                /* No weird shifting */
+    box-sizing: border-box;   /* Prevent width overflow */
+    max-width: 950px;         /* A4 safe width */
+    overflow: hidden;         /* Hide anything going outside */
+    transform-origin: top left;
+    transform: scale(0.96);   /* Slight shrink to avoid cut edges */
+    margin-top: -100px;        /* No top margin */
+}
 
 </style>
 </head>
@@ -637,29 +663,26 @@ class JobCardResource extends Resource
 </html>
 HTML;
 
-        // 5) Generate PDF
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html)->setPaper('A4', 'portrait');
-        $pdf->getDomPDF()->set_option('isHtml5ParserEnabled', true);
-        $pdf->getDomPDF()->set_option('isUnicodeEnabled', true);
-        $pdf->getDomPDF()->set_option('isRemoteEnabled', true); // important for Hostinger
 
-        // Save PDF in Hostinger-safe path
-        $fileName = "job-card-{$record->job_id}.pdf";
-        $filePath = "job-cards/{$fileName}";
+                            // 5) Generate PDF
+                            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html)->setPaper('A4');
+                            $pdf->getDomPDF()->set_option('isRemoteEnabled', true);
+                            $pdf->getDomPDF()->set_option('isHtml5ParserEnabled', true);
+                            $pdf->getDomPDF()->set_option('isUnicodeEnabled', true);
 
-        Storage::disk('public')->put($filePath, $pdf->output());
+                            // Save PDF
+                            $fileName = "job-card-{$record->job_id}.pdf";
+                            $filePath = "job-cards/{$fileName}";
+                            Storage::disk('public')->put($filePath, $pdf->output());
 
-        // 100% safe URL
-        $fullUrl = url("storage/{$filePath}");
+                            $fullUrl = url("storage/{$filePath}");
 
-        // 6) Share via Web Share API
-        $livewire->js(<<<JS
+                            // 6) SHARE / OPEN
+                            $livewire->js(<<<JS
             if (navigator.share && navigator.canShare) {
-
                 fetch("{$fullUrl}")
                     .then(res => res.blob())
                     .then(blob => {
-
                         const file = new File([blob], "{$fileName}", { type: "application/pdf" });
 
                         if (navigator.canShare({ files: [file] })) {
@@ -672,13 +695,12 @@ HTML;
                             window.open("{$fullUrl}", "_blank");
                         }
                     });
-
             } else {
                 window.open("{$fullUrl}", "_blank");
             }
         JS);
 
-    }),
+                        }),
 
 
 
