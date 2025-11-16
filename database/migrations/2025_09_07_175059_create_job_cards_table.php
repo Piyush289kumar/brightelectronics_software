@@ -16,6 +16,7 @@ return new class extends Migration {
             $table->string('job_id')->unique();
             $table->string('status')->default('Open');
             $table->json('product_id')->nullable(); // Multi-select devices (Products)
+            $table->json('check_list')->nullable(); // Multi-select Check List
             $table->decimal('amount', 10, 2)->nullable();
             $table->decimal('gst_amount', 10, 2)->nullable();
             $table->decimal('expense', 10, 2)->nullable();

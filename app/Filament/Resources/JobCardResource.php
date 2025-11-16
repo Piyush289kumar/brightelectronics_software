@@ -25,6 +25,8 @@ class JobCardResource extends Resource
     public static function form(Form $form): Form
     {
         return $form->schema([
+
+
             Forms\Components\Section::make('Basic Job Details')
                 ->description('Core information for the job card and complain mapping.')
                 ->schema([
@@ -54,6 +56,27 @@ class JobCardResource extends Resource
                             ])
                             ->default('Open')
                             ->columnSpan(1),
+
+
+                        Forms\Components\CheckboxList::make('check_list')
+                            ->label('Check List')
+                            ->options([
+                                'Remote' => 'Remote',
+                                'Remote Battery' => 'Remote Battery',
+                                'Adapter' => 'Adapter',
+                                'Powercable' => 'Powercable',
+                                'Wallstand' => 'Wallstand',
+                                'Table stand' => 'Table stand',
+                                'Box' => 'Box',
+                            ])
+                            ->columnSpanFull() // take full width
+                            ->columns(7)       // one column per item (makes them line up horizontally)
+                            ->extraAttributes([
+                                'class' => 'flex flex-row flex-wrap items-center gap-4' // forces horizontal layout and wraps on small screens
+                            ])
+                            ->helperText('Select all items received/checked')
+                            ->default([])
+                            ->nullable(),
                     ]),
                 ])
                 ->columns(3)

@@ -18,6 +18,7 @@ class JobCard extends Model
         'gst_amount',
         'expense',
         'product_id',                // store selected product ids (json)
+        'check_list',     // Multi Check Box Selection
         'gross_amount',
         'incentive_type',
         'incentive_amount',
@@ -31,6 +32,7 @@ class JobCard extends Model
     ];
     protected $casts = [
         'product_id' => 'array',
+        'check_list' => 'array',
         'incentive_percentages' => 'array',
         'gross_amount' => 'float',
         'amount' => 'float',
