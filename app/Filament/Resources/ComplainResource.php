@@ -40,6 +40,7 @@ class ComplainResource extends Resource
                             ->maxLength(255),
                         Forms\Components\TextInput::make('mobile')
                             ->label('Customer Phone Number')
+                            ->rules(['required', 'min:10'])   // <--- add this
                             ->maxLength(20)
                             ->required(),
                     ]),
@@ -135,6 +136,7 @@ class ComplainResource extends Resource
                 ->columns(3),
         ]);
     }
+
     public static function table(Table $table): Table
     {
         return $table
