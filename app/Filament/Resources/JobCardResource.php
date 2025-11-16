@@ -11,6 +11,7 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Storage;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 use TomatoPHP\FilamentDocs\Models\Document;
 use TomatoPHP\FilamentDocs\Models\DocumentTemplate;
@@ -537,7 +538,150 @@ class JobCardResource extends Resource
                 iframe.contentWindow.print();
             };
         JS);
+
                         }),
+
+
+                   Tables\Actions\Action::make('shareJobCard')
+    ->label('Share Job Card')
+    ->color('success')
+    ->icon('heroicon-s-share')
+    ->tooltip('Share Job Card')
+    ->action(function ($record, $livewire) {
+
+        // 1) Fetch Template Body
+        $template = DocumentTemplate::find(15);
+        $body = $template->body;
+
+        // Checklist
+        $check = $record->check_list ?? [];
+
+        // 2) Map
+        $map = [
+            '$DOCUMENT_DATE' => now()->format('d-m-Y'),
+            '$JOB_ID' => $record->job_id,
+            '$COMPLAIN_ID' => $record->complain->complain_id ?? '',
+            '$CUSTOMER_NAME' => $record->complain->name ?? '',
+            '$CUSTOMER_PHONE' => $record->complain->mobile ?? '',
+            '$DEVICE' => $record->complain->device ?? '',
+            '$SERVICES' => implode(', ', $record->complain->service_type ?? []),
+            '$ESTIMATE_REPAIR_AMOUNT' => $record->complain->estimate_repair_amount ?? '',
+            '$ESTIMATE_NEW_AMOUNT' => $record->complain->estimate_new_amount ?? '',
+
+            '$REMOTE'         => in_array('Remote', $check) ? '✔' : '✘',
+            '$REMOTE_BATTERY' => in_array('Remote Battery', $check) ? '✔' : '✘',
+            '$ADAPTER'        => in_array('Adapter', $check) ? '✔' : '✘',
+            '$POWERCABLE'     => in_array('Powercable', $check) ? '✔' : '✘',
+            '$WALLSTAND'      => in_array('Wallstand', $check) ? '✔' : '✘',
+            '$TABLE_STAND'    => in_array('Table stand', $check) ? '✔' : '✘',
+            '$BOX'            => in_array('Box', $check) ? '✔' : '✘',
+        ];
+
+        foreach ($map as $k => $v) {
+            $body = str_replace($k, $v, $body);
+        }
+
+        // 3) Load Header (Footer removed as per your code)
+        $header = view('filament.header')->render();
+
+        // 4) Hostinger-safe PDF HTML
+        $html = <<<HTML
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<style>
+
+    /* Hostinger-safe local fonts */
+    @font-face {
+        font-family: 'Devanagari';
+        src: url('https://billing.vipprow.com/fonts/NotoSansDevanagari-Regular.ttf') format('truetype');
+    }
+
+    @font-face {
+        font-family: 'Lexend';
+        src: url('https://billing.vipprow.com/fonts/Lexend-Regular.ttf') format('truetype');
+    }
+
+    body {
+        font-family: 'Devanagari', 'Lexend', Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        font-size: 14px;
+    }
+
+    .pdf-header {
+        width: 100%;
+        text-align: center;
+        margin-bottom: 20px;
+    }
+
+    .pdf-body {
+        padding: 10px 20px;
+    }
+
+</style>
+</head>
+
+<body>
+
+<div class="pdf-header">
+    {$header}
+</div>
+
+<div class="pdf-body">
+    {$body}
+</div>
+
+</body>
+</html>
+HTML;
+
+        // 5) Generate PDF
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html)->setPaper('A4', 'portrait');
+        $pdf->getDomPDF()->set_option('isHtml5ParserEnabled', true);
+        $pdf->getDomPDF()->set_option('isUnicodeEnabled', true);
+        $pdf->getDomPDF()->set_option('isRemoteEnabled', true); // important for Hostinger
+
+        // Save PDF in Hostinger-safe path
+        $fileName = "job-card-{$record->job_id}.pdf";
+        $filePath = "job-cards/{$fileName}";
+
+        Storage::disk('public')->put($filePath, $pdf->output());
+
+        // 100% safe URL
+        $fullUrl = url("storage/{$filePath}");
+
+        // 6) Share via Web Share API
+        $livewire->js(<<<JS
+            if (navigator.share && navigator.canShare) {
+
+                fetch("{$fullUrl}")
+                    .then(res => res.blob())
+                    .then(blob => {
+
+                        const file = new File([blob], "{$fileName}", { type: "application/pdf" });
+
+                        if (navigator.canShare({ files: [file] })) {
+                            navigator.share({
+                                title: "Job Card",
+                                text: "Job Card {$record->job_id}",
+                                files: [file],
+                            });
+                        } else {
+                            window.open("{$fullUrl}", "_blank");
+                        }
+                    });
+
+            } else {
+                window.open("{$fullUrl}", "_blank");
+            }
+        JS);
+
+    }),
+
+
+
                     Tables\Actions\EditAction::make(),
                     Tables\Actions\DeleteAction::make(),
                 ])->dropdown()->tooltip('Actions')
