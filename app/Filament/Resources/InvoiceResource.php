@@ -1,7 +1,9 @@
 <?php
 namespace App\Filament\Resources;
 use App\Filament\Resources\InvoiceResource\Pages;
+use App\Models\Customer;
 use App\Models\Invoice;
+use App\Models\JobCard;
 use App\Models\Payment;
 use App\Models\Product;
 use Filament\Forms;
@@ -48,13 +50,81 @@ class InvoiceResource extends Resource
     }
     // (Optional) Add tooltip to the badge
     protected static ?string $navigationBadgeTooltip = 'Total number of invoices';
-    
+
     public static function form(Form $form): Form
     {
         return $form
             ->schema([
-                Grid::make(3)
+                Grid::make(12)
                     ->schema([
+
+
+                        Select::make('job_card_id')
+                            ->label('Import From Job Card')
+                            ->searchable()
+                            ->placeholder('Select Job Card')
+                            ->columnSpan(4)
+                            ->options(
+                                JobCard::with('complain')
+                                    ->get()
+                                    ->mapWithKeys(fn($job) => [
+                                        $job->id => "{$job->job_id} - {$job->complain->name} ({$job->complain->mobile})"
+                                    ])
+                            )
+                            ->reactive()
+                            ->afterStateUpdated(function ($state, callable $set, callable $get) {
+                                if (!$state)
+                                    return;
+                                $job = JobCard::with('complain')->find($state);
+
+                                if (!$job)
+                                    return;
+
+                                // 1) Auto-fill billable (Customer)
+                                $customer = Customer::firstOrCreate(
+                                    ['phone' => $job->complain->mobile],
+                                    [
+                                        'name' => $job->complain->name,
+                                        'email' => $job->complain->customer_email,
+                                        'billing_address' => $job->complain->address,
+                                        'is_active' => true,
+                                    ]
+                                );
+
+                                $set('billable_type', 'App\Models\Customer');
+                                $set('billable_id', $customer->id);
+
+                                // 2) Auto-fill invoice items from job card products
+                                $items = [];
+                                if (!empty($job->product_id)) {
+                                    foreach ($job->product_id as $productId) {
+                                        $product = Product::find($productId);
+                                        if ($product) {
+                                            $items[] = [
+                                                'product_id' => $product->id,
+                                                'quantity' => 1,
+                                                'unit_price' => $product->selling_price,
+                                                'discount' => 0,
+                                                'gst_rate' => 18,
+                                                'discount_amount_per_item' => 0,
+                                                'gst_amount' => 0,
+                                                'total_amount' => 0,
+                                            ];
+                                        }
+                                    }
+                                }
+
+                                $set('items', $items);
+
+                                // 3) Auto-fill totals
+                                \App\Filament\Resources\InvoiceResource::recalculateInvoiceTotals($set, $get);
+
+                                // 4) Auto-fill notes (optional)
+                                $set('notes', "Imported from Job Card #{$job->job_id}");
+                            }),
+
+
+
                         TextInput::make('number')
                             ->label(fn(callable $get) => match ($get('document_type')) {
                                 'purchase_order' => 'PO Number',
@@ -70,6 +140,7 @@ class InvoiceResource extends Resource
                                 'payment_voucher' => 'Payment Voucher Number',
                                 default => 'Document Number',
                             })
+                            ->columnSpan(2)
                             ->readonly()
                             ->placeholder('Will be auto-generated')
                             ->unique(ignoreRecord: true),
@@ -79,6 +150,7 @@ class InvoiceResource extends Resource
                                 'App\Models\Customer' => 'Customer',
                                 'App\Models\Vendor' => 'Client',
                             ])->disabled(true)
+                            ->columnSpan(2)
                             ->default('App\Models\Vendor') // Always default to Vendor                            
                             ->required()
                             ->dehydrated(true) // 👈 Force saving to DB
@@ -92,6 +164,7 @@ class InvoiceResource extends Resource
                                 }
                                 return $type::query()->pluck('name', 'id')->toArray();
                             })
+                            ->columnSpan(4)
                             ->searchable()
                             ->required()
                             ->reactive()

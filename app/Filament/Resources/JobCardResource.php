@@ -89,9 +89,6 @@ class JobCardResource extends Resource
 
 
 
-
-
-
                         Forms\Components\Select::make('product_id')
                             ->label('Select Products (Expenses)')
                             ->multiple()             // multiple select
@@ -127,41 +124,9 @@ class JobCardResource extends Resource
                                     ])
                                     ->toArray();
                             })
-                            // Server-side rule to prevent saving out-of-stock products (safety)
-                            ->rules([
-                                function ($attribute, $value, $fail) {
-                                    // $value may be array (multiple) or single id
-                                    $ids = is_array($value) ? $value : [$value];
 
-                                    if (empty($ids)) {
-                                        return; // no selection, nothing to validate here
-                                    }
-
-                                    $outOfStock = Product::query()
-                                        ->withSum('storeInventories as stock_qty', 'quantity')
-                                        ->whereIn('id', $ids)
-                                        ->get()
-                                        ->filter(fn($p) => ($p->stock_qty ?? 0) <= 0);
-
-                                    if ($outOfStock->isNotEmpty()) {
-                                        $names = $outOfStock->pluck('name')->join(', ');
-                                        $fail("The following product(s) are out of stock and cannot be selected: {$names}");
-                                    }
-                                },
-                            ])
                             ->afterStateUpdated(fn($state, $set, $get) => self::recalculateAll($set, $get))
                             ->columnSpan(2),
-
-
-
-
-
-
-
-
-
-
-
 
                     ]),
                     Grid::make(5)->schema([

@@ -56,10 +56,10 @@ class Complain extends Model
         return $this->hasOne(JobCard::class);
     }
 
-    public function products()
-    {
-        return $this->belongsToMany(Product::class);
-    }
+    // public function products()
+    // {
+    //     return $this->belongsToMany(Product::class);
+    // }
 
     public function assigner()
     {
