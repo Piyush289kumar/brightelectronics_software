@@ -36,14 +36,10 @@ class ProductResource extends Resource
                             ->unique(ignoreRecord: true),
 
                         Forms\Components\TextInput::make('barcode')
-                            ->disabled()
+                            ->label('Part Code/Number')
                             ->dehydrated()
-                            ->unique(ignoreRecord: true)->hidden(true),
-                        Forms\Components\Select::make('unit_id')
-                            ->label('Unit')
-                            ->relationship('unit', 'symbol')
-                            ->searchable()
-                            ->required(),
+                            ->unique(ignoreRecord: true),
+
 
                         Forms\Components\Select::make('brand_id')
                             ->label('Brand')
@@ -64,8 +60,8 @@ class ProductResource extends Resource
                                     ->pluck('name', 'id')
                             )
                             ->reactive()
-                            ->afterStateUpdated(fn(callable $set) => $set('category_level_2', null))
-                            ->required(),
+                            // ->required()
+                            ->afterStateUpdated(fn(callable $set) => $set('category_level_2', null)),
 
                         // Level 2: Sub Category (only shows if Level 1 has children)
                         Forms\Components\Select::make('category_level_2')
