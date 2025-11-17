@@ -64,6 +64,8 @@ class InvoiceResource extends Resource
                             ->searchable()
                             ->placeholder('Select Job Card')
                             ->columnSpan(4)
+                            // 🔥 Disable ONLY on Edit Invoice Page
+                            ->disabled(fn($livewire) => $livewire instanceof \Filament\Resources\Pages\EditRecord)
                             ->options(
                                 JobCard::with('complain')
                                     ->get()
