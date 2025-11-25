@@ -38,12 +38,12 @@ class StoreInventoryResource extends Resource
                     ->required()
                     ->searchable()
                     ->reactive()
-
                     ->options(function (callable $get, $record) {
 
                         $storeId = $get('store_id');
-                        if (!$storeId)
+                        if (!$storeId) {
                             return [];
+                        }
 
                         $query = \App\Models\Product::query()->where('is_active', true);
 
@@ -51,8 +51,7 @@ class StoreInventoryResource extends Resource
                         if (!$record) {
                             $query->whereDoesntHave(
                                 'storeInventories',
-                                fn($q) =>
-                                $q->where('store_id', $storeId)
+                                fn($q) => $q->where('store_id', $storeId),
                             );
                         }
                         // Edit mode
@@ -60,21 +59,27 @@ class StoreInventoryResource extends Resource
                             $query->where(function ($q) use ($storeId, $record) {
                                 $q->whereDoesntHave(
                                     'storeInventories',
-                                    fn($sub) =>
-                                    $sub->where('store_id', $storeId)
+                                    fn($sub) => $sub->where('store_id', $storeId),
                                 )
                                     ->orWhere('id', $record->product_id);
                             });
                         }
 
-                        return $query->pluck('name', 'id')->toArray();
+                        // Label for initial load (when no search yet)
+                        return $query
+                            ->get()
+                            ->mapWithKeys(fn($p) => [
+                                $p->id => "{$p->name} — {$p->barcode}",
+                            ])
+                            ->toArray();
                     })
 
                     ->getSearchResultsUsing(function (string $search, callable $get, $record) {
 
                         $storeId = $get('store_id');
-                        if (!$storeId)
+                        if (!$storeId) {
                             return [];
+                        }
 
                         $query = \App\Models\Product::query()
                             ->where('is_active', true)
@@ -88,8 +93,7 @@ class StoreInventoryResource extends Resource
                         if (!$record) {
                             $query->whereDoesntHave(
                                 'storeInventories',
-                                fn($q) =>
-                                $q->where('store_id', $storeId)
+                                fn($q) => $q->where('store_id', $storeId),
                             );
                         }
                         // Edit mode
@@ -97,19 +101,30 @@ class StoreInventoryResource extends Resource
                             $query->where(function ($q) use ($storeId, $record) {
                                 $q->whereDoesntHave(
                                     'storeInventories',
-                                    fn($sub) =>
-                                    $sub->where('store_id', $storeId)
+                                    fn($sub) => $sub->where('store_id', $storeId),
                                 )
                                     ->orWhere('id', $record->product_id);
                             });
                         }
 
                         return $query
+                            ->limit(50)
                             ->get()
                             ->mapWithKeys(fn($p) => [
-                                $p->id => "{$p->name} — {$p->barcode}"
+                                $p->id => "{$p->name} — {$p->barcode}",
                             ])
                             ->toArray();
+                    })
+
+                    // Ensures already-selected value renders correctly when form loads
+                    ->getOptionLabelUsing(function ($value): ?string {
+                        if (!$value) {
+                            return null;
+                        }
+
+                        $p = \App\Models\Product::find($value);
+
+                        return $p ? "{$p->name} — {$p->barcode}" : null;
                     }),
 
 
