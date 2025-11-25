@@ -37,31 +37,81 @@ class StoreInventoryResource extends Resource
                     ->label('Product')
                     ->required()
                     ->searchable()
+                    ->reactive()
+
                     ->options(function (callable $get, $record) {
+
                         $storeId = $get('store_id');
-                        if (!$storeId) {
+                        if (!$storeId)
                             return [];
-                        }
 
-                        $query = \App\Models\Product::query();
+                        $query = \App\Models\Product::query()->where('is_active', true);
 
-                        // In create mode, exclude products already in the store
+                        // Create mode
                         if (!$record) {
-                            $query->whereDoesntHave('storeInventories', function ($q) use ($storeId) {
-                                $q->where('store_id', $storeId);
-                            });
-                        } else {
-                            // In edit mode, allow the current product
+                            $query->whereDoesntHave(
+                                'storeInventories',
+                                fn($q) =>
+                                $q->where('store_id', $storeId)
+                            );
+                        }
+                        // Edit mode
+                        else {
                             $query->where(function ($q) use ($storeId, $record) {
-                                $q->whereDoesntHave('storeInventories', function ($sub) use ($storeId) {
-                                    $sub->where('store_id', $storeId);
-                                })->orWhere('id', $record->product_id);
+                                $q->whereDoesntHave(
+                                    'storeInventories',
+                                    fn($sub) =>
+                                    $sub->where('store_id', $storeId)
+                                )
+                                    ->orWhere('id', $record->product_id);
                             });
                         }
 
-                        return $query->pluck('name', 'id');
+                        return $query->pluck('name', 'id')->toArray();
                     })
-                    ->reactive(),
+
+                    ->getSearchResultsUsing(function (string $search, callable $get, $record) {
+
+                        $storeId = $get('store_id');
+                        if (!$storeId)
+                            return [];
+
+                        $query = \App\Models\Product::query()
+                            ->where('is_active', true)
+                            ->where(function ($q) use ($search) {
+                                $q->where('name', 'like', "%{$search}%")
+                                    ->orWhere('sku', 'like', "%{$search}%")
+                                    ->orWhere('barcode', 'like', "%{$search}%");
+                            });
+
+                        // Create mode
+                        if (!$record) {
+                            $query->whereDoesntHave(
+                                'storeInventories',
+                                fn($q) =>
+                                $q->where('store_id', $storeId)
+                            );
+                        }
+                        // Edit mode
+                        else {
+                            $query->where(function ($q) use ($storeId, $record) {
+                                $q->whereDoesntHave(
+                                    'storeInventories',
+                                    fn($sub) =>
+                                    $sub->where('store_id', $storeId)
+                                )
+                                    ->orWhere('id', $record->product_id);
+                            });
+                        }
+
+                        return $query
+                            ->get()
+                            ->mapWithKeys(fn($p) => [
+                                $p->id => "{$p->name} — {$p->barcode}"
+                            ])
+                            ->toArray();
+                    }),
+
 
                 Forms\Components\TextInput::make('quantity')->numeric()->required(),
             ])->columns(3);
@@ -72,6 +122,7 @@ class StoreInventoryResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('store.name')->sortable()->searchable(),
+                Tables\Columns\TextColumn::make('product.barcode')->label('Part No.')->sortable()->searchable(),
                 Tables\Columns\TextColumn::make('product.name')->sortable()->searchable(),
                 Tables\Columns\TextColumn::make('quantity')->sortable(),
                 Tables\Columns\TextColumn::make('updated_at')->dateTime()->sortable(),
