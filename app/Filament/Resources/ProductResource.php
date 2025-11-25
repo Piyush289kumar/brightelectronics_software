@@ -45,9 +45,9 @@ class ProductResource extends Resource
                             ->label('Linked Products')
                             ->multiple()
                             ->relationship('linkedProducts', 'name')
-                            ->searchable()
                             ->preload()
-                            ->helperText('Select related/compatible products'),
+                            ->searchable()
+                            ->helperText('Select products that are related to this product'),
 
 
                         Forms\Components\Select::make('brand_id')
@@ -159,6 +159,22 @@ class ProductResource extends Resource
                     ])->columns(3),
             ]);
     }
+
+    public static function mutateFormDataBeforeSave(array $data): array
+    {
+        // remove linkedProducts from data so Filament doesn't try to save it in products table
+        $data['linkedProducts_ids'] = $data['linkedProducts'] ?? [];
+        unset($data['linkedProducts']);
+
+        return $data;
+    }
+
+    public static function afterSave(Form $form, Product $record): void
+    {
+        // Apply the linking after product is saved and has an ID
+        $record->syncLinks($form->getState()['linkedProducts_ids'] ?? []);
+    }
+
 
     public static function table(Table $table): Table
     {

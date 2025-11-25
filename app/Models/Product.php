@@ -75,24 +75,53 @@ class Product extends Model
 
 
     public function linkedProducts()
-{
-    return $this->belongsToMany(
-        Product::class,
-        'product_links',
-        'product_id',
-        'linked_product_id'
-    );
-}
+    {
+        return $this->belongsToMany(
+            Product::class,
+            'product_links',
+            'product_id',
+            'linked_product_id'
+        );
+    }
 
-public function linkedByProducts()
-{
-    return $this->belongsToMany(
-        Product::class,
-        'product_links',
-        'linked_product_id',
-        'product_id'
-    );
-}
+    public function linkedByProducts()
+    {
+        return $this->belongsToMany(
+            Product::class,
+            'product_links',
+            'linked_product_id',
+            'product_id'
+        );
+    }
+
+    /**
+     * Get ALL related products for BOTH sides
+     */
+    public function allLinkedProducts()
+    {
+        return $this->linkedProducts->merge($this->linkedByProducts)->unique('id');
+    }
+
+    public function syncLinks(array $ids)
+    {
+        // Add new links without removing reverse links
+        $this->linkedProducts()->syncWithoutDetaching($ids);
+
+        // Remove unselected links safely
+        $this->linkedProducts()
+            ->whereNotIn('linked_product_id', $ids)
+            ->detach();
+
+        // Also save reverse links
+        foreach ($ids as $id) {
+            $p = Product::find($id);
+            if ($p) {
+                $p->linkedProducts()->syncWithoutDetaching([$this->id]);
+            }
+        }
+    }
+
+
 
     /**
      * Boot method to auto-generate SKU and barcode.
