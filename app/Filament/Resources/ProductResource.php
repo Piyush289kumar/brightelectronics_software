@@ -44,13 +44,12 @@ class ProductResource extends Resource
                         Forms\Components\Select::make('linkedProducts')
                             ->label('Linked Products')
                             ->multiple()
-                            ->relationship('linkedProducts', 'name')
+                            ->relationship('linkedProducts')
+                            ->getOptionLabelFromRecordUsing(fn($record) => "{$record->barcode} - {$record->name}")
                             ->preload()
-                            ->searchable()
                             ->helperText('Select products that are related to this product'),
 
-
-                             Forms\Components\Select::make('unit_id')
+                        Forms\Components\Select::make('unit_id')
                             ->label('Unit')
                             ->relationship('unit', 'name')
                             ->nullable(),
