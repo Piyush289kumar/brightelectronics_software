@@ -96,23 +96,46 @@ class JobCardResource extends Resource
                             ->searchable()
                             // Search endpoint — returns only in-stock matches
                             ->getSearchResultsUsing(function (string $search) {
-                                return Product::query()
+
+                                // 1. Find matching products by search
+                                $matches = Product::query()
+                                    ->with(['linkedProducts', 'linkedByProducts'])
                                     ->withSum('storeInventories as stock_qty', 'quantity')
                                     ->where(function ($q) use ($search) {
-                                        $q->where('name', 'like', "%{$search}%")
-                                            ->orWhere('sku', 'like', "%{$search}%")
-                                            ->orWhere('barcode', 'like', "%{$search}%");
-                                    })
-                                    ->get()
-                                    ->filter(function ($product) {
-                                        return ($product->stock_qty ?? 0) > 0; // only in-stock in search
-                                    })
+                                    $q->where('name', 'like', "%{$search}%")
+                                        ->orWhere('sku', 'like', "%{$search}%")
+                                        ->orWhere('barcode', 'like', "%{$search}%");
+                                })
+                                    ->get();
+
+                                // 2. Also include all linked products
+                                $allProducts = collect();
+
+                                foreach ($matches as $product) {
+                                    $allProducts->push($product);
+
+                                    // Add linked ones
+                                    $allProducts = $allProducts
+                                        ->merge($product->allLinkedProducts());
+                                }
+
+                                // 3. Remove duplicates
+                                $allProducts = $allProducts->unique('id');
+
+                                // 4. Only show items in stock
+                                $allProducts = $allProducts->filter(function ($product) {
+                                    return ($product->stock_qty ?? 0) > 0;
+                                });
+                                
+                                // 5. Return formatted results
+                                return $allProducts
                                     ->mapWithKeys(function ($product) {
-                                        $stock = $product->stock_qty ?? 0;
-                                        return [$product->id => "{$product->name} — Stock: {$stock}"];
-                                    })
+                                    $stock = $product->stock_qty ?? 0;
+                                    return [$product->id => "{$product->name} — Stock: {$stock}"];
+                                })
                                     ->toArray();
                             })
+
                             // Options shown when the select is opened — only in-stock products
                             ->options(function () {
                                 return Product::query()
@@ -262,7 +285,7 @@ class JobCardResource extends Resource
         $amount = round((float) ($get('amount') ?? 0), 2);
         $productIds = $get('product_id') ?? [];
         // Step 1: Product Expense
-        $expense = Product::whereIn('id', $productIds)->sum('selling_price');
+        $expense = Product::whereIn('id', $productIds)->sum('purchase_price');
         $expense = round($expense, 2);
         // Step 2: GST (not affecting price)
         $gstAmount = round(($amount * 18) / 100, 2);

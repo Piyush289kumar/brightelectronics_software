@@ -50,13 +50,17 @@ class ProductResource extends Resource
                             ->helperText('Select products that are related to this product'),
 
 
+                             Forms\Components\Select::make('unit_id')
+                            ->label('Unit')
+                            ->relationship('unit', 'name')
+                            ->nullable(),
+
                         Forms\Components\Select::make('brand_id')
                             ->label('Brand')
                             ->relationship('brand', 'name')
-                            ->searchable()
                             ->nullable(),
 
-                    ])->columns(5),
+                    ])->columns(3),
 
                 Forms\Components\Section::make('Category & Tax')
                     ->schema([
@@ -180,7 +184,7 @@ class ProductResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\ImageColumn::make('image_path')->disk('public')->square()->toggleable(),
+                Tables\Columns\TextColumn::make('barcode')->label('Part No.')->searchable()->sortable()->toggleable(),
                 Tables\Columns\TextColumn::make('name')->searchable()->sortable()->toggleable(),
                 Tables\Columns\TextColumn::make('sku')->searchable()->sortable()->toggleable(),
                 Tables\Columns\TextColumn::make('category.name')->label('Category')->sortable()->toggleable(),

@@ -10,6 +10,7 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Support\Str;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 class CategoryResource extends Resource
 {
@@ -22,9 +23,39 @@ class CategoryResource extends Resource
         return $form
             ->schema([
                 Forms\Components\Section::make('Basic Info')->schema([
-                    Forms\Components\TextInput::make('name')->required()->maxLength(255),
-                    Forms\Components\TextInput::make('code')->required()->unique(ignoreRecord: true)->maxLength(50),
-                    Forms\Components\TextInput::make('slug')->required()->unique(ignoreRecord: true)->maxLength(255),
+                    Forms\Components\TextInput::make('name')
+                        ->required()
+                        ->maxLength(255)
+                        // ->reactive() // << required so Filament reacts while typing
+                        ->lazy()
+                        ->afterStateUpdated(function ($state, callable $set) {
+
+                            if (!$state)
+                                return;
+
+                            // Generate slug
+                            $slug = Str::slug($state);
+
+                            // Generate unique code
+                            $code = strtoupper(Str::slug($state, ''));
+                            $code = $code . '-' . str_pad(rand(1, 9999), 4, '0', STR_PAD_LEFT);
+
+                            $set('slug', $slug);
+                            $set('code', $code);
+                        }),
+                    Forms\Components\TextInput::make('code')
+                        ->required()
+                        ->unique(ignoreRecord: true)
+                        ->maxLength(50)
+                        ->disabled()   // so user can see but not edit
+                        ->dehydrated(), // still save to DB
+
+                    Forms\Components\TextInput::make('slug')
+                        ->required()
+                        ->unique(ignoreRecord: true)
+                        ->maxLength(255)
+                        ->disabled()
+                        ->dehydrated(),
                     Forms\Components\Textarea::make('description')->rows(3),
                     Forms\Components\FileUpload::make('image_path')->image()->directory('categories'),
                 ])->columns(2),
