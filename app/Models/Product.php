@@ -73,6 +73,27 @@ class Product extends Model
         return $this->hasMany(StoreInventory::class);
     }
 
+
+    public function linkedProducts()
+{
+    return $this->belongsToMany(
+        Product::class,
+        'product_links',
+        'product_id',
+        'linked_product_id'
+    );
+}
+
+public function linkedByProducts()
+{
+    return $this->belongsToMany(
+        Product::class,
+        'product_links',
+        'linked_product_id',
+        'product_id'
+    );
+}
+
     /**
      * Boot method to auto-generate SKU and barcode.
      */

@@ -38,7 +38,16 @@ class ProductResource extends Resource
                         Forms\Components\TextInput::make('barcode')
                             ->label('Part Code/Number')
                             ->dehydrated()
+                            ->required()
                             ->unique(ignoreRecord: true),
+
+                        Forms\Components\Select::make('linkedProducts')
+                            ->label('Linked Products')
+                            ->multiple()
+                            ->relationship('linkedProducts', 'name')
+                            ->searchable()
+                            ->preload()
+                            ->helperText('Select related/compatible products'),
 
 
                         Forms\Components\Select::make('brand_id')
@@ -47,7 +56,7 @@ class ProductResource extends Resource
                             ->searchable()
                             ->nullable(),
 
-                    ])->columns(4),
+                    ])->columns(5),
 
                 Forms\Components\Section::make('Category & Tax')
                     ->schema([
@@ -124,9 +133,9 @@ class ProductResource extends Resource
 
                 Forms\Components\Section::make('Pricing')
                     ->schema([
-                        Forms\Components\TextInput::make('purchase_price')->numeric()->step(0.01)->required(),
-                        Forms\Components\TextInput::make('selling_price')->numeric()->step(0.01)->required(),
-                        Forms\Components\TextInput::make('mrp')->numeric()->step(0.01)->nullable(),
+                        Forms\Components\TextInput::make('purchase_price')->numeric()->step(0.01)->required()->default(0.00),
+                        Forms\Components\TextInput::make('selling_price')->numeric()->step(0.01)->required()->default(0.00),
+                        Forms\Components\TextInput::make('mrp')->numeric()->step(0.01)->nullable()->default(0.00),
                     ])->columns(3),
 
                 Forms\Components\Section::make('Stock Management')
@@ -139,7 +148,7 @@ class ProductResource extends Resource
                 Forms\Components\Section::make('Metadata')
                     ->schema([
                         Forms\Components\Toggle::make('is_active')->default(true),
-                        Forms\Components\FileUpload::make('image_path')
+                        Forms\Components\FileUpload::make('image_path')->label('Product Image')
                             ->disk('public')
                             ->directory('products')
                             ->image()
