@@ -36,6 +36,7 @@ class AccountResource extends Resource
 
                         Forms\Components\Select::make('account_type')
                             ->options([
+                                'current' => 'Current',
                                 'cash' => 'Cash',
                                 'bank' => 'Bank',
                                 'upi' => 'UPI',
@@ -43,7 +44,7 @@ class AccountResource extends Resource
                                 'other' => 'Other',
                             ])
                             ->required()
-                            ->default('bank')
+                            ->default('current')
                             ->label('Account Type'),
                     ]),
                 ])->collapsible(),
