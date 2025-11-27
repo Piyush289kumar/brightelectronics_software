@@ -22,7 +22,7 @@ class UserResource extends Resource
     protected static ?string $pluralLabel = 'Users';
 
 
-    
+
 
     public static function form(Form $form): Form
     {
@@ -63,6 +63,7 @@ class UserResource extends Resource
     public static function table(Table $table): Table
     {
         return $table->columns([
+            Tables\Columns\TextColumn::make('id')->label('ID')->searchable()->sortable(),
             Tables\Columns\TextColumn::make('name')->searchable()->sortable(),
             Tables\Columns\TextColumn::make('email')->searchable()->sortable(),
             Tables\Columns\TextColumn::make('store.name')->label('Store')->sortable(),
@@ -81,7 +82,7 @@ class UserResource extends Resource
             ->filters([])
             ->actions([
                 Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),                
+                Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\DeleteBulkAction::make(),
