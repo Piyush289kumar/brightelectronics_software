@@ -123,15 +123,6 @@ class ComplainResource extends Resource
                         ->options(User::role('Engineer')->pluck('name', 'id')->toArray())
                         ->default(fn() => [Auth::id()])
                         ->disabled(fn() => !auth()->user()->hasAnyRole(['Administrator', 'Store Manager', 'Team Lead'])),
-                    Forms\Components\Select::make('status')
-                        ->label('Status')
-                        ->options([
-                            'Pending' => 'Pending',
-                            'In Progress' => 'In Progress',
-                            'Completed' => 'Completed',
-                            'Cancelled' => 'Cancelled',
-                        ])
-                        ->default('Pending'),
                 ])
                 ->columns(3),
         ]);

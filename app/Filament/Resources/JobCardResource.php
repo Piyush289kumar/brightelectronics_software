@@ -126,7 +126,7 @@ class JobCardResource extends Resource
                                 $allProducts = $allProducts->filter(function ($product) {
                                     return ($product->stock_qty ?? 0) > 0;
                                 });
-                                
+
                                 // 5. Return formatted results
                                 return $allProducts
                                     ->mapWithKeys(function ($product) {
@@ -252,6 +252,17 @@ class JobCardResource extends Resource
                                             ->reactive()
                                             ->suffixIcon('heroicon-o-currency-rupee')
                                             ->extraAttributes(['class' => 'text-blue-600 font-semibold']),
+
+                                        Forms\Components\Select::make('status')
+                                            ->label('Status')
+                                            ->options([
+                                                'Pending' => 'Pending',
+                                                'In Progress' => 'In Progress',
+                                                'Completed' => 'Completed',
+                                                'Cancelled' => 'Cancelled',
+                                            ])
+                                            ->default('Pending'),
+
                                         Forms\Components\Toggle::make('job_verified_by_admin')
                                             ->label('Verified by Admin')
                                             ->onColor('success')
@@ -341,7 +352,7 @@ class JobCardResource extends Resource
                     ->label('Status')
                     ->badge()
                     ->color(fn($state) => match ($state) {
-                        'Open' => 'warning',
+                        'Pending' => 'warning',
                         'In Progress' => 'info',
                         'Completed' => 'success',
                         'Cancelled' => 'danger',
