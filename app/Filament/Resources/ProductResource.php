@@ -118,7 +118,7 @@ class ProductResource extends Resource
 
                         Grid::make(3)
                             ->schema([
-                                Forms\Components\TextInput::make('hsn_code')
+                                Forms\Components\TextInput::make('hsn_code')->label('Model No.')
                                     ->maxLength(8),
 
                                 Forms\Components\Select::make('tax_slab_id')
@@ -184,6 +184,7 @@ class ProductResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('barcode')->label('Part No.')->searchable()->sortable()->toggleable(),
+                Tables\Columns\TextColumn::make('hsn_code')->label('Model No.')->searchable()->sortable()->toggleable(),
                 Tables\Columns\TextColumn::make('name')->searchable()->sortable()->toggleable(),
                 Tables\Columns\TextColumn::make('sku')->searchable()->sortable()->toggleable(),
                 Tables\Columns\TextColumn::make('category.name')->label('Category')->sortable()->toggleable(),
