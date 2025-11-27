@@ -782,6 +782,14 @@ HTML;
                 ExportBulkAction::make()->label('Export'),
             ]);
     }
+
+    public static function getRelations(): array
+    {
+        return [
+            \App\Filament\Resources\ComplainRelationManagerResource\RelationManagers\JobCardResourceRelationManager::class,
+        ];
+    }
+
     public static function getPages(): array
     {
         return [
