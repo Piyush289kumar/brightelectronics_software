@@ -30,7 +30,9 @@ class ProductVendorResource extends Resource
         return $form
             ->schema([
                 Forms\Components\Select::make('product_id')
-                    ->relationship('product', 'name')
+                    ->relationship('product', 'barcode')
+                    ->label('Product Part No.')
+                    ->searchable()
                     ->required(),
                 Forms\Components\Select::make('vendor_id')
                     ->relationship('vendor', 'name')
