@@ -18,7 +18,7 @@ class FloorResource extends Resource
     protected static ?string $model = Floor::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
-    protected static ?string $navigationGroup = 'Stores';
+    protected static ?string $navigationGroup = 'Branches';
     protected static ?string $label = 'Floor';
     protected static ?string $pluralLabel = 'Floors';
     protected static ?int $navigationSort = 6;

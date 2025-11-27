@@ -30,7 +30,7 @@ class StoreInventoryInResource extends Resource
 {
     protected static ?string $model = StoreInventoryIn::class;
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
-    protected static ?string $navigationGroup = 'Stores';
+    protected static ?string $navigationGroup = 'Branches';
     protected static ?string $navigationLabel = 'Stock In';
     protected static ?int $navigationSort = 12;
 
