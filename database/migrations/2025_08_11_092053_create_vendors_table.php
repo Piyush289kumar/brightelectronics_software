@@ -16,6 +16,14 @@ return new class extends Migration {
             $table->string('contact_person')->nullable();
             $table->string('phone')->nullable();
             $table->string('email')->nullable();
+
+            $table->string('account_holder_name')->nullable();
+            $table->string('bank_name')->nullable();
+            $table->string('account_number')->nullable();
+            $table->string('ifsc_code')->nullable();
+            $table->string('account_type')->nullable(); // savings/current
+            $table->string('branch_name')->nullable();
+
             $table->string('gst_number', 15)->nullable();
             $table->string('pan_number', 10)->nullable();
             $table->string('address')->nullable();

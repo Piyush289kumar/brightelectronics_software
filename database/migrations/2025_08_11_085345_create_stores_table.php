@@ -21,6 +21,15 @@ return new class extends Migration {
             $table->string('pincode', 6)->nullable(); // Indian PIN code
             $table->string('country')->default('India');
 
+            // Accounting Details
+
+            $table->string('account_holder_name')->nullable();
+            $table->string('bank_name')->nullable();
+            $table->string('account_number')->nullable();
+            $table->string('ifsc_code')->nullable();
+            $table->string('account_type')->nullable(); // savings/current
+            $table->string('branch_name')->nullable();
+
             // GST & Tax Info
             $table->string('gst_number', 15)->nullable(); // GSTIN format: 15 chars
             $table->string('pan_number', 10)->nullable(); // PAN for store entity

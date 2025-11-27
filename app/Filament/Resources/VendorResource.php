@@ -38,6 +38,35 @@ class VendorResource extends Resource
                         Forms\Components\TextInput::make('email')->email()->maxLength(255),
                     ])->columns(2),
 
+
+                Forms\Components\Section::make('Account Details')
+                    ->schema([
+                        // Banking/Account Details
+                        Forms\Components\TextInput::make('account_holder_name')
+                            ->label('Account Holder Name')
+                            ->maxLength(255),
+                        Forms\Components\TextInput::make('bank_name')
+                            ->label('Bank Name')
+                            ->maxLength(255),
+                        Forms\Components\TextInput::make('account_number')
+                            ->label('Account Number')
+                            ->maxLength(20),
+                        Forms\Components\TextInput::make('ifsc_code')
+                            ->label('IFSC Code')
+                            ->maxLength(20),
+                        Forms\Components\Select::make('account_type')
+                            ->label('Account Type')
+                            ->options([
+                                'savings' => 'Savings',
+                                'current' => 'Current',
+                            ]),
+                        Forms\Components\TextInput::make('branch_name')
+                            ->label('Branch Name')
+                            ->maxLength(255),
+                    ])
+                    ->columns(2)
+                    ->collapsible(),
+
                 Forms\Components\Section::make('Tax Details')
                     ->schema([
                         Forms\Components\TextInput::make('gst_number')->maxLength(15),
