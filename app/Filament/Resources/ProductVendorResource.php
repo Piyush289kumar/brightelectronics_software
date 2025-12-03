@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\ProductVendorResource\Pages;
 use App\Filament\Resources\ProductVendorResource\RelationManagers;
+use App\Models\Product;
 use App\Models\ProductVendor;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -32,7 +33,13 @@ class ProductVendorResource extends Resource
                 Forms\Components\Select::make('product_id')
                     ->relationship('product', 'barcode')
                     ->label('Product Part No.')
+                    ->options(
+                        Product::all()->mapWithKeys(
+                            fn($p) => [$p->id => $p->name . ' (' . $p->barcode . ')']
+                        )
+                    )
                     ->searchable()
+                    ->preload()
                     ->required(),
                 Forms\Components\Select::make('vendor_id')
                     ->relationship('vendor', 'name')
@@ -113,8 +120,8 @@ class ProductVendorResource extends Resource
     {
         return [
             'index' => Pages\ListProductVendors::route('/'),
-            'create' => Pages\CreateProductVendor::route('/create'),
-            'edit' => Pages\EditProductVendor::route('/{record}/edit'),
+            // 'create' => Pages\CreateProductVendor::route('/create'),
+            // 'edit' => Pages\EditProductVendor::route('/{record}/edit'),
         ];
     }
 }

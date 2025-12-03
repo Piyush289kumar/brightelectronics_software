@@ -86,7 +86,7 @@ class ComplainResource extends Resource
                         ->required(),
 
                     Forms\Components\Select::make('product_id')
-                        ->label('Products')
+                        ->label('Devices')
                         ->multiple()
                         ->options(
                             \App\Models\Product::all()->mapWithKeys(
