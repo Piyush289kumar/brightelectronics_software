@@ -166,49 +166,52 @@ class JobCardResourceRelationManager extends RelationManager
                 Tables\Columns\TextColumn::make('complain_id')->label('Complain ID')->sortable(),
                 Tables\Columns\TextColumn::make('name')->label('Customer Name')->sortable(),
                 Tables\Columns\TextColumn::make('mobile')->label('Phone')->sortable(),
-                Tables\Columns\TextColumn::make('customer_email')->label('Email')->sortable(),
-                Tables\Columns\TextColumn::make('address')->label('Address')->sortable(),
-
+                // Tables\Columns\TextColumn::make('customer_email')->label('Email')->sortable(),
+                // Tables\Columns\TextColumn::make('address')->label('Address')->sortable(),
                 Tables\Columns\TextColumn::make('leadSource.lead_name')->label('Lead Source')->sortable(),
+                // Tables\Columns\TextColumn::make('device')
+                //     ->label('Device')
+                //     ->formatStateUsing(fn($state) => is_array($state) ? implode(', ', $state) : $state)
+                //     ->sortable(),
 
-                Tables\Columns\TextColumn::make('device')
-                    ->label('Device')
-                    ->formatStateUsing(fn($state) => is_array($state) ? implode(', ', $state) : $state)
-                    ->sortable(),
-
-                Tables\Columns\TextColumn::make('service_type')
-                    ->label('Service Type')
-                    ->formatStateUsing(fn($state) => is_array($state) ? implode(', ', $state) : $state)
-                    ->sortable(),
+                // Tables\Columns\TextColumn::make('service_type')
+                //     ->label('Service Type')
+                //     ->formatStateUsing(fn($state) => is_array($state) ? implode(', ', $state) : $state)
+                //     ->sortable(),
 
                 Tables\Columns\TextColumn::make('first_action_code')->label('First Action Code')->sortable(),
-                Tables\Columns\TextColumn::make('rsd_time')->label('RSD Time')->sortable(),
-                Tables\Columns\TextColumn::make('cancel_reason')->label('Cancel Reason')->sortable(),
+                // Tables\Columns\TextColumn::make('rsd_time')->label('RSD Time')->sortable(),
+                // Tables\Columns\TextColumn::make('cancel_reason')->label('Cancel Reason')->sortable(),
                 Tables\Columns\TextColumn::make('status')->label('Status')->sortable(),
 
                 Tables\Columns\TextColumn::make('estimate_repair_amount')->label('Estimate Repair Amount')->money('usd')->sortable(),
                 Tables\Columns\TextColumn::make('estimate_new_amount')->label('Estimate New Amount')->money('usd')->sortable(),
 
-                Tables\Columns\TextColumn::make('assigner.name')->label('Assigned By')->sortable(),
-                
-                Tables\Columns\TextColumn::make('assigned_engineers')
-                    ->label('Assigned Engineers')
-                    ->formatStateUsing(function ($state) {
-                        if (is_array($state)) {
-                            return User::whereIn('id', $state)
-                                ->pluck('name') // get names
-                                ->implode(', '); // convert to comma-separated string
-                        }
-                        return $state;
-                    })
-                    ->sortable(),
+                // Tables\Columns\TextColumn::make('assigner.name')->label('Assigned By')->sortable(),
+
+                // Tables\Columns\TextColumn::make('assigned_engineers')
+                //     ->label('Assigned Engineers')
+                //     ->formatStateUsing(function ($state) {
+                //         if (is_array($state)) {
+                //             return User::whereIn('id', $state)
+                //                 ->pluck('name') // get names
+                //                 ->implode(', '); // convert to comma-separated string
+                //         }
+                //         return $state;
+                //     })
+                //     ->sortable(),
 
                 Tables\Columns\TextColumn::make('created_at')->label('Created At')->dateTime()->sortable(),
                 Tables\Columns\TextColumn::make('updated_at')->label('Updated At')->dateTime()->sortable(),
             ])
             ->actions([
-                Tables\Actions\EditAction::make()
-                    ->visible(fn() => Auth::user()?->isAdmin()), // Only visible to admin
+                Tables\Actions\ActionGroup::make([
+                    Tables\Actions\ViewAction::make()
+                        ->visible(fn() => Auth::user()?->isAdmin()), // Only visible to admin
+                    Tables\Actions\EditAction::make()
+                        ->visible(fn() => Auth::user()?->isAdmin()), // Only visible to admin
+                ])->label('Actions'),
+
             ])
             ->bulkActions([]);
     }
