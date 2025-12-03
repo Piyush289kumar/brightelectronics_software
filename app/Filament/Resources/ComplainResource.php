@@ -84,6 +84,19 @@ class ComplainResource extends Resource
                             )
                         )
                         ->required(),
+
+                    Forms\Components\Select::make('product_id')
+                        ->label('Products')
+                        ->multiple()
+                        ->options(
+                            \App\Models\Product::all()->mapWithKeys(
+                                fn($p) => [$p->id => $p->name . ' (' . $p->barcode . ')']
+                            )
+                        )->searchable()
+                        ->preload()
+                        ->required(),
+
+
                     Forms\Components\Select::make('first_action_code')
                         ->label('First Action Code')
                         ->options([

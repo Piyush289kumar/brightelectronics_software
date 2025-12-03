@@ -20,6 +20,7 @@ class Complain extends Model
         'google_map_location',
         'lead_source_id',
         'complain_id',
+        'product_id',
         'device',
         'size',
         'service_type',
@@ -56,10 +57,10 @@ class Complain extends Model
         return $this->hasOne(JobCard::class);
     }
 
-    // public function products()
-    // {
-    //     return $this->belongsToMany(Product::class);
-    // }
+    public function products()
+    {
+        return $this->belongsToMany(Product::class);
+    }
 
     public function assigner()
     {
