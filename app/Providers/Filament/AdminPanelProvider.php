@@ -84,5 +84,6 @@ class AdminPanelProvider extends PanelProvider
             ->sidebarCollapsibleOnDesktop()
             ->collapsedSidebarWidth('9rem')
             ->sidebarWidth('16rem');
+            // ->topNavigation();
     }
 }
