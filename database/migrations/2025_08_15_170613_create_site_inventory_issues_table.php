@@ -13,6 +13,7 @@ return new class extends Migration {
         Schema::create('site_inventory_issues', function (Blueprint $table) {
             $table->id();
             $table->foreignId('store_id')->constrained()->restrictOnDelete();
+            $table->foreignId('job_card_id')->constrained()->restrictOnDelete();
             $table->foreignId('site_id')->constrained()->restrictOnDelete();
             $table->foreignId('issued_by')->constrained('users')->restrictOnDelete();
 

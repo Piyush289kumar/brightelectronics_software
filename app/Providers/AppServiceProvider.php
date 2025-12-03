@@ -30,7 +30,7 @@ class AppServiceProvider extends ServiceProvider
         StoreInventory::observe(StoreInventoryObserver::class);
         Inventory::observe(InventoryObserver::class);
         Complain::observe(ComplainObserver::class);
-        // FilamentDocs::header('filament.header');
+        FilamentDocs::header('filament.header');
         // FilamentDocs::footer('filament.footer');
     }
 

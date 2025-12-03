@@ -6,6 +6,6 @@
 
 
 <div style="text-align:center; width:100%;">
-    <img src="https://billing.vipprow.com/public/images/document_header.jpg" alt="Header Logo"
+    <img src="https://seashell-mandrill-170694.hostingersite.com/public/assets/beheader.jpg" alt="Header Logo"
         style="width:100%; height:120px;">
 </div>

@@ -40,25 +40,13 @@ class SiteInventoryIssueResource extends Resource
                         ->disabled(fn() => Auth::user()?->isStoreManager())
                         ->dehydrated(), // <-- ensures value is saved even when disabled
 
-                    Select::make('site_id')
-                        ->label('Site')
+                    Select::make('job_card_id')
+                        ->label(label: 'Job Card')
+                        ->relationship('jobCard', 'job_id') // 👈 use jobCard here
                         ->required()
                         ->searchable()
                         ->preload()
-                        ->reactive()
-                        ->options(function (callable $get) {
-                            $storeId = $get('store_id');
-
-                            if (!$storeId) {
-                                return [];
-                            }
-
-                            return \App\Models\Site::query()
-                                ->where('store_id', $storeId)
-                                ->pluck('name', 'id')
-                                ->toArray();
-                        })
-                        ->default(fn() => Auth::user()?->isStoreManager() ? Auth::user()->site_id : null),
+                        ->reactive(),
 
                     Select::make('issued_by')
                         ->label('Issued By')

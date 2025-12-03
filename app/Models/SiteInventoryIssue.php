@@ -12,6 +12,7 @@ class SiteInventoryIssue extends Model
 
     protected $fillable = [
         'store_id',
+        'job_card_id',
         'site_id',
         'issued_by',
         'status',
@@ -26,6 +27,11 @@ class SiteInventoryIssue extends Model
     public function store()
     {
         return $this->belongsTo(Store::class);
+    }
+
+    public function jobCard()
+    {
+        return $this->belongsTo(JobCard::class);
     }
 
     public function site()
