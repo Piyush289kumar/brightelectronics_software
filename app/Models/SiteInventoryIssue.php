@@ -34,10 +34,10 @@ class SiteInventoryIssue extends Model
         return $this->belongsTo(JobCard::class);
     }
 
-    public function site()
-    {
-        return $this->belongsTo(Site::class);
-    }
+    // public function site()
+    // {
+    //     return $this->belongsTo(Site::class);
+    // }
 
     public function issuer()
     {
@@ -49,4 +49,10 @@ class SiteInventoryIssue extends Model
     {
         return $this->hasMany(SiteInventoryIssueItem::class);
     }
+
+    public function returnedBy()
+    {
+        return $this->belongsTo(User::class, 'returned_by');
+    }
+
 }

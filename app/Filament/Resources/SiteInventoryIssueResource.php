@@ -42,7 +42,7 @@ class SiteInventoryIssueResource extends Resource
 
                     Select::make('job_card_id')
                         ->label(label: 'Job Card')
-                        ->relationship('jobCard', 'job_id') // 👈 use jobCard here
+                        ->relationship('jobCard', 'job_id')
                         ->required()
                         ->searchable()
                         ->preload()
@@ -63,33 +63,24 @@ class SiteInventoryIssueResource extends Resource
                     Repeater::make('items')
                         ->relationship()
                         ->schema([
+
                             Select::make('product_id')
                                 ->label('Product')
                                 ->relationship('product', 'name')
                                 ->required()
                                 ->searchable()
-                                ->reactive(), // reactive so we can get its value for max
+                                ->preload()
+                                ->reactive(),
 
+                            // ----------------------------------------------------
+                            //  ISSUED QUANTITY (Only editable while issuing)
+                            // ----------------------------------------------------
                             TextInput::make('quantity')
+                                ->label('Issued Qty')
                                 ->numeric()
                                 ->minValue(1)
                                 ->required()
-                                ->maxValue(function (callable $get, $set, $record) {
-                                    $storeId = $get('../../store_id'); // get the store_id from the parent form
-                                    $productId = $get('product_id');
-
-                                    if (!$storeId || !$productId) {
-                                        return null; // no limit if store or product not selected yet
-                                    }
-
-                                    // fetch current stock from StoreInventory
-                                    $inventory = \App\Models\StoreInventory::where('store_id', $storeId)
-                                        ->where('product_id', $productId)
-                                        ->first();
-
-                                    return $inventory?->quantity ?? 0; // maxValue = available stock
-                                })
-                                ->helperText(function (callable $get) {
+                                ->maxValue(function (callable $get) {
                                     $storeId = $get('../../store_id');
                                     $productId = $get('product_id');
 
@@ -101,15 +92,47 @@ class SiteInventoryIssueResource extends Resource
                                         ->where('product_id', $productId)
                                         ->first();
 
-                                    $qty = $inventory?->quantity ?? 0;
+                                    return $inventory?->quantity ?? 0;
+                                })
+                                ->helperText(function (callable $get) {
+                                    $storeId = $get('../../store_id');
+                                    $productId = $get('product_id');
+                                    if (!$storeId || !$productId)
+                                        return null;
 
-                                    return "Available stock: {$qty}";
-                                }),
+                                    $inventory = \App\Models\StoreInventory::where('store_id', $storeId)
+                                        ->where('product_id', $productId)
+                                        ->first();
+
+                                    return "Available stock: " . ($inventory?->quantity ?? 0);
+                                })
+                                ->disabled(fn(callable $get) => $get('../../status') === 'returned'), // ❌ cannot edit when returning
+
+
+                            // ----------------------------------------------------
+                            //  RETURN QUANTITY (Visible only when Returning)
+                            // ----------------------------------------------------
+                            TextInput::make('return_qty')
+                                ->label('Return Qty')
+                                ->numeric()
+                                ->minValue(0)
+                                ->maxValue(
+                                    fn(callable $get) =>
+                                    $get('quantity') ?? 0 // cannot return more than issued
+                                )
+                                ->helperText(
+                                    fn(callable $get) =>
+                                    "Issued: " . ($get('quantity') ?? 0)
+                                ),
 
                             Textarea::make('notes')->rows(1),
                         ])
                         ->columns(3)
-                        ->required(),
+                        ->required()
+                        ->visible(
+                            fn() =>
+                            auth()->user()->hasAnyRole(['Administrator', 'Store Manager', 'Team Lead'])
+                        )
 
                 ]),
             ]);
