@@ -52,6 +52,12 @@ class PaymentAdvice extends Model
         return $this->belongsTo(Invoice::class, 'invoice_id');
     }
 
+    public function items()
+    {
+        return $this->hasMany(PaymentAdviceItem::class);
+    }
+
+
     /*
     |--------------------------------------------------------------------------
     | Auto-generate Payment Document No

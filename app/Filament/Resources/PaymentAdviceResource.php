@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Resources\PaymentAdviceItemResource\RelationManagers\ItemsRelationManager;
 use App\Filament\Resources\PaymentAdviceResource\Pages;
 use App\Filament\Resources\PaymentAdviceResource\RelationManagers;
 use App\Models\Invoice;
@@ -43,7 +44,7 @@ class PaymentAdviceResource extends Resource
                             ->searchable()
                             ->required()
                             ->reactive()
-                            ->afterStateUpdated(fn($set) => $set('po_data', [])),
+                            ->afterStateUpdated(fn($set) => $set('meta', [])),
                     ])->columns(2),
 
                 Forms\Components\Section::make("Filter Purchase Orders")
@@ -69,8 +70,7 @@ class PaymentAdviceResource extends Resource
                                     ->button()
                                     ->color('success')
                                     ->icon('heroicon-o-arrow-down-tray')
-                                    ->extraAttributes(['class' => 'w-full mt-6'])
-                                    ->action(function (callable $get, callable $set) {
+                                    ->extraAttributes(['class' => 'w-full mt-6'])->action(function (callable $get, callable $set) {
 
                                         $vendorId = $get('vendor_id');
                                         $startDate = $get('start_date');
@@ -106,19 +106,19 @@ class PaymentAdviceResource extends Resource
                                             ];
                                         }
 
-                                        $set("po_data", $rows);
+                                        $set("items_data", $rows);
                                     }),
                             ])->alignment('right'),
 
                         ]),
 
+
+
                     ])->columns(1),
 
-                Forms\Components\Section::make("Purchase Advice Rows")
+                Forms\Components\Section::make("Purchase Advice Items")
                     ->schema([
-
-                        Forms\Components\Repeater::make('meta')
-                            ->statePath('po_data')
+                        Forms\Components\Repeater::make('items_data')
                             ->schema([
                                 Forms\Components\TextInput::make("sr_no")->label("Sr No")->disabled(),
                                 Forms\Components\DatePicker::make("po_date")->label("PO Date")->disabled(),
@@ -127,8 +127,10 @@ class PaymentAdviceResource extends Resource
                                 Forms\Components\TextInput::make("amount")->numeric()->label("Amount")->disabled(),
                                 Forms\Components\TextInput::make("payment_doc_no")->label("Payment Doc No")->disabled(),
                             ])
-                            ->columns(6),
+                            ->columns(6)
+                            ->default([])
                     ]),
+
             ]);
     }
 
@@ -147,6 +149,7 @@ class PaymentAdviceResource extends Resource
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -158,7 +161,7 @@ class PaymentAdviceResource extends Resource
     public static function getRelations(): array
     {
         return [
-            //
+            ItemsRelationManager::class,
         ];
     }
 

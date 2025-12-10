@@ -10,26 +10,22 @@ class CreatePaymentAdvice extends CreateRecord
 {
     protected static string $resource = PaymentAdviceResource::class;
 
-    protected function mutateFormDataBeforeCreate(array $data): array
+    protected function afterCreate(): void
     {
-        // po_data contains the repeater rows
-        $rows = $data['po_data'] ?? [];
+        $items = $this->data['items_data'] ?? [];
 
-        if (!empty($rows)) {
-
-            $first = $rows[0];
-
-            $data['purchase_order_id'] = $first['po_id'] ?? null;
-            $data['invoice_id'] = $first['invoice_id'] ?? null;
-            $data['invoice_amount'] = $first['amount'] ?? 0;
-            $data['payment_doc_no'] = $first['payment_doc_no'] ?? null;
-
-            // Save full rows into meta
-            $data['meta'] = $rows;
+        foreach ($items as $row) {
+            $this->record->items()->create([
+                'purchase_order_id' => $row['po_id'],
+                'invoice_id' => $row['invoice_id'],
+                'amount' => $row['amount'],
+                'payment_doc_no' => $row['payment_doc_no'],
+                'po_date' => $row['po_date'],
+                'invoice_no' => $row['invoice_no'],
+            ]);
         }
-
-        return $data;
     }
+
 
 
 }

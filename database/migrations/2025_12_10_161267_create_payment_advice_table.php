@@ -18,7 +18,7 @@ return new class extends Migration {
             $table->string('invoice_id')->nullable();
             $table->decimal('invoice_amount', 12, 2)->default(0);
             $table->string('payment_doc_no')->nullable();
-            $table->json('meta');
+            $table->json('meta')->nullable();
             $table->timestamps();
         });
     }
