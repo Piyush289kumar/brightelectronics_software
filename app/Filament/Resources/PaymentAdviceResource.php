@@ -27,111 +27,89 @@ class PaymentAdviceResource extends Resource
 
     public static function form(Form $form): Form
     {
-        return $form
-            ->schema([
+        return $form->schema([
 
-                Forms\Components\Section::make("Basic Details")
-                    ->schema([
-                        Forms\Components\DatePicker::make('date')
-                            ->label('Payment Advice Date')
-                            ->default(now())
-                            ->required()
-                            ->columnSpan(1),
+            Forms\Components\Section::make('Payment Advice')
+                ->schema([
+                    Forms\Components\DatePicker::make('date')
+                        ->label('Payment Date')
+                        ->required()
+                        ->default(now()),
 
-                        Forms\Components\Select::make("vendor_id")
-                            ->label("Vendor")
-                            ->options(Vendor::pluck("name", "id"))
-                            ->searchable()
-                            ->required()
-                            ->reactive()
-                            ->afterStateUpdated(fn($set) => $set('meta', [])),
-                    ])->columns(2),
+                    Forms\Components\Select::make('vendor_id')
+                        ->label('Vendor')
+                        ->options(Vendor::pluck('name', 'id'))
+                        ->searchable()
+                        ->required(),
+                    Forms\Components\DatePicker::make('payment_advice_start_date')
+                        ->label('Start Date')
+                        ->default(now()->subDays(7))   // ⬅️ 7 days previous
+                        ->required(),
 
-                Forms\Components\Section::make("Filter Purchase Orders")
-                    ->schema([
+                    Forms\Components\DatePicker::make('payment_advice_end_date')
+                        ->label('End Date')
+                        ->default(now())               // ⬅️ today
+                        ->required(),
+                    Forms\Components\Actions::make([
+                        Forms\Components\Actions\Action::make('load_po')
+                            ->label('Load Purchase Orders')
+                            ->color('success')
+                            ->extraAttributes(['class' => 'w-full mt-6'])
+                            ->action(function ($get, $set) {
 
-                        Forms\Components\Grid::make(3)->schema([
-                            Forms\Components\DatePicker::make("start_date")
-                                ->label("Start Date")
-                                ->required()
-                                ->reactive()
-                                ->afterStateUpdated(fn($set) => $set('po_data', [])),
+                                $vendorId = $get('vendor_id');
+                                $start = $get('payment_advice_start_date');
+                                $end = $get('payment_advice_end_date');
 
-                            Forms\Components\DatePicker::make("end_date")
-                                ->label("End Date")
-                                ->required()
-                                ->reactive()
-                                ->afterStateUpdated(fn($set) => $set('po_data', [])),
+                                if (!$vendorId || !$start || !$end) {
+                                    return;
+                                }
 
+                                // 🔒 Already used PO IDs
+                                $usedPoIds = \App\Models\PaymentAdviceItem::pluck('purchase_order_id')->toArray();
 
-                            Forms\Components\Actions::make([
-                                Forms\Components\Actions\Action::make('load_purchase_orders')
-                                    ->label('Load Purchase Orders')
-                                    ->button()
-                                    ->color('success')
-                                    ->icon('heroicon-o-arrow-down-tray')
-                                    ->extraAttributes(['class' => 'w-full mt-6'])->action(function (callable $get, callable $set) {
+                                // ✅ Fetch ONLY unused Purchase Orders
+                                $pos = Invoice::query()
+                                    ->where('document_type', 'purchase_order')
+                                    ->where('billable_id', $vendorId)
+                                    ->whereBetween('document_date', [$start, $end])
+                                    ->whereNotIn('id', $usedPoIds) // ⭐ KEY LINE
+                                    ->get();
 
-                                        $vendorId = $get('vendor_id');
-                                        $startDate = $get('start_date');
-                                        $endDate = $get('end_date');
+                                $rows = [];
 
-                                        if (!$vendorId || !$startDate || !$endDate) {
-                                            return;
-                                        }
+                                foreach ($pos as $po) {
+                                    $rows[] = [
+                                        'purchase_order_id' => $po->id,
+                                        'po_date' => $po->document_date,
+                                        'po_number' => $po->number,
+                                        'amount' => $po->total_amount,
+                                        'payment_doc_no' => 0,
+                                    ];
+                                }
 
-                                        $pos = Invoice::where("document_type", "purchase_order")
-                                            ->where("billable_id", $vendorId)
-                                            ->whereBetween("document_date", [$startDate, $endDate])
-                                            ->get();
-
-                                        $rows = [];
-                                        $i = 1;
-
-                                        foreach ($pos as $po) {
-                                            $invoice = Invoice::where("billable_id", $po->billable_id)
-                                                ->where("document_type", "invoice")
-                                                ->orderBy("id")
-                                                ->first();
-
-                                            $rows[] = [
-                                                "sr_no" => $i++,
-                                                "po_id" => $po->id,
-                                                "invoice_id" => $invoice?->id,
-                                                "po_date" => $po->document_date,
-                                                "po_number" => $po->number,
-                                                "invoice_no" => $invoice?->number ?? null,
-                                                "amount" => $invoice?->total_amount ?? 0,
-                                                "payment_doc_no" => "PAD-" . str_pad($po->id, 4, "0", STR_PAD_LEFT),
-                                            ];
-                                        }
-
-                                        $set("items_data", $rows);
-                                    }),
-                            ])->alignment('right'),
-
-                        ]),
-
-
-
-                    ])->columns(1),
-
-                Forms\Components\Section::make("Purchase Advice Items")
-                    ->schema([
-                        Forms\Components\Repeater::make('items_data')
-                            ->schema([
-                                Forms\Components\TextInput::make("sr_no")->label("Sr No")->disabled(),
-                                Forms\Components\DatePicker::make("po_date")->label("PO Date")->disabled(),
-                                Forms\Components\TextInput::make("po_number")->label("PO Number")->disabled(),
-                                Forms\Components\TextInput::make("invoice_no")->label("Invoice No")->disabled(),
-                                Forms\Components\TextInput::make("amount")->numeric()->label("Amount")->disabled(),
-                                Forms\Components\TextInput::make("payment_doc_no")->label("Payment Doc No")->disabled(),
-                            ])
-                            ->columns(6)
-                            ->default([])
+                                $set('items_data', $rows);
+                            }),
                     ]),
 
-            ]);
+                ])
+                ->columns(5),
+
+            Forms\Components\Section::make('Payment Advice Items')
+                ->visible(fn(string $operation) => $operation === 'create')
+                ->schema([
+                    Forms\Components\Repeater::make('items_data')
+                        ->visible(fn(string $operation) => $operation === 'create')
+                        ->schema([
+                            Forms\Components\DatePicker::make('po_date')->label('PON Date')->disabled(),
+                            Forms\Components\TextInput::make('po_number')->label('PON')->disabled(),
+                            Forms\Components\TextInput::make('invoice')->label('Invoice No.'),
+                            Forms\Components\TextInput::make('amount')->label('Invoice Amount'),
+                            Forms\Components\TextInput::make('payment_doc_no')->default(0)->label('Payment doc no.'),
+                        ])
+                        ->columns(5),
+                ])
+        ]);
     }
 
 

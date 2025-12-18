@@ -16,12 +16,12 @@ class CreatePaymentAdvice extends CreateRecord
 
         foreach ($items as $row) {
             $this->record->items()->create([
-                'purchase_order_id' => $row['po_id'],
-                'invoice_id' => $row['invoice_id'],
+                'purchase_order_id' => $row['purchase_order_id'],
+                'po_date' => $row['po_date'],
+                // 'invoice_id' => $row['invoice_id'],ss
+                'invoice_no' => $row['po_number'],
                 'amount' => $row['amount'],
                 'payment_doc_no' => $row['payment_doc_no'],
-                'po_date' => $row['po_date'],
-                'invoice_no' => $row['invoice_no'],
             ]);
         }
     }

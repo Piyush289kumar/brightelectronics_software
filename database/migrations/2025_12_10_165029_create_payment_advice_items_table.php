@@ -15,10 +15,12 @@ return new class extends Migration {
 
             $table->foreignId('payment_advice_id')->constrained('payment_advices')->cascadeOnDelete();
             $table->foreignId('purchase_order_id')->constrained('invoices')->cascadeOnDelete();
+            
+            $table->date('po_date')->nullable();
             $table->foreignId('invoice_id')->nullable()->constrained('invoices')->nullOnDelete();
             $table->decimal('amount', 12, 2)->default(0);
             $table->string('payment_doc_no')->nullable();
-            $table->date('po_date')->nullable();
+            
             $table->string('invoice_no')->nullable();
             $table->json('meta')->nullable();
             $table->timestamps();

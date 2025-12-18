@@ -14,6 +14,8 @@ class PaymentAdvice extends Model
 
     protected $fillable = [
         'date',
+        'payment_advice_start_date',
+        'payment_advice_end_date',
         'vendor_id',
         'purchase_order_id',
         'invoice_id',
@@ -24,6 +26,8 @@ class PaymentAdvice extends Model
 
     protected $casts = [
         'date' => 'date',
+        'payment_advice_start_date' => 'date',
+        'payment_advice_end_date' => 'date',
         'meta' => 'array',
         'invoice_amount' => 'decimal:2',
     ];
@@ -64,15 +68,4 @@ class PaymentAdvice extends Model
     |--------------------------------------------------------------------------
     */
 
-    protected static function booted()
-    {
-        static::creating(function ($paymentAdvice) {
-            if (empty($paymentAdvice->payment_doc_no)) {
-                $nextId = static::max('id') + 1;
-
-                // Example Format: PAD-0001
-                $paymentAdvice->payment_doc_no = 'PAD-' . str_pad($nextId, 4, '0', STR_PAD_LEFT);
-            }
-        });
-    }
 }

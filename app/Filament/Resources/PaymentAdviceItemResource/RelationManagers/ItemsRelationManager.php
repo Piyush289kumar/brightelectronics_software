@@ -33,11 +33,12 @@ class ItemsRelationManager extends RelationManager
         return $table
             ->recordTitleAttribute('po_number')
             ->columns([
-                Tables\Columns\TextColumn::make('po_date'),
-                Tables\Columns\TextColumn::make('purchaseOrder.number')->label('PO Number'),
-                Tables\Columns\TextColumn::make('invoice.number')->label('Invoice Number'),
-                Tables\Columns\TextColumn::make('amount'),
-                Tables\Columns\TextColumn::make('payment_doc_no'),
+                Tables\Columns\TextColumn::make('po_date')->label('PON Date'),
+                Tables\Columns\TextColumn::make('purchaseOrder.number')->label('PON'),
+                Tables\Columns\TextColumn::make('invoice.number')->label('Invoice No.'),
+                Tables\Columns\TextColumn::make('amount')->label('Invoice Amount'),
+                Tables\Columns\TextColumn::make('payment_doc_no')->label('Payment Doc No.'),
+
             ])
             ->filters([
                 //

@@ -12,10 +12,12 @@ return new class extends Migration {
     {
         Schema::create('payment_advices', function (Blueprint $table) {
             $table->id();
-            $table->string('date');
+            $table->date('date');
+            $table->date('payment_advice_start_date');
+            $table->date('payment_advice_end_date');
             $table->foreignId('vendor_id')->constrained()->cascadeOnDelete();
-            $table->foreignId('purchase_order_id')->constrained('invoices')->cascadeOnDelete();
-            $table->string('invoice_id')->nullable();
+            $table->foreignId('purchase_order_id')->nullable()->constrained('invoices')->nullOnDelete();
+            $table->string('invoice')->nullable();
             $table->decimal('invoice_amount', 12, 2)->default(0);
             $table->string('payment_doc_no')->nullable();
             $table->json('meta')->nullable();
