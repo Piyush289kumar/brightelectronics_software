@@ -18,15 +18,53 @@ class ItemsRelationManager extends RelationManager
 
     public function form(Form $form): Form
     {
-        return $form
-            ->schema([
-                Forms\Components\TextInput::make('po_date')->label('Date')->disabled(),
-                Forms\Components\TextInput::make('po_number')->label('PON Number')->disabled(),
-                Forms\Components\TextInput::make('invoice_no')->label('Invoice No'),
-                Forms\Components\TextInput::make('amount')->numeric()->disabled(),
-                Forms\Components\TextInput::make('payment_doc_no')->label('Payment Doc No'),
-            ]);
+        return $form->schema([
+
+
+            // ✅ Auto-filled PO Date
+            Forms\Components\DatePicker::make('po_date')
+                ->label('PO Date')
+                ->readOnly()
+                ->required(),
+
+            // ✅ Purchase Order Dropdown
+            Forms\Components\Select::make('purchase_order_id')
+                ->label('Purchase Order (PON)')
+                ->options(
+                    \App\Models\Invoice::where('document_type', 'purchase_order')
+                        ->orderBy('id', 'desc')
+                        ->pluck('number', 'id')
+                )
+                ->searchable()
+                ->required()
+                ->reactive()
+                ->afterStateUpdated(function ($state, callable $set) {
+                    if (!$state) {
+                        return;
+                    }
+                    $po = \App\Models\Invoice::find($state);
+                    if (!$po) {
+                        return;
+                    }
+                    // ✅ Auto-fill fields
+                    $set('po_date', $po->document_date);
+                    $set('amount', $po->total_amount);
+                }),
+            // ✅ Auto-filled Amount
+            Forms\Components\TextInput::make('amount')
+                ->label('Amount')
+                ->numeric()
+                ->dehydrated()
+                ->disabled()
+                ->required(),
+            // Payment document number
+            Forms\Components\TextInput::make('payment_doc_no')
+                ->label('Payment Doc No')
+                ->required(),
+        ])
+            ->columns(2);
     }
+
 
     public function table(Table $table): Table
     {

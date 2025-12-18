@@ -118,9 +118,10 @@ class PaymentAdviceResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make("vendor.name"),
-                Tables\Columns\TextColumn::make("date")->date(),
-                Tables\Columns\TextColumn::make("payment_doc_no"),
+                Tables\Columns\TextColumn::make("vendor.name")->searchable()->sortable(),
+                Tables\Columns\TextColumn::make("date")->label('Payment Date')->date()->searchable()->sortable(),
+                Tables\Columns\TextColumn::make("payment_advice_start_date")->label('Start Date')->date()->searchable()->sortable()->toggleable(),
+                Tables\Columns\TextColumn::make("payment_advice_end_date")->label('End Date')->date()->searchable()->sortable()->toggleable(),
             ])
             ->filters([
                 //
