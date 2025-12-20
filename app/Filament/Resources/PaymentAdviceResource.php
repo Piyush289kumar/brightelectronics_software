@@ -24,11 +24,13 @@ use TomatoPHP\FilamentDocs\Models\DocumentTemplate;
 class PaymentAdviceResource extends Resource
 {
     protected static ?string $model = PaymentAdvice::class;
-
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $navigationGroup = 'Advices';
+    protected static ?string $navigationIcon = 'heroicon-o-document-text';
     protected static ?string $navigationLabel = 'Payment Advice';
     protected static ?string $pluralModelLabel = 'Payment Advices';
     protected static ?string $label = 'Payment Advices';
+    protected static ?string $pluralLabel = 'Payment Advices';
+
 
     public static function form(Form $form): Form
     {
