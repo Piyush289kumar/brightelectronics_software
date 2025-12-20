@@ -16,6 +16,11 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 
+use Illuminate\Support\Carbon;
+use TomatoPHP\FilamentDocs\Filament\Resources\DocumentResource\Pages\PrintDocument;
+use TomatoPHP\FilamentDocs\Models\Document;
+use TomatoPHP\FilamentDocs\Models\DocumentTemplate;
+
 class PaymentAdviceResource extends Resource
 {
     protected static ?string $model = PaymentAdvice::class;
@@ -123,13 +128,170 @@ class PaymentAdviceResource extends Resource
                 Tables\Columns\TextColumn::make("payment_advice_start_date")->label('Start Date')->date()->searchable()->sortable()->toggleable(),
                 Tables\Columns\TextColumn::make("payment_advice_end_date")->label('End Date')->date()->searchable()->sortable()->toggleable(),
             ])
+            ->defaultSort('created_at', 'desc')
             ->filters([
                 //
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                Tables\Actions\ActionGroup::make([
+
+                    /* =========================
+      PREVIEW PAYMENT ADVICE
+      ========================= */
+                    Tables\Actions\Action::make('preview_payment_advice')
+                        ->label('Preview')
+                        ->icon('heroicon-s-eye')
+                        ->color('info')
+                        ->modalHeading('Payment Advice Preview')
+                        ->modalButton('Print')
+                        ->modalContent(function (PaymentAdvice $record) {
+
+                            // 1️⃣ Fetch template (ID = 16)
+                            $template = DocumentTemplate::find(16);
+                            $templateBody = (string) ($template->body ?? '');
+
+                            // 2️⃣ Build items HTML
+                            $itemsHtml = $record->items->map(function ($item, $index) {
+                                return "
+                <tr style='border-bottom:1px solid #000;'>
+                    <td style='padding:6px; text-align:center;'>" . ($index + 1) . "</td>
+                    <td style='padding:6px; text-align:center;'>" . \Carbon\Carbon::parse($item->po_date)->format('d-m-Y') . "</td>
+                    <td style='padding:6px; text-align:center;'>" . ($item->purchaseOrder?->number ?? '') . "</td>
+                    <td style='padding:6px; text-align:center;'>" . ($item->invoice_no ?? '') . "</td>
+                    <td style='padding:6px; text-align:right;'>₹ " . number_format($item->amount, 2) . "</td>
+                    <td style='padding:6px; text-align:center;'>" . $item->payment_doc_no . "</td>
+                </tr>";
+                            })->implode('');
+
+                            $totalAmount = (float) $record->items->sum('amount');
+
+                            // 3️⃣ Replace placeholders
+                            $map = [
+                                '$ACCOUNT_NAME' => $record->vendor->name ?? '',
+                                '$ACCOUNT_ADDRESS' => $record->vendor->address ?? '',
+                                '$ACCOUNT_PHONE' => $record->vendor->phone ?? '',
+                                '$ACCOUNT_GSTIN' => $record->vendor->gst_number ?? '',
+                                '$ACCOUNT_STATE' => $record->vendor->state ?? '',
+                                '$PAYMENT_DOC_NO' => $record->payment_doc_no,
+                                '$DATE' => \Carbon\Carbon::parse($record->date)->format('d-m-Y'),
+                                '$AMOUNT' => number_format($totalAmount, 2),
+                                '$AMOUNT_IN_WORDS' => ucfirst(
+                                    \NumberFormatter::create('en_IN', \NumberFormatter::SPELLOUT)->format($totalAmount)
+                                ),
+                                '$ITEMS' => $itemsHtml,
+                            ];
+
+                            $body = $templateBody;
+                            foreach ($map as $key => $value) {
+                                $body = str_replace($key, (string) $value, $body);
+                            }
+
+                            // 4️⃣ Delete old document
+                            if ($record->document_id) {
+                                Document::where('id', $record->document_id)->delete();
+                            }
+
+                            // 5️⃣ Create document
+                            $document = Document::create([
+                                'document_template_id' => 16,
+                                'model_type' => PaymentAdvice::class,
+                                'model_id' => $record->id,
+                                'body' => $body,
+                            ]);
+
+                            // 6️⃣ Save document_id
+                            // $record->document_id = $document->id;
+                            $record->save();
+
+                            // 7️⃣ Return preview
+                            return view('filament-docs::print', ['record' => $document]);
+                        }),
+
+                    /* =========================
+                       PRINT PAYMENT ADVICE
+                       ========================= */
+                    Tables\Actions\Action::make('print_payment_advice')
+                        ->label('Print')
+                        ->icon('heroicon-s-printer')
+                        ->color('warning')
+                        ->action(function (PaymentAdvice $record, $livewire) {
+
+                            // 🔁 SAME LOGIC AS PREVIEW (generate first)
+                
+                            $template = DocumentTemplate::find(16);
+                            $templateBody = (string) ($template->body ?? '');
+
+                            $itemsHtml = $record->items->map(function ($item, $index) {
+                                return "
+                <tr style='border-bottom:1px solid #000;'>
+                    <td style='padding:6px; text-align:center;'>" . ($index + 1) . "</td>
+                    <td style='padding:6px; text-align:center;'>" . \Carbon\Carbon::parse($item->po_date)->format('d-m-Y') . "</td>
+                    <td style='padding:6px; text-align:center;'>" . ($item->purchaseOrder?->number ?? '') . "</td>
+                    <td style='padding:6px; text-align:center;'>" . ($item->invoice_no ?? '') . "</td>
+                    <td style='padding:6px; text-align:right;'>₹ " . number_format($item->amount, 2) . "</td>
+                    <td style='padding:6px; text-align:center;'>" . $item->payment_doc_no . "</td>
+                </tr>";
+                            })->implode('');
+
+                            $totalAmount = (float) $record->items->sum('amount');
+
+                            $map = [
+                                '$ACCOUNT_NAME' => $record->vendor->name ?? '',
+                                '$ACCOUNT_ADDRESS' => $record->vendor->address ?? '',
+                                '$ACCOUNT_PHONE' => $record->vendor->phone ?? '',
+                                '$ACCOUNT_GSTIN' => $record->vendor->gst_number ?? '',
+                                '$ACCOUNT_STATE' => $record->vendor->state ?? '',
+                                '$PAYMENT_DOC_NO' => $record->payment_doc_no,
+                                '$DATE' => \Carbon\Carbon::parse($record->date)->format('d-m-Y'),
+                                '$AMOUNT' => number_format($totalAmount, 2),
+                                '$AMOUNT_IN_WORDS' => ucfirst(
+                                    \NumberFormatter::create('en_IN', \NumberFormatter::SPELLOUT)->format($totalAmount)
+                                ),
+                                '$ITEMS' => $itemsHtml,
+                            ];
+
+                            $body = $templateBody;
+                            foreach ($map as $key => $value) {
+                                $body = str_replace($key, (string) $value, $body);
+                            }
+
+                            if ($record->document_id) {
+                                Document::where('id', $record->document_id)->delete();
+                            }
+
+                            $document = Document::create([
+                                'document_template_id' => 16,
+                                'model_type' => PaymentAdvice::class,
+                                'model_id' => $record->id,
+                                'body' => $body,
+                            ]);
+
+                            // $record->document_id = $document->id;
+                            $record->save();
+
+                            // 🖨 PRINT
+                            $url = PrintDocument::getUrl(['record' => $document->id]);
+
+                            $livewire->js(<<<JS
+                const iframe = document.createElement('iframe');
+                iframe.style.position = 'absolute';
+                iframe.style.width = '0';
+                iframe.style.height = '0';
+                iframe.style.border = '0';
+                iframe.src = "{$url}";
+                document.body.appendChild(iframe);
+                iframe.onload = function () {
+                    iframe.contentWindow.focus();
+                    iframe.contentWindow.print();
+                };
+            JS);
+                        }),
+                    Tables\Actions\EditAction::make(),
+                    Tables\Actions\DeleteAction::make(),
+
+                ])->dropdown()->tooltip('More actions'),
             ])
+
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
@@ -152,4 +314,92 @@ class PaymentAdviceResource extends Resource
             'edit' => Pages\EditPaymentAdvice::route('/{record}/edit'),
         ];
     }
+
+    protected static function generatePaymentAdviceDocument(PaymentAdvice $record)
+    {
+        // 1️⃣ Fetch template
+        $template = DocumentTemplate::find(16);
+        $body = (string) ($template->body ?? '');
+
+        // 2️⃣ Build ITEMS rows
+        $itemsHtml = $record->items->map(function ($item, $index) {
+
+            $poNumber = $item->purchaseOrder?->number ?? '';
+            $invoiceNo = $item->invoice_no ?? '';
+            $date = Carbon::parse($item->po_date)->format('d-m-Y');
+
+            return "
+        <tr style='border-bottom:1px solid #000;'>
+            <td style='padding:6px; text-align:center;'>" . ($index + 1) . "</td>
+            <td style='padding:6px; text-align:center;'>{$date}</td>
+            <td style='padding:6px; text-align:center;'>{$poNumber}</td>
+            <td style='padding:6px; text-align:center;'>{$invoiceNo}</td>
+            <td style='padding:6px; text-align:right;'>₹ " . number_format($item->amount, 2) . "</td>
+            <td style='padding:6px; text-align:center;'>{$item->payment_doc_no}</td>
+        </tr>";
+        })->implode('');
+
+        // 3️⃣ Calculate total amount
+        $totalAmount = $record->items->sum('amount');
+
+        // 4️⃣ Replace template variables
+        $map = [
+            '$ACCOUNT_NAME' => $record->vendor->name ?? '',
+            '$ACCOUNT_ADDRESS' => $record->vendor->address ?? '',
+            '$ACCOUNT_PHONE' => $record->vendor->phone ?? '',
+            '$ACCOUNT_GSTIN' => $record->vendor->gst_number ?? '',
+            '$ACCOUNT_STATE' => $record->vendor->state ?? '',
+            '$PAYMENT_DOC_NO' => $record->payment_doc_no,
+            '$DATE' => Carbon::parse($record->date)->format('d-m-Y'),
+            '$AMOUNT' => number_format($totalAmount, 2),
+            '$AMOUNT_IN_WORDS' => \NumberFormatter::create('en_IN', \NumberFormatter::SPELLOUT)->format($record->total_amount),
+            '$ITEMS' => $itemsHtml,
+        ];
+
+        foreach ($map as $key => $value) {
+            $body = str_replace($key, (string) $value, $body);
+        }
+
+        // 5️⃣ Delete old document if exists
+        if ($record->document_id) {
+            Document::where('id', $record->document_id)->delete();
+        }
+
+        // 6️⃣ Create document
+        $document = Document::create([
+            'document_template_id' => 16,
+            'model_type' => PaymentAdvice::class,
+            'model_id' => $record->id,
+            'body' => $body,
+        ]);
+
+        $record->save();
+
+        return view('filament-docs::print', ['record' => $document]);
+    }
+
+    protected static function printPaymentAdvice(PaymentAdvice $record, $livewire): void
+    {
+        // 1️⃣ Generate (or regenerate) the document
+        self::generatePaymentAdviceDocument($record);
+
+        // 2️⃣ Open print preview via iframe
+        $url = PrintDocument::getUrl(['record' => $record->document_id]);
+
+        $livewire->js(<<<JS
+        const iframe = document.createElement('iframe');
+        iframe.style.position = 'absolute';
+        iframe.style.width = '0';
+        iframe.style.height = '0';
+        iframe.style.border = '0';
+        iframe.src = "{$url}";
+        document.body.appendChild(iframe);
+        iframe.onload = function () {
+            iframe.contentWindow.focus();
+            iframe.contentWindow.print();
+        };
+    JS);
+    }
+
+
 }
