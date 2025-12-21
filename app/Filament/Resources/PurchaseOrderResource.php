@@ -173,7 +173,6 @@ class PurchaseOrderResource extends Resource
 
                                                 Select::make('product_id')
                                                     ->label('Product')
-
                                                     ->options(function () {
                                                         return Product::query()
                                                             ->orderBy('name')
@@ -183,7 +182,6 @@ class PurchaseOrderResource extends Resource
                                                                 $p->id => "{$p->name} ({$p->barcode})",
                                                             ]);
                                                     })
-
                                                     ->getSearchResultsUsing(function (string $query) {
                                                         return Product::query()
                                                             ->where('name', 'like', "%{$query}%")
@@ -196,28 +194,23 @@ class PurchaseOrderResource extends Resource
                                                                 $p->id => "{$p->name} ({$p->barcode})",
                                                             ]);
                                                     })
-
                                                     ->getOptionLabelUsing(function ($value): ?string {
                                                         $product = Product::find($value);
                                                         return $product
                                                             ? "{$product->name} ({$product->barcode})"
                                                             : null;
                                                     })
-
                                                     ->searchable()
                                                     ->required()
                                                     ->reactive()
-
                                                     ->createOptionForm([
                                                         Grid::make(2)->schema([
                                                             Forms\Components\TextInput::make('name')
                                                                 ->label('Product Name')
                                                                 ->required(),
-
                                                             Forms\Components\TextInput::make('barcode')
                                                                 ->label('Barcode')
                                                                 ->required(),
-
                                                             Forms\Components\TextInput::make('selling_price')
                                                                 ->label('Selling Price')
                                                                 ->numeric()
@@ -225,7 +218,6 @@ class PurchaseOrderResource extends Resource
                                                                 ->required(),
                                                         ]),
                                                     ])
-
                                                     ->createOptionUsing(function (array $data) {
                                                         $product = Product::create([
                                                             'name' => $data['name'],
@@ -236,29 +228,22 @@ class PurchaseOrderResource extends Resource
                                                             'is_active' => false,
                                                             'sku' => 'PRD-' . str_pad((Product::max('id') ?? 0) + 1, 5, '0', STR_PAD_LEFT),
                                                         ]);
-
                                                         return $product->id;
                                                     })
-
                                                     ->afterStateUpdated(function (callable $set, $get, $state) {
                                                         if (!$state) {
                                                             return;
                                                         }
-
                                                         $product = Product::find($state);
-
                                                         if (!$product) {
                                                             return;
                                                         }
-
                                                         $set('unit_price', $product->selling_price);
                                                         $set('cgst_rate', 0);
                                                         $set('sgst_rate', 0);
                                                         $set('igst_rate', 0);
-
                                                         InvoiceResource::recalculateItem($set, $get);
                                                     })
-
                                                     ->columnSpan(5),
 
 

@@ -15,12 +15,15 @@ class InvoiceItem extends Model
         'quantity',
         'unit_price',
         'discount',
+        'discount_amount_per_item',
         'cgst_rate',
         'sgst_rate',
         'igst_rate',
+        'gst_rate',
         'cgst_amount',
         'sgst_amount',
         'igst_amount',
+        'gst_amount',
         'total_amount',
     ];
 
