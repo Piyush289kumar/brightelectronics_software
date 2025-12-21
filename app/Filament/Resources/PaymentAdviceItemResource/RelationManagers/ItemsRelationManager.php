@@ -50,6 +50,8 @@ class ItemsRelationManager extends RelationManager
                     $set('po_date', $po->document_date);
                     $set('amount', $po->total_amount);
                 }),
+            Forms\Components\TextInput::make('invoice_no')->label('Invoice No.'),
+
             // ✅ Auto-filled Amount
             Forms\Components\TextInput::make('amount')
                 ->label('Amount')

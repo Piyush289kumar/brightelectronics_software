@@ -26,6 +26,7 @@ class EditPaymentAdvice extends EditRecord
 
             $data['purchase_order_id'] = $first['po_id'] ?? null;
             $data['invoice_id'] = $first['invoice_id'] ?? null;
+            $data['invoice_no'] = $first['invoice_no'] ?? null;
             $data['invoice_amount'] = $first['amount'] ?? 0;
             $data['payment_doc_no'] = $first['payment_doc_no'] ?? null;
         }
