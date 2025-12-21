@@ -14,6 +14,7 @@ class PaymentAdviceItem extends Model
         'payment_advice_id',
         'purchase_order_id',
         'invoice_id',
+        'invoice_no',
         'amount',
         'payment_doc_no',
         'po_date',

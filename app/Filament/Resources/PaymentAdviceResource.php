@@ -110,7 +110,7 @@ class PaymentAdviceResource extends Resource
                         ->schema([
                             Forms\Components\DatePicker::make('po_date')->label('PON Date')->disabled(),
                             Forms\Components\TextInput::make('po_number')->label('PON')->disabled(),
-                            Forms\Components\TextInput::make('invoice')->label('Invoice No.'),
+                            Forms\Components\TextInput::make('invoice_no')->label('Invoice No.'),
                             Forms\Components\TextInput::make('amount')->label('Invoice Amount'),
                             Forms\Components\TextInput::make('payment_doc_no')->default(0)->label('Payment doc no.'),
                         ])

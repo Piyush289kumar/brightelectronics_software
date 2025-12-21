@@ -19,7 +19,7 @@ class CreatePaymentAdvice extends CreateRecord
                 'purchase_order_id' => $row['purchase_order_id'],
                 'po_date' => $row['po_date'],
                 // 'invoice_id' => $row['invoice_id'],ss
-                'invoice_no' => $row['po_number'],
+                'invoice_no' => $row['invoice_no'],
                 'amount' => $row['amount'],
                 'payment_doc_no' => $row['payment_doc_no'],
             ]);

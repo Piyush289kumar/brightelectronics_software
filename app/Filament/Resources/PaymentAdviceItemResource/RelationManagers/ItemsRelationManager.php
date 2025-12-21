@@ -73,7 +73,7 @@ class ItemsRelationManager extends RelationManager
             ->columns([
                 Tables\Columns\TextColumn::make('po_date')->label('PON Date'),
                 Tables\Columns\TextColumn::make('purchaseOrder.number')->label('PON'),
-                Tables\Columns\TextColumn::make('invoice.number')->label('Invoice No.'),
+                Tables\Columns\TextColumn::make('invoice_no')->label('Invoice No.'),
                 Tables\Columns\TextColumn::make('amount')->label('Invoice Amount'),
                 Tables\Columns\TextColumn::make('payment_doc_no')->label('Payment Doc No.'),
 
