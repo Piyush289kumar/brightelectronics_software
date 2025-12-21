@@ -82,14 +82,14 @@ class PurchaseOrderResource extends Resource
                             ->label('Bill To')
                             ->options([
                                 'App\Models\Customer' => 'Customer',
-                                'App\Models\Vendor' => 'Client',
+                                'App\Models\Vendor' => 'Vendor',
                             ])->disabled(true)
                             ->default('App\Models\Vendor') // Always default to Vendor                            
                             ->required()
                             ->dehydrated(true) // 👈 Force saving to DB
                             ->reactive(),
                         Select::make('billable_id')
-                            ->label('Select Client')
+                            ->label('Select Vendor')
                             ->options(function (callable $get) {
                                 $type = $get('billable_type');
                                 if (!$type) {
@@ -104,7 +104,7 @@ class PurchaseOrderResource extends Resource
                                 Grid::make('3')
                                     ->schema([
                                         Forms\Components\TextInput::make('name')
-                                            ->label('Client Name')
+                                            ->label('Vendor Name')
                                             ->required(),
                                         Forms\Components\TextInput::make('email')
                                             ->label('Email')
@@ -167,70 +167,101 @@ class PurchaseOrderResource extends Resource
                                     ->schema([
                                         Grid::make(12)
                                             ->schema([
+
+
+
+
                                                 Select::make('product_id')
                                                     ->label('Product')
+
                                                     ->options(function () {
                                                         return Product::query()
                                                             ->orderBy('name')
-                                                            ->limit(200) // optional limit for performance
-                                                            ->pluck('name', 'id');
+                                                            ->limit(200)
+                                                            ->get()
+                                                            ->mapWithKeys(fn($p) => [
+                                                                $p->id => "{$p->name} ({$p->barcode})",
+                                                            ]);
                                                     })
+
                                                     ->getSearchResultsUsing(function (string $query) {
                                                         return Product::query()
                                                             ->where('name', 'like', "%{$query}%")
-                                                            ->orWhere('id', 'like', "%{$query}%")
+                                                            ->orWhere('barcode', 'like', "%{$query}%")
                                                             ->orWhere('sku', 'like', "%{$query}%")
+                                                            ->orWhere('id', 'like', "%{$query}%")
                                                             ->limit(50)
-                                                            ->pluck('name', 'id'); // you can also pluck("display_field", "id")
+                                                            ->get()
+                                                            ->mapWithKeys(fn($p) => [
+                                                                $p->id => "{$p->name} ({$p->barcode})",
+                                                            ]);
                                                     })
+
                                                     ->getOptionLabelUsing(function ($value): ?string {
                                                         $product = Product::find($value);
-                                                        return $product ? "{$product->id} - {$product->sku} - {$product->name}" : null;
+                                                        return $product
+                                                            ? "{$product->name} ({$product->barcode})"
+                                                            : null;
                                                     })
+
                                                     ->searchable()
                                                     ->required()
                                                     ->reactive()
+
                                                     ->createOptionForm([
-                                                        Grid::make(2)
-                                                            ->schema([
-                                                                Forms\Components\TextInput::make('name')
-                                                                    ->label('Product Name')
-                                                                    ->placeholder('Enter product name') // <-- placeholder added
-                                                                    ->required(),
-                                                                Forms\Components\TextInput::make('selling_price')
-                                                                    ->label('Selling Price')
-                                                                    ->placeholder('Enter selling price') // <-- placeholder added
-                                                                    ->numeric()
-                                                                    ->default(0)
-                                                                    ->required(),
-                                                            ]),
+                                                        Grid::make(2)->schema([
+                                                            Forms\Components\TextInput::make('name')
+                                                                ->label('Product Name')
+                                                                ->required(),
+
+                                                            Forms\Components\TextInput::make('barcode')
+                                                                ->label('Barcode')
+                                                                ->required(),
+
+                                                            Forms\Components\TextInput::make('selling_price')
+                                                                ->label('Selling Price')
+                                                                ->numeric()
+                                                                ->default(0)
+                                                                ->required(),
+                                                        ]),
                                                     ])
+
                                                     ->createOptionUsing(function (array $data) {
-                                                        $sku = 'PRD-' . str_pad(Product::max('id') + 1, 5, '0', STR_PAD_LEFT);
                                                         $product = Product::create([
                                                             'name' => $data['name'],
+                                                            'barcode' => $data['barcode'],
                                                             'selling_price' => $data['selling_price'] ?? 0,
-                                                            'is_active' => false,
-                                                            'sku' => $sku,
                                                             'purchase_price' => 0,
                                                             'track_inventory' => false,
+                                                            'is_active' => false,
+                                                            'sku' => 'PRD-' . str_pad((Product::max('id') ?? 0) + 1, 5, '0', STR_PAD_LEFT),
                                                         ]);
+
                                                         return $product->id;
                                                     })
+
                                                     ->afterStateUpdated(function (callable $set, $get, $state) {
-                                                        if ($state) {
-                                                            $product = Product::find($state);
-                                                            if ($product) {
-                                                                $set('unit_price', $product->selling_price);
-                                                                // Set GST rates to 0 as tax slab is removed
-                                                                $set('cgst_rate', 0);
-                                                                $set('sgst_rate', 0);
-                                                                $set('igst_rate', 0);
-                                                                InvoiceResource::recalculateItem($set, $get);
-                                                            }
+                                                        if (!$state) {
+                                                            return;
                                                         }
+
+                                                        $product = Product::find($state);
+
+                                                        if (!$product) {
+                                                            return;
+                                                        }
+
+                                                        $set('unit_price', $product->selling_price);
+                                                        $set('cgst_rate', 0);
+                                                        $set('sgst_rate', 0);
+                                                        $set('igst_rate', 0);
+
+                                                        InvoiceResource::recalculateItem($set, $get);
                                                     })
+
                                                     ->columnSpan(5),
+
+
                                                 TextInput::make('quantity')
                                                     ->label('Quantity')
                                                     ->numeric()

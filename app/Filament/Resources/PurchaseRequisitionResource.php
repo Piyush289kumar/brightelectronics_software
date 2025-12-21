@@ -71,9 +71,14 @@ class PurchaseRequisitionResource extends Resource
                     ->label('Requested Items')
                     ->schema([
                         Grid::make(3)->schema([
+
                             Select::make('product_id')
                                 ->label('Product')
-                                ->options(Product::pluck('name', 'id'))
+                                ->options(
+                                    Product::all()->mapWithKeys(
+                                        fn($p) => [$p->id => $p->name . ' (' . $p->barcode . ')']
+                                    )
+                                )
                                 ->searchable()
                                 ->reactive()
                                 ->required()
@@ -85,6 +90,7 @@ class PurchaseRequisitionResource extends Resource
                                         }
                                     }
                                 }),
+
                             TextInput::make('quantity')
                                 ->label('Quantity')
                                 ->numeric()
@@ -375,13 +381,13 @@ class PurchaseRequisitionResource extends Resource
                                     ->default($merged) // 👈 load merged products
                                     ->schema([
                                         Grid::make(2)->schema([
-                                             TextInput::make('product_name')->disabled()->label('Product')->dehydrated(true),
-                                             TextInput::make('quantity')->disabled()->label('Total Qty')->dehydrated(true),
-                                             TextInput::make('unit_price')->disabled()->label('Unit Price')->dehydrated(true),
-                                        TextInput::make('total_amount')->disabled()->label('Total')->dehydrated(true),
+                                            TextInput::make('product_name')->disabled()->label('Product')->dehydrated(true),
+                                            TextInput::make('quantity')->disabled()->label('Total Qty')->dehydrated(true),
+                                            TextInput::make('unit_price')->disabled()->label('Unit Price')->dehydrated(true),
+                                            TextInput::make('total_amount')->disabled()->label('Total')->dehydrated(true),
                                         ]),
                                         // Grid::make(4)->schema([]),
-                                       
+                
                                         Select::make('vendor_id')
                                             ->label('Vendor')
                                             ->options(Vendor::pluck('name', 'id'))
@@ -462,8 +468,8 @@ class PurchaseRequisitionResource extends Resource
                         }),
 
 
-                        ExportBulkAction::make(),
-                        Tables\Actions\DeleteBulkAction::make(),
+                    ExportBulkAction::make(),
+                    Tables\Actions\DeleteBulkAction::make(),
                 ]),
             ]);
     }
