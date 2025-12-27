@@ -2,6 +2,7 @@
 namespace App\Filament\Resources;
 use App\Filament\Resources\ComplainResource\Pages;
 use App\Models\Complain;
+use App\Models\Device;
 use App\Models\LeadSource;
 use App\Models\Service;
 use App\Models\User;
@@ -69,6 +70,20 @@ class ComplainResource extends Resource
                         ->label('Lead Source')
                         ->relationship('leadSource', 'lead_name')
                         ->required(),
+
+
+                    Forms\Components\Select::make('product_id')
+                        ->label('Devices')
+                        ->multiple()
+                        ->options(
+                            Device::all()->mapWithKeys(
+                                fn($p) => [$p->id => $p->name]
+                            )
+                        )->searchable()
+                        ->preload()
+                        ->required(),
+
+
                     Forms\Components\MultiSelect::make('service_type')
                         ->label('Service Type')
                         ->options(
@@ -85,16 +100,7 @@ class ComplainResource extends Resource
                         )
                         ->required(),
 
-                    Forms\Components\Select::make('product_id')
-                        ->label('Devices')
-                        ->multiple()
-                        ->options(
-                            \App\Models\Product::all()->mapWithKeys(
-                                fn($p) => [$p->id => $p->name . ' (' . $p->barcode . ')']
-                            )
-                        )->searchable()
-                        ->preload()
-                        ->required(),
+
 
 
                     Forms\Components\Select::make('first_action_code')
