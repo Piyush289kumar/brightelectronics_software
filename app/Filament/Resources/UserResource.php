@@ -21,9 +21,6 @@ class UserResource extends Resource
     protected static ?string $label = 'User';
     protected static ?string $pluralLabel = 'Users';
 
-
-
-
     public static function form(Form $form): Form
     {
         return $form->schema([
@@ -50,13 +47,14 @@ class UserResource extends Resource
                 ->preload(),
 
             Forms\Components\TextInput::make('password')
-                ->password()
-                ->maxLength(255)
-                ->dehydrateStateUsing(fn($state) => !empty($state) ? bcrypt($state) : null)
-                ->required(fn($context) => $context === 'create')
-                ->dehydrated(fn($state) => filled($state))
                 ->label('Password')
-                ->extraAttributes(['autocomplete' => 'new-password']), // prevents autofill
+                ->password()
+                ->autocomplete('off')
+                ->dehydrateStateUsing(fn($state) => filled($state) ? bcrypt($state) : null)
+                ->dehydrated(fn($state) => filled($state)) // only save if user typed new password
+                ->required(fn($context) => $context === 'create')
+                ->formatStateUsing(fn() => '') // always blank field on edit
+                ->maxLength(255),
         ]);
     }
 
