@@ -56,10 +56,18 @@ class LeadSourceResource extends Resource
                             ])
                             ->default('active')
                             ->required(),
-                        Forms\Components\TextInput::make('lead_type')
+
+                        Forms\Components\Select::make('lead_type')
                             ->label('Lead Type')
-                            ->required()
-                            ->maxLength(255),
+                            ->options([
+                                'individual' => 'Individual',
+                                'company' => 'Company',
+                                'agency' => 'Agency',
+                                'other' => 'Other',
+                            ])
+                            ->default('individual')
+                            ->required(),
+
                         Forms\Components\TextInput::make('lead_incentive')
                             ->label('Lead Incentive (%)')
                             ->numeric()
@@ -140,7 +148,7 @@ class LeadSourceResource extends Resource
     {
         return $table
             ->columns([
-                  Tables\Columns\TextColumn::make('lead_code')
+                Tables\Columns\TextColumn::make('lead_code')
                     ->label('Lead Code')
                     ->sortable()
                     ->searchable(),
