@@ -23,7 +23,7 @@ body.fi-body {
     /* @apply bg-slate-50 dark:bg-gray-950; */
 }
 main.fi-main {
-    @apply px-0;
+    @apply px-2;
 }
 
 /* SIDE BAR */
