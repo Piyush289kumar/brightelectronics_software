@@ -21,6 +21,7 @@ class StoreInventoryResource extends Resource
     protected static ?string $model = StoreInventory::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $label = 'Branch Inventory';
     protected static ?string $navigationGroup = 'Inventory Management';
     protected static ?int $navigationSort = 2;
 
@@ -30,6 +31,7 @@ class StoreInventoryResource extends Resource
             ->schema([
 
                 Forms\Components\Select::make('store_id')
+                    ->label('Branch')
                     ->relationship('store', 'name')
                     ->required(),
 
@@ -37,6 +39,7 @@ class StoreInventoryResource extends Resource
                     ->label('Product')
                     ->required()
                     ->searchable()
+                    ->preload()
                     ->reactive()
                     ->options(function (callable $get, $record) {
 

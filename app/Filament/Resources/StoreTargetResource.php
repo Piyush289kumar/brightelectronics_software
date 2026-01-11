@@ -23,13 +23,14 @@ class StoreTargetResource extends Resource
 {
     protected static ?string $model = StoreTarget::class;
     protected static ?string $navigationIcon = 'heroicon-o-flag';
+    protected static ?string $label = 'Branch Targets';
     protected static ?string $navigationGroup = 'Targets';
 
     public static function form(Form $form): Form
     {
         return $form->schema([
             Select::make('store_id')
-                ->label('Store')
+                ->label('Branch')
                 ->options(fn() => Store::pluck('name', 'id'))
                 ->searchable()
                 ->required(),

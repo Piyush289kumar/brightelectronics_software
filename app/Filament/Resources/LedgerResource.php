@@ -47,7 +47,7 @@ class LedgerResource extends Resource
                     // ->searchable()
                     ->preload()
                     ->required()
-                    ->label('Store'),
+                    ->label('Branch'),
 
                 Forms\Components\Select::make('account_id')
                     ->relationship('account', 'account_name') // ✅ Fix here

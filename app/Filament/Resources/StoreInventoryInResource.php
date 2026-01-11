@@ -46,7 +46,7 @@ class StoreInventoryInResource extends Resource
                     ->schema([
                         Grid::make(3)->schema([
                             Select::make('store_id')
-                                ->label('Store')
+                                ->label('Branch')
                                 ->options(Store::pluck('name', 'id'))
                                 ->default(fn() => Auth::user()?->store_id ?? Store::first()?->id)
                                 ->required()
@@ -234,7 +234,7 @@ class StoreInventoryInResource extends Resource
                     ->searchable(),
 
                 Tables\Columns\TextColumn::make('store.name')
-                    ->label('Store')
+                    ->label('Branch')
                     ->sortable()
                     ->searchable(),
 
@@ -301,7 +301,7 @@ class StoreInventoryInResource extends Resource
             ->defaultSort('created_at', 'desc')
             ->filters([
                 Tables\Filters\SelectFilter::make('store_id')
-                    ->label('Store')
+                    ->label('Branch')
                     ->relationship('store', 'name'),
 
                 Tables\Filters\SelectFilter::make('payment_status')

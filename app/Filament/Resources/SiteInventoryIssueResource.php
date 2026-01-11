@@ -32,6 +32,7 @@ class SiteInventoryIssueResource extends Resource
                 // Store + Site + Issued By + Notes
                 Grid::make(3)->schema([
                     Select::make('store_id')
+                        ->label('Branch')
                         ->relationship('store', 'name')
                         ->required()
                         ->searchable()
@@ -142,7 +143,7 @@ class SiteInventoryIssueResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('store.name')->label('Store')->sortable()->searchable(),
+                Tables\Columns\TextColumn::make('store.name')->label('Branch')->sortable()->searchable(),
                 Tables\Columns\TextColumn::make('site.name')->label('Site')->sortable()->searchable(),
                 Tables\Columns\TextColumn::make('issuer.name')->label('Issued By')->sortable(),
 

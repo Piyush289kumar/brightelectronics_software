@@ -49,7 +49,7 @@ class PurchaseRequisitionResource extends Resource
             ->schema([
                 Grid::make(3)->schema([
                     Select::make('store_id')
-                        ->label('Store (Requesting)')
+                        ->label('Branch (Requesting)')
                         ->options(Store::pluck('name', 'id'))
                         ->default(fn() => Auth::user()->store_id ?? null)
                         ->required()
@@ -135,7 +135,7 @@ class PurchaseRequisitionResource extends Resource
             })
             ->columns([
                 Tables\Columns\TextColumn::make('id')->label('ID')->sortable(),
-                Tables\Columns\TextColumn::make('store.name')->label('Store')->sortable(),
+                Tables\Columns\TextColumn::make('store.name')->label('Branch')->sortable(),
                 Tables\Columns\TextColumn::make('requester.name')->label('Requested By'),
                 Tables\Columns\TextColumn::make('status')->sortable(),
                 Tables\Columns\TextColumn::make('priority')->sortable(),
@@ -157,7 +157,7 @@ class PurchaseRequisitionResource extends Resource
                             ->label('Fulfillment Method')
                             ->options([
                                 'purchase' => 'Purchase from Vendor',
-                                'transfer' => 'Transfer from Another Store',
+                                'transfer' => 'Transfer from Another Branch',
                             ])
                             ->reactive()
                             ->required(),
@@ -178,7 +178,7 @@ class PurchaseRequisitionResource extends Resource
                                 $set('items', $items);
                             }),
                         Select::make('destination_store_id')
-                            ->label('Destination Store')
+                            ->label('Destination Branch')
                             ->options(function (callable $get, $record) {
                                 // fall back to requisition's store_id if not inside the modal
                                 $storeId = $get('store_id') ?? $record?->store_id;
@@ -195,7 +195,7 @@ class PurchaseRequisitionResource extends Resource
                                     TextInput::make('id')->hidden()->dehydrated(),
                                     TextInput::make('product_name')->label('Product')->disabled(),
                                     TextInput::make('quantity')->label('Requested Qty')->disabled(),
-                                    TextInput::make('purchase_price')->label('Requested Price')->disabled(),
+                                    // TextInput::make('purchase_price')->label('Requested Price')->disabled(),
                                     Select::make('vendor_id')
                                         ->label('Vendor')
                                         ->options(Vendor::pluck('name', 'id'))
@@ -210,6 +210,7 @@ class PurchaseRequisitionResource extends Resource
                                     TextInput::make('approved_price')
                                         ->label('Approved Price')
                                         ->numeric()
+                                        ->default(0)
                                         ->required(),
                                     TextInput::make('approved_total')
                                         ->label('Approved Total')
