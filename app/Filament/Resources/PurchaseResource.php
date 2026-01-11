@@ -808,6 +808,8 @@ class PurchaseResource extends Resource
                             TextInput::make('amount')
                                 ->label('Amount to Pay')
                                 ->numeric()
+                                ->readOnly()
+                                ->dehydrated(true)
                                 ->required()
                                 ->default(fn($record) => number_format($record->total_amount - $record->payments()->where('status', 'completed')->sum('amount'), 2, '.', ''))
                                 ->maxValue(fn($record) => number_format($record->total_amount - $record->payments()->where('status', 'completed')->sum('amount'), 2, '.', '')),

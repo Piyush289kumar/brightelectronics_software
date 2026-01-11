@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\StoreInventoryInResource\Pages;
 use App\Filament\Resources\StoreInventoryInResource\RelationManagers;
+use App\Models\Product;
 use App\Models\Store;
 use App\Models\StoreInventoryIn;
 use App\Models\User;
@@ -204,7 +205,33 @@ class StoreInventoryInResource extends Resource
                             ->schema([
                                 Select::make('product_id')
                                     ->label('Product')
-                                    ->relationship('product', 'name')
+                                    ->options(function () {
+                                        return Product::query()
+                                            ->orderBy('name')
+                                            ->limit(200)
+                                            ->get()
+                                            ->mapWithKeys(fn($p) => [
+                                                $p->id => "{$p->name} ({$p->barcode})",
+                                            ]);
+                                    })
+                                    ->getSearchResultsUsing(function (string $query) {
+                                        return Product::query()
+                                            ->where('name', 'like', "%{$query}%")
+                                            ->orWhere('barcode', 'like', "%{$query}%")
+                                            ->orWhere('sku', 'like', "%{$query}%")
+                                            ->orWhere('id', 'like', "%{$query}%")
+                                            ->limit(50)
+                                            ->get()
+                                            ->mapWithKeys(fn($p) => [
+                                                $p->id => "{$p->name} ({$p->barcode})",
+                                            ]);
+                                    })
+                                    ->getOptionLabelUsing(function ($value): ?string {
+                                        $product = Product::find($value);
+                                        return $product
+                                            ? "{$product->name} ({$product->barcode})"
+                                            : null;
+                                    })
                                     ->searchable()
                                     ->required(),
 

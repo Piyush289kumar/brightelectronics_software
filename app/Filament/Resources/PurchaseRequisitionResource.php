@@ -70,7 +70,7 @@ class PurchaseRequisitionResource extends Resource
                     ->relationship('items')
                     ->label('Requested Items')
                     ->schema([
-                        Grid::make(3)->schema([
+                        Grid::make(12)->schema([
 
                             Select::make('product_id')
                                 ->label('Product')
@@ -89,7 +89,7 @@ class PurchaseRequisitionResource extends Resource
                                             $set('purchase_price', $product->purchase_price);
                                         }
                                     }
-                                }),
+                                })->columnSpan(6),
 
                             TextInput::make('quantity')
                                 ->label('Quantity')
@@ -99,26 +99,31 @@ class PurchaseRequisitionResource extends Resource
                                 ->reactive()
                                 ->afterStateUpdated(function ($state, callable $get, callable $set) {
                                     $set('total_price', $state * ($get('purchase_price') ?? 0));
-                                }),
-                            TextInput::make('purchase_price')
-                                ->label('Purchase Unit Price')
-                                ->numeric()
-                                ->disabled()
-                                ->dehydrated()
-                                ->required()
-                                ->reactive()
-                                ->default(0)
-                                ->afterStateUpdated(function ($state, callable $get, callable $set) {
-                                    $set('total_price', $state * ($get('quantity') ?? 0));
-                                }),
-                            Grid::make(2)->schema([
-                                TextInput::make('total_price')
-                                    ->label('Total Price')
-                                    ->numeric()
-                                    ->disabled()
-                                    ->default(0)
-                                    ->dehydrated(true) // 👈 important: store in DB
-                                    ->required(),
+                                })->columnSpan(2),
+                            Forms\Components\FileUpload::make('uom')->label('Product Picture')
+                                ->disk('public')
+                                ->directory('request_products')
+                                ->image()
+                                ->nullable()->columnSpan(4),
+                            // TextInput::make('purchase_price')
+                            //     ->label('Purchase Unit Price')
+                            //     ->numeric()
+                            //     ->disabled()
+                            //     ->dehydrated()
+                            //     ->required()
+                            //     ->reactive()
+                            //     ->default(0)
+                            //     ->afterStateUpdated(function ($state, callable $get, callable $set) {
+                            //         $set('total_price', $state * ($get('quantity') ?? 0));
+                            //     }),
+                            Grid::make(1)->schema([
+                                // TextInput::make('total_price')
+                                //     ->label('Total Price')
+                                //     ->numeric()
+                                //     ->disabled()
+                                //     ->default(0)
+                                //     ->dehydrated(true) // 👈 important: store in DB
+                                //     ->required(),
                                 Textarea::make('note')->label('Note')->rows(1),
                             ])
                         ])

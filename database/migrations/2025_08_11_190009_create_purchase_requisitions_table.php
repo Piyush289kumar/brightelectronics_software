@@ -24,6 +24,7 @@ return new class extends Migration {
             $table->foreignId('approved_by')->nullable()->constrained('users')->nullOnDelete();
             $table->timestamp('approved_at')->nullable();
             $table->json('meta')->nullable(); // store extra structured info
+            $table->string('image_path')->nullable();
             $table->timestamps();
         });
     }
