@@ -24,7 +24,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\DatePicker;
 use Illuminate\Support\Facades\Auth;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
-
+use App\Models\Invoice;
 
 class StoreInventoryInResource extends Resource
 {
@@ -112,24 +112,24 @@ class StoreInventoryInResource extends Resource
                 // ----------------------------
                 // Payment Info
                 // ----------------------------
-                Section::make('Payment & Amounts')
-                    ->schema([
-                        Grid::make(3)->schema([
-                            TextInput::make('grand_total')->label('Grand Total')->numeric()->default(0),
-                            TextInput::make('payment_method')->label('Payment Method'),
-                            DatePicker::make('payment_date')->label('Payment Date'),
-                            Select::make('payment_status')
-                                ->label('Payment Status')
-                                ->options([
-                                    'pending' => 'Pending',
-                                    'paid' => 'Paid',
-                                    'partial' => 'Partial',
-                                ])
-                                ->default('pending'),
-                            TextInput::make('discount_amount')->label('Discount')->numeric()->default(0),
-                            TextInput::make('tax_amount')->label('Tax')->numeric()->default(0),
-                        ])
-                    ]),
+                // Section::make('Payment & Amounts')
+                //     ->schema([
+                //         Grid::make(3)->schema([
+                //             TextInput::make('grand_total')->label('Grand Total')->numeric()->default(0),
+                //             TextInput::make('payment_method')->label('Payment Method'),
+                //             DatePicker::make('payment_date')->label('Payment Date'),
+                //             Select::make('payment_status')
+                //                 ->label('Payment Status')
+                //                 ->options([
+                //                     'pending' => 'Pending',
+                //                     'paid' => 'Paid',
+                //                     'partial' => 'Partial',
+                //                 ])
+                //                 ->default('pending'),
+                //             TextInput::make('discount_amount')->label('Discount')->numeric()->default(0),
+                //             TextInput::make('tax_amount')->label('Tax')->numeric()->default(0),
+                //         ])
+                //     ]),
 
                 // ----------------------------
                 // Documents / Attachments
@@ -158,22 +158,61 @@ class StoreInventoryInResource extends Resource
                 // ----------------------------
                 // Inventory Items
                 // ----------------------------
+                Section::make('Import From Purchase Order')
+                    ->schema([
+                        Select::make('purchase_order_id')
+                            ->label('Load from Purchase Order')
+                            ->options(
+                                Invoice::where('document_type', 'purchase_order')
+                                    ->latest('id')
+                                    ->pluck('number', 'id')
+                            )
+                            ->searchable()
+                            ->reactive()
+                            ->afterStateUpdated(function ($state, callable $set) {
+                                if (!$state) {
+                                    return;
+                                }
+
+                                $po = Invoice::with('items')->find($state);
+
+                                if (!$po) {
+                                    return;
+                                }
+
+                                // 🔹 Map PO items to Stock In items
+                                $items = $po->items->map(function ($item) {
+                                    return [
+                                        'product_id' => $item->product_id,
+                                        'quantity' => $item->quantity,
+                                        'note' => 'Imported from PO',
+                                    ];
+                                })->toArray();
+
+                                // 🔹 Replace current repeater items
+                                $set('items', $items);
+                            }),
+                    ])
+                    ->columns(1),
                 Section::make('Stock Items')
                     ->schema([
                         Repeater::make('items')
                             ->relationship()
+                            ->label('Items')
+                            ->required()
+                            ->reactive()
                             ->schema([
                                 Select::make('product_id')
                                     ->label('Product')
-                                    ->relationship('product', 'name') // works because SiteInventoryIssueItem has product()
-                                    ->required()
-                                    ->searchable(),
-
+                                    ->relationship('product', 'name')
+                                    ->searchable()
+                                    ->required(),
 
                                 TextInput::make('quantity')
                                     ->numeric()
                                     ->minValue(1)
                                     ->required(),
+
                                 Textarea::make('note')
                                     ->rows(1),
                             ])
@@ -181,6 +220,7 @@ class StoreInventoryInResource extends Resource
                             ->minItems(1)
                             ->columnSpanFull(),
                     ]),
+
             ]);
     }
 
