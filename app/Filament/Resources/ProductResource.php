@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\ProductResource\Pages;
 use App\Filament\Resources\ProductResource\RelationManagers;
+use App\Models\Category;
 use App\Models\Product;
 use Filament\Forms;
 use Filament\Forms\Components\Grid;
@@ -20,6 +21,8 @@ class ProductResource extends Resource
     protected static ?string $model = Product::class;
     protected static ?string $navigationIcon = 'heroicon-o-cube';
     protected static ?string $navigationGroup = 'Products & Categories';
+
+    protected static ?string $label = 'Spare Parts';
     protected static ?int $navigationSort = 15;
 
 
@@ -67,13 +70,31 @@ class ProductResource extends Resource
                         Forms\Components\Select::make('category_level_1')
                             ->label('Main Category')
                             ->options(
-                                \App\Models\Category::query()
-                                    ->whereNull('parent_id')
-                                    ->pluck('name', 'id')
+                                Category::whereNull('parent_id')->pluck('name', 'id')
                             )
                             ->reactive()
-                            // ->required()
-                            ->afterStateUpdated(fn(callable $set) => $set('category_level_2', null)),
+                            ->afterStateHydrated(function ($set, $get, $record) {
+                                if (!$record?->category_id) {
+                                    return;
+                                }
+
+                                $category = Category::find($record->category_id);
+
+                                if ($category?->parent?->parent) {
+                                    // Level 3 selected
+                                    $set('category_level_1', $category->parent->parent->id);
+                                    $set('category_level_2', $category->parent->id);
+                                    $set('category_level_3', $category->id);
+                                } elseif ($category?->parent) {
+                                    // Level 2 selected
+                                    $set('category_level_1', $category->parent->id);
+                                    $set('category_level_2', $category->id);
+                                } else {
+                                    // Level 1 selected
+                                    $set('category_level_1', $category->id);
+                                }
+                            })
+                            ->afterStateUpdated(fn($set) => $set('category_level_2', null)),
 
                         // Level 2: Sub Category (only shows if Level 1 has children)
                         Forms\Components\Select::make('category_level_2')
@@ -82,12 +103,12 @@ class ProductResource extends Resource
                                 $parentId = $get('category_level_1');
                                 if (!$parentId)
                                     return [];
-                                return \App\Models\Category::where('parent_id', $parentId)
+                                return Category::where('parent_id', $parentId)
                                     ->pluck('name', 'id');
                             })
                             ->hidden(function (callable $get) {
                                 $parentId = $get('category_level_1');
-                                return !\App\Models\Category::where('parent_id', $parentId)->exists();
+                                return !Category::where('parent_id', $parentId)->exists();
                             })
                             ->reactive()
                             ->afterStateUpdated(fn(callable $set) => $set('category_level_3', null)),
@@ -99,12 +120,12 @@ class ProductResource extends Resource
                                 $parentId = $get('category_level_2');
                                 if (!$parentId)
                                     return [];
-                                return \App\Models\Category::where('parent_id', $parentId)
+                                return Category::where('parent_id', $parentId)
                                     ->pluck('name', 'id');
                             })
                             ->hidden(function (callable $get) {
                                 $parentId = $get('category_level_2');
-                                return !$parentId || !\App\Models\Category::where('parent_id', $parentId)->exists();
+                                return !$parentId || !Category::where('parent_id', $parentId)->exists();
                             })
                             ->reactive(),
 
@@ -187,7 +208,19 @@ class ProductResource extends Resource
                 Tables\Columns\TextColumn::make('hsn_code')->label('Model No.')->searchable()->sortable()->toggleable(),
                 Tables\Columns\TextColumn::make('name')->searchable()->sortable()->toggleable(),
                 Tables\Columns\TextColumn::make('sku')->searchable()->sortable()->toggleable(),
-                Tables\Columns\TextColumn::make('category.name')->label('Category')->sortable()->toggleable(),
+                Tables\Columns\TextColumn::make('category.parent.name')
+                    ->label('Category')
+                    ->formatStateUsing(fn($state) => $state ?? '-')
+                    ->sortable()
+                    ->toggleable(),
+                Tables\Columns\TextColumn::make('category.name')
+                    ->label('Sub Category')
+                    ->formatStateUsing(
+                        fn($state, $record) =>
+                        $record->category?->parent_id ? $state : '-'
+                    )
+                    ->sortable()
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('selling_price')->money('INR')->sortable()->toggleable(),
                 Tables\Columns\IconColumn::make('is_active')->boolean()->sortable()->toggleable(),
                 Tables\Columns\TextColumn::make('created_at')->date()->sortable()->toggleable(),
