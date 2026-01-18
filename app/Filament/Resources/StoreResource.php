@@ -109,6 +109,7 @@ class StoreResource extends Resource
     {
         return $table
             ->columns([
+                Tables\Columns\TextColumn::make('id')->label('ID')->formatStateUsing(fn($state) => 'BRT-' . str_pad($state, 4, '0', STR_PAD_LEFT))->searchable()->sortable(),
                 Tables\Columns\TextColumn::make('name')->searchable()->sortable(),
                 Tables\Columns\TextColumn::make('code')->sortable(),
                 Tables\Columns\TextColumn::make('city')->sortable(),

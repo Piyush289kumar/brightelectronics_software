@@ -89,6 +89,7 @@ class VendorResource extends Resource
     {
         return $table
             ->columns([
+                Tables\Columns\TextColumn::make('id')->label('ID')->formatStateUsing(callback: fn($state) => 'VEN-' . str_pad($state, 4, '0', STR_PAD_LEFT))->searchable()->sortable(),
                 Tables\Columns\TextColumn::make('name')->searchable(),
                 Tables\Columns\TextColumn::make('contact_person'),
                 Tables\Columns\TextColumn::make('phone'),
