@@ -77,7 +77,7 @@ class PaymentAdviceResource extends Resource
 
                                 // ✅ Fetch ONLY unused Purchase Orders
                                 $pos = Invoice::query()
-                                    ->where('document_type', 'purchase_order')
+                                    ->where('document_type', 'purchase')
                                     ->where('billable_id', $vendorId)
                                     ->whereBetween('document_date', [$start, $end])
                                     ->whereNotIn('id', $usedPoIds) // ⭐ KEY LINE
@@ -108,8 +108,8 @@ class PaymentAdviceResource extends Resource
                     Forms\Components\Repeater::make('items_data')
                         ->visible(fn(string $operation) => $operation === 'create')
                         ->schema([
-                            Forms\Components\DatePicker::make('po_date')->label('PON Date')->disabled(),
-                            Forms\Components\TextInput::make('po_number')->label('PON')->disabled(),
+                            Forms\Components\DatePicker::make('po_date')->label('PCH Date')->disabled(),
+                            Forms\Components\TextInput::make('po_number')->label('PCH')->disabled(),
                             Forms\Components\TextInput::make('invoice_no')->label('Invoice No.'),
                             Forms\Components\TextInput::make('amount')->label('Invoice Amount'),
                             Forms\Components\TextInput::make('payment_doc_no')->default(0)->label('Payment doc no.'),

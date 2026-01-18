@@ -6,6 +6,7 @@ use App\Filament\Resources\PurchaseResource\Pages;
 use App\Filament\Resources\EstimateResource\RelationManagers;
 use App\Models\Estimate;
 use App\Models\Payment;
+use App\Models\Vendor;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -538,27 +539,42 @@ class PurchaseResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('number')->sortable()->searchable(),
-                Tables\Columns\TextColumn::make('billable.name')->label('Billed To')->sortable()->searchable(),
-                Tables\Columns\TextColumn::make('document_date')->date()->sortable(),
-                Tables\Columns\TextColumn::make('due_date')->date()->sortable(),
-                Tables\Columns\TextColumn::make('total_amount')->money('INR')->sortable(),
+                Tables\Columns\TextColumn::make('number')->sortable()->searchable()->toggleable(),
+                Tables\Columns\TextColumn::make('billable.name')->label('Billed To')->sortable()->searchable()->toggleable(),
+                Tables\Columns\TextColumn::make('document_date')->date()->sortable()->toggleable(),
+                Tables\Columns\TextColumn::make('due_date')->date()->sortable()->toggleable(),
+                Tables\Columns\TextColumn::make('total_amount')->money('INR')->sortable()->toggleable(),
                 Tables\Columns\TextColumn::make('amount_paid')
                     ->label('Paid')
                     ->money('INR')
                     ->getStateUsing(fn($record) => $record->payments()->where('status', 'completed')->sum('amount'))
-                    ->sortable(),
+                    ->sortable()->toggleable(),
 
                 Tables\Columns\TextColumn::make('balance')
                     ->label('Remaining')
                     ->money('INR')
                     ->getStateUsing(fn($record) => $record->total_amount - $record->payments()->where('status', 'completed')->sum('amount'))
-                    ->sortable(),
+                    ->sortable()->toggleable(),
 
-                Tables\Columns\TextColumn::make('status')->sortable(),
+                Tables\Columns\TextColumn::make('status')->sortable()->toggleable(),
             ])->defaultSort('created_at', 'desc')
 
             ->filters([
+                // Filter by Vendors
+                SelectFilter::make('vendor')
+                    ->label('Vendor')
+                    ->options(
+                        Vendor::query()->pluck('name', 'id')
+                    )
+                    ->searchable()
+                    ->query(function ($query, array $data) {
+                        if (!$data['value']) {
+                            return;
+                        }
+
+                        $query->where('billable_type', Vendor::class)
+                            ->where('billable_id', $data['value']);
+                    }),
                 // Filter by status
                 SelectFilter::make('status')
                     ->options([
@@ -581,30 +597,6 @@ class PurchaseResource extends Resource
                             ->when($data['document_date_to'], fn($q, $val) => $q->where('document_date', '<=', $val));
                     }),
 
-                // Filter by due date range
-                Filter::make('due_date')
-                    ->form([
-                        DatePicker::make('due_date_from')->label('Due From'),
-                        DatePicker::make('due_date_to')->label('Due To'),
-                    ])->columns(2)
-                    ->query(function ($query, array $data) {
-                        return $query
-                            ->when($data['due_date_from'], fn($q, $val) => $q->where('due_date', '>=', $val))
-                            ->when($data['due_date_to'], fn($q, $val) => $q->where('due_date', '<=', $val));
-                    }),
-
-                // Filter by total_amount range
-                Filter::make('total_amount')
-                    ->form([
-                        TextInput::make('min')->label('Min')->numeric(),
-                        TextInput::make('max')->label('Max')->numeric(),
-                    ])
-                    ->query(function ($query, array $data) {
-                        return $query
-                            ->when($data['min'], fn($q, $val) => $q->where('total_amount', '>=', $val))
-                            ->when($data['max'], fn($q, $val) => $q->where('total_amount', '<=', $val));
-                    }),
-                TrashedFilter::make()->label('Deleted Document'),
             ])
             ->actions([
 
