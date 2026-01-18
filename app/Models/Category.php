@@ -61,4 +61,18 @@ class Category extends Model
         return $depth;
     }
 
+
+    public function allChildrenIds(): array
+    {
+        $ids = [];
+
+        foreach ($this->children as $child) {
+            $ids[] = $child->id;
+            $ids = array_merge($ids, $child->allChildrenIds());
+        }
+
+        return $ids;
+    }
+
+
 }

@@ -91,9 +91,10 @@ class CategoryResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('name')
+                    ->label('Sub Category')
                     ->searchable(),
                 Tables\Columns\TextColumn::make('parent.name')
-                    ->label('Parent Category')
+                    ->label('Category')
                     ->sortable()
                     ->searchable()
                     ->toggleable(),
@@ -107,9 +108,31 @@ class CategoryResource extends Resource
             ])->defaultSort('name')
             ->filters([
                 Tables\Filters\SelectFilter::make('parent_id')
-                    ->label('Parent Category')
-                    ->relationship('parent', 'name')
-                    ->searchable(),
+                    ->label('Category')
+                    ->options(
+                        Category::whereNull('parent_id')->pluck('name', 'id')
+                    )
+                    ->searchable()
+                    ->query(function ($query, array $data) {
+                        if (!$data['value']) {
+                            return;
+                        }
+
+                        $category = Category::with('children')->find($data['value']);
+
+                        if (!$category) {
+                            return;
+                        }
+
+                        $ids = array_merge(
+                            [$category->id],
+                            $category->allChildrenIds()
+                        );
+
+                        // IMPORTANT FIX 👇
+                        $query->whereIn('id', $ids)
+                            ->orWhereIn('parent_id', $ids);
+                    }),
                 Tables\Filters\Filter::make('is_active')
                     ->label('Active Categories')
                     ->query(fn($query) => $query->where('is_active', true)),
