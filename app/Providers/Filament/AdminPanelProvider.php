@@ -53,10 +53,9 @@ class AdminPanelProvider extends PanelProvider
                 CompanyInfoWidget::class,
                 DashboardStats::class,
                 LowStockWidget::class, // 👈 Add here
-                PurchaseAnalyticsWidget::class,
-                TopVendorskWidget::class,
-                MonthlyPurchaseTrendWidget::class,
-
+                // PurchaseAnalyticsWidget::class,
+                // TopVendorskWidget::class,
+                // MonthlyPurchaseTrendWidget::class,
                 AccountingStats::class,
                 LedgerWidget::class,
             ])
