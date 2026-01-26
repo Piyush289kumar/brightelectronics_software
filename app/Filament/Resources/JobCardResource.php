@@ -11,6 +11,7 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 use TomatoPHP\FilamentDocs\Models\Document;
@@ -800,6 +801,20 @@ HTML;
     }
     public static function getEloquentQuery(): Builder
     {
-        return parent::getEloquentQuery()->with(['complain.leadSource']);
+        $user = Auth::user();
+
+        return parent::getEloquentQuery()
+            ->with(['complain.leadSource'])
+            ->when(
+                $user &&
+                !$user->hasRole(['Administrator', 'Developer', 'admin']) &&
+                $user->email !== 'vipprow@gmail.com',
+                function ($query) use ($user) {
+                    $query->whereHas('complain', function ($q) use ($user) {
+                        $q->whereJsonContains('assigned_engineers', $user->id);
+                    });
+                }
+            );
     }
+
 }

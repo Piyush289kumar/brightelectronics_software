@@ -5,9 +5,22 @@ namespace App\Filament\Widgets;
 use App\Models\Invoice;
 use App\Models\Vendor;
 use Filament\Widgets\ChartWidget;
+use Illuminate\Support\Facades\Auth;
 
 class MonthlyPurchaseTrendWidget extends ChartWidget
 {
+
+    public static function canView(): bool
+    {
+        $user = Auth::user();
+
+        return $user
+            && (
+                $user->hasRole(['Administrator', 'Developer', 'admin'])
+            );
+    }
+
+
     protected static ?string $heading = 'Monthly Purchase Trend';
 
     protected function getData(): array

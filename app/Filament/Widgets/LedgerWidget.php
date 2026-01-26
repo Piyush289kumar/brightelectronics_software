@@ -5,9 +5,20 @@ namespace App\Filament\Widgets;
 use App\Models\Ledger;
 use Filament\Tables;
 use Filament\Widgets\TableWidget as BaseWidget;
+use Illuminate\Support\Facades\Auth;
 
 class LedgerWidget extends BaseWidget
 {
+    public static function canView(): bool
+    {
+        $user = Auth::user();
+
+        return $user
+            && (
+                $user->hasRole(['Administrator', 'Developer', 'admin'])
+            );
+    }
+
     protected int|string|array $columnSpan = 'full'; // full width in dashboard
 
     protected static ?string $heading = 'Recent Ledger Transactions';

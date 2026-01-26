@@ -147,6 +147,10 @@ class ComplainResource extends Resource
         ]);
     }
 
+
+
+
+
     public static function table(Table $table): Table
     {
         return $table
@@ -257,12 +261,27 @@ class ComplainResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         $query = parent::getEloquentQuery();
-        // Hide complains where first_action_code is PKD
+
+        // Hide PKD records
         $query->where('first_action_code', '!=', 'PKD');
+
         $user = Auth::user();
+
+        // Store Manager restriction
         if ($user && $user->hasRole('Store Manager')) {
             $query->where('store_id', $user->store_id);
         }
+
+        // Restrict for non-admin users
+        if (
+            $user &&
+            !$user->hasRole(['Administrator', 'Developer', 'admin']) &&
+            $user->email !== 'vipprow@gmail.com'
+        ) {
+            $query->whereJsonContains('assigned_engineers', $user->id);
+        }
+
         return $query;
     }
+
 }

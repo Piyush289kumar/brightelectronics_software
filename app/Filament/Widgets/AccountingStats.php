@@ -9,6 +9,7 @@ use App\Models\Ledger;
 use App\Models\Product;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
+use Illuminate\Support\Facades\Auth;
 
 class AccountingStats extends BaseWidget
 {
@@ -16,24 +17,58 @@ class AccountingStats extends BaseWidget
 
     protected function getStats(): array
     {
-        $complainCount = Complain::count();
+        $user = Auth::user();
 
-        $jobCardTotal = JobCard::count();
+        // -------------------------
+        // Complaints Query
+        // -------------------------
+        $complainQuery = Complain::query();
 
-        $jobCardPending = JobCard::where('status', 'pending')->count();
+        if (
+            $user &&
+            !$user->hasRole(['Administrator', 'Developer', 'admin']) &&
+            $user->email !== 'vipprow@gmail.com'
+        ) {
+            $complainQuery->whereJsonContains('assigned_engineers', $user->id);
+        }
 
-        $jobCardCompleted = JobCard::where('status', 'completed')->count();
+        $complainCount = $complainQuery->count();
+
+        // -------------------------
+        // Job Cards Query
+        // -------------------------
+        $jobCardQuery = JobCard::query();
+
+        if (
+            $user &&
+            !$user->hasRole(['Administrator', 'Developer', 'admin']) &&
+            $user->email !== 'vipprow@gmail.com'
+        ) {
+            $jobCardQuery->whereHas('complain', function ($q) use ($user) {
+                $q->whereJsonContains('assigned_engineers', $user->id);
+            });
+        }
+
+        $jobCardTotal = $jobCardQuery->count();
+
+        $jobCardPending = (clone $jobCardQuery)
+            ->where('status', 'pending')
+            ->count();
+
+        $jobCardCompleted = (clone $jobCardQuery)
+            ->where('status', 'completed')
+            ->count();
 
         return [
             Stat::make('Total Complaints', $complainCount)
                 ->icon('heroicon-o-chat-bubble-left-right')
                 ->color('info')
-                ->description('All registered complaints'),
+                ->description('Assigned complaints'),
 
             Stat::make('Total Job Cards', $jobCardTotal)
                 ->icon('heroicon-o-clipboard-document-list')
                 ->color('primary')
-                ->description('All job cards'),
+                ->description('Assigned job cards'),
 
             Stat::make('Pending Job Cards', $jobCardPending)
                 ->icon('heroicon-o-clock')

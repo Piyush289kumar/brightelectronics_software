@@ -6,9 +6,20 @@ use App\Models\Inventory;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget as BaseWidget;
+use Illuminate\Support\Facades\Auth;
 
 class LowStockWidget extends BaseWidget
 {
+    public static function canView(): bool
+    {
+        $user = Auth::user();
+
+        return $user
+            && (
+                $user->hasRole(['Administrator', 'Developer', 'admin'])
+            );
+    }
+
     protected static ?int $sort = 3;
 
     public function table(Table $table): Table

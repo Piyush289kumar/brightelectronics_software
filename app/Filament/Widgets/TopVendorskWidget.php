@@ -5,9 +5,20 @@ namespace App\Filament\Widgets;
 use App\Models\Invoice;
 use App\Models\Vendor;
 use Filament\Widgets\ChartWidget;
+use Illuminate\Support\Facades\Auth;
 
 class TopVendorskWidget extends ChartWidget
 {
+
+    public static function canView(): bool
+    {
+        $user = Auth::user();
+
+        return $user
+            && (
+                $user->hasRole(['Administrator', 'Developer', 'admin'])
+            );
+    }
     protected static ?string $heading = 'Top Vendors by Purchase Value';
 
     protected function getData(): array
