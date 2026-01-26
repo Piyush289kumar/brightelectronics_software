@@ -131,6 +131,22 @@ class PurchaseRequisitionResource extends Resource
                     ->columnSpan('full')
             ]);
     }
+
+     public static function getEloquentQuery(): Builder
+    {
+        $user = Auth::user();
+
+        $query = parent::getEloquentQuery();
+
+        // ✅ Restrict visibility for non-admin users
+        if (!$user->hasRole(['Administrator', 'Developer', 'admin']) && $user->email !== 'vipprow@gmail.com') {
+            $query->where('requested_by', $user->id);
+        }
+
+        return $query;
+    }
+
+
     public static function table(Table $table): Table
     {
         return $table
