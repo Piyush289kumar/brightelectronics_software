@@ -454,7 +454,7 @@ class PurchaseOrderResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('number')->sortable()->searchable()->label('Invoice No.'),
+                Tables\Columns\TextColumn::make('number')->sortable()->searchable()->label('PON'),
                 Tables\Columns\TextColumn::make('purchase_req_to_purchase_order_no')->sortable()->searchable()->label('Purchase req. No.')->default('--'),
                 Tables\Columns\TextColumn::make('billable.name')->label('Billed To')->searchable()->toggleable(),
                 Tables\Columns\TextColumn::make('document_date')->date()->sortable()->label('Invoice Date'),
