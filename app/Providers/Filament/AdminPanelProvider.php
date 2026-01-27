@@ -9,6 +9,7 @@ use App\Filament\Widgets\LedgerWidget;
 use App\Filament\Widgets\LowStockWidget;
 use App\Filament\Widgets\MonthlyPurchaseTrendWidget;
 use App\Filament\Widgets\PurchaseAnalyticsWidget;
+use App\Filament\Widgets\RescheduledComplainsWidget;
 use App\Filament\Widgets\TopVendorskWidget;
 use Filament\Http\Middleware\Authenticate;
 use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
@@ -58,6 +59,7 @@ class AdminPanelProvider extends PanelProvider
                 // MonthlyPurchaseTrendWidget::class,
                 AccountingStats::class,
                 LedgerWidget::class,
+                RescheduledComplainsWidget::class,
             ])
             ->middleware([
                 EncryptCookies::class,

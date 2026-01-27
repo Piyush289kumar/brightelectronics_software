@@ -5,9 +5,21 @@ namespace App\Filament\Widgets;
 use App\Models\Invoice;
 use BezhanSalleh\FilamentShield\Traits\HasWidgetShield;
 use Filament\Widgets\ChartWidget;
+use Illuminate\Support\Facades\Auth;
 
 class PurchaseAnalyticsWidget extends ChartWidget
 {
+
+    public static function canView(): bool
+    {
+        $user = Auth::user();
+
+        return $user
+            && (
+                $user->hasRole(['Administrator-', 'Developer-', 'admin-'])
+            );
+    }
+
     use HasWidgetShield;
 
     protected static ?string $heading = 'Purchase Orders vs. Purchase Invoices';

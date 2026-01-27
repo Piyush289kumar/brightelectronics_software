@@ -16,7 +16,7 @@ class MonthlyPurchaseTrendWidget extends ChartWidget
 
         return $user
             && (
-                $user->hasRole(['Administrator', 'Developer', 'admin'])
+                $user->hasRole(['Administrator-', 'Developer-', 'admin-'])
             );
     }
 
