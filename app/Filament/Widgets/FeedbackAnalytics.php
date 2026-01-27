@@ -5,10 +5,22 @@ namespace App\Filament\Widgets;
 use App\Models\Feedback;
 use BezhanSalleh\FilamentShield\Traits\HasWidgetShield;
 use Filament\Widgets\ChartWidget;
+use Illuminate\Support\Facades\Auth;
 
 class FeedbackAnalytics extends ChartWidget
 {
     use HasWidgetShield;
+
+    public static function canView(): bool
+    {
+        $user = Auth::user();
+
+        return $user
+            && (
+                $user->hasRole(['Administrator-', 'Developer-', 'admin-'])
+            );
+    }
+
     protected static ?string $heading = 'Feedback Overview';
     protected function getData(): array
     {

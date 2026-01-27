@@ -5,10 +5,22 @@ namespace App\Filament\Widgets;
 use App\Models\StoreInventory;
 use BezhanSalleh\FilamentShield\Traits\HasWidgetShield;
 use Filament\Widgets\ChartWidget;
+use Illuminate\Support\Facades\Auth;
 
 class InventoryStockChart extends ChartWidget
 {
     use HasWidgetShield;
+
+
+    public static function canView(): bool
+    {
+        $user = Auth::user();
+
+        return $user
+            && (
+                $user->hasRole(['Administrator-', 'Developer-', 'admin-'])
+            );
+    }
 
     protected static ?string $heading = 'Inventory Stock by Store';
 
