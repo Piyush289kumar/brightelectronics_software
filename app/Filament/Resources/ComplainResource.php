@@ -99,10 +99,6 @@ class ComplainResource extends Resource
                             )
                         )
                         ->required(),
-
-
-
-
                     Forms\Components\Select::make('first_action_code')
                         ->label('First Action Code')
                         ->options([
@@ -136,12 +132,20 @@ class ComplainResource extends Resource
                         ->label('Assigned By')
                         ->relationship('assigner', 'name')
                         ->default(fn() => Auth::id())
+                        ->dehydrated()
                         ->disabled(fn() => !auth()->user()->hasAnyRole(['Administrator', 'Store Manager', 'Team Lead'])),
                     Forms\Components\MultiSelect::make('assigned_engineers')
                         ->label('Assigned Engineers')
                         ->options(User::role('Engineer')->pluck('name', 'id')->toArray())
                         ->default(fn() => [Auth::id()])
-                        ->disabled(fn() => !auth()->user()->hasAnyRole(['Administrator', 'Store Manager', 'Team Lead'])),
+                        ->disabled(fn() => !auth()->user()->hasAnyRole(['Administrator', 'Store Manager', 'Team Lead']))
+                        ->dehydrated(true)
+                        ->dehydrateStateUsing(
+                            fn($state) =>
+                            !empty($state)
+                            ? collect($state)->map(fn($id) => (int) $id)->values()->toArray()
+                            : [Auth::id()] // ✅ fallback when disabled
+                        ),
                 ])
                 ->columns(3),
         ]);
@@ -155,19 +159,25 @@ class ComplainResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('complain_id')->label('Complain ID')->sortable(),
-                Tables\Columns\TextColumn::make('name')->label('Customer Name')->sortable(),
-                Tables\Columns\TextColumn::make('mobile')->label('Phone')->sortable(),
-                Tables\Columns\TextColumn::make('status')->label('Status')->badge()
-                    ->color(fn($state) => match ($state) {
-                        'Pending' => 'warning',
-                        'In Progress' => 'info',
-                        'Completed' => 'success',
-                        'Cancelled' => 'danger',
-                        default => 'secondary',
-                    }),
-                Tables\Columns\TextColumn::make('first_action_code')->label('Action Code')->sortable(),
-                Tables\Columns\TextColumn::make('created_at')->label('Created At')->dateTime()->sortable(),
+                Tables\Columns\TextColumn::make('complain_id')->label('Complain ID')->sortable()->toggleable(),
+                Tables\Columns\TextColumn::make('name')->label('Customer Name')->sortable()->toggleable(),
+                Tables\Columns\TextColumn::make('mobile')->label('Phone')->sortable()->toggleable(),
+
+                Tables\Columns\TextColumn::make('first_action_code')->label('Action Code')->sortable()->toggleable(),
+                Tables\Columns\TextColumn::make('assigned_engineers')
+                    ->label('Assigned Engineers')
+                    ->state(function ($record) {
+                        if (empty($record->assigned_engineers)) {
+                            return '—';
+                        }
+
+                        return User::whereIn('id', $record->assigned_engineers)
+                            ->pluck('name')
+                            ->implode(', ');
+                    })
+                    ->wrap()
+                    ->sortable()->toggleable(),
+                Tables\Columns\TextColumn::make('created_at')->label('Created At')->dateTime()->sortable()->toggleable(),
                 // ⭐ NEW MAP BUTTON COLUMN
                 Tables\Columns\TextColumn::make('map')
                     ->label('Map')
@@ -201,29 +211,29 @@ class ComplainResource extends Resource
             ->actions([
                 Tables\Actions\ActionGroup::make([
                     Tables\Actions\ViewAction::make(),
-                    Tables\Actions\Action::make('updateFirstActionCode')
-                        ->label('Set Action') // short label
-                        ->icon('heroicon-o-cube-transparent') // concise editing icon
-                        ->color('warning')
-                        ->requiresConfirmation()
-                        ->form([
-                            Select::make('first_action_code')
-                                ->label('Action Code') // shorter label
-                                ->options([
-                                    'NEW' => 'NEW',
-                                    'PKD' => 'Picked (PKD)',
-                                    'Visit' => 'Visit',
-                                    'RSD' => 'Reschedule Visit (RSD)',
-                                    'CNC' => 'Call Not Connected (CNC)',
-                                    'Job Cancel' => 'Job Cancel',
-                                ])
-                                ->default(fn($record) => $record->first_action_code)
-                                ->required(),
-                        ])
-                        ->action(function ($record, array $data) {
-                            $record->update(['first_action_code' => $data['first_action_code']]);
-                        })
-                        ->visible(fn() => auth()->user()->hasAnyRole(['Administrator', 'Store Manager', 'Team Lead'])),
+                    // Tables\Actions\Action::make('updateFirstActionCode')
+                    //     ->label('Set Action') // short label
+                    //     ->icon('heroicon-o-cube-transparent') // concise editing icon
+                    //     ->color('warning')
+                    //     ->requiresConfirmation()
+                    //     ->form([
+                    //         Select::make('first_action_code')
+                    //             ->label('Action Code') // shorter label
+                    //             ->options([
+                    //                 'NEW' => 'NEW',
+                    //                 'PKD' => 'Picked (PKD)',
+                    //                 'Visit' => 'Visit',
+                    //                 'RSD' => 'Reschedule Visit (RSD)',
+                    //                 'CNC' => 'Call Not Connected (CNC)',
+                    //                 'Job Cancel' => 'Job Cancel',
+                    //             ])
+                    //             ->default(fn($record) => $record->first_action_code)
+                    //             ->required(),
+                    //     ])
+                    //     ->action(function ($record, array $data) {
+                    //         $record->update(['first_action_code' => $data['first_action_code']]);
+                    //     })
+                    //     ->visible(fn() => auth()->user()->hasAnyRole(['Administrator', 'Store Manager', 'Team Lead'])),
                     // ✅ Open Google Map Button
                     Tables\Actions\Action::make('open_map')
                         ->label('Open Map')
