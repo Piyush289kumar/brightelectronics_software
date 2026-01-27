@@ -62,7 +62,7 @@ class ProductVendorResource extends Resource
             ])->defaultSort('created_at', 'desc')
             ->filters([
                 Tables\Filters\SelectFilter::make('product_id')
-                    ->label('Product')
+                    ->label('Spare Parts')
                     ->relationship('product', 'name')
                     ->searchable()
                     ->preload(),

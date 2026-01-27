@@ -73,7 +73,7 @@ class PurchaseRequisitionResource extends Resource
                         Grid::make(12)->schema([
 
                             Select::make('product_id')
-                                ->label('Product')
+                                ->label('Spare Parts')
                                 ->options(
                                     Product::all()->mapWithKeys(
                                         fn($p) => [$p->id => $p->name . ' (' . $p->barcode . ')']
@@ -222,7 +222,7 @@ class PurchaseRequisitionResource extends Resource
                                 ->schema([
                                     Grid::make(4)->schema([
                                         TextInput::make('id')->hidden()->dehydrated(),
-                                        TextInput::make('product_name')->label('Product')->disabled(),
+                                        TextInput::make('product_name')->label('Spare Parts')->disabled(),
                                         TextInput::make('quantity')->label('Requested Qty')->disabled(),
                                         // TextInput::make('purchase_price')->label('Requested Price')->disabled(),
                                         Select::make('vendor_id')
@@ -407,12 +407,12 @@ class PurchaseRequisitionResource extends Resource
                                     ->required(fn($get) => $get('method') === 'transfer'),
 
                                 Repeater::make('products')
-                                    ->label('Products to Purchase')
+                                    ->label('Spare Parts to Purchase')
                                     ->visible(fn($get) => $get('method') === 'purchase')
                                     ->default($merged) // 👈 load merged products
                                     ->schema([
                                         Grid::make(2)->schema([
-                                            TextInput::make('product_name')->disabled()->label('Product')->dehydrated(true),
+                                            TextInput::make('product_name')->disabled()->label('Spare Parts')->dehydrated(true),
                                             TextInput::make('quantity')->disabled()->label('Total Qty')->dehydrated(true),
                                             TextInput::make('unit_price')->disabled()->label('Unit Price')->dehydrated(true),
                                             TextInput::make('total_amount')->disabled()->label('Total')->dehydrated(true),

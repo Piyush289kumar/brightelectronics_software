@@ -172,7 +172,7 @@ class TransferOrderResource extends Resource
                                         Grid::make(12)
                                             ->schema([
                                                 Select::make('product_id')
-                                                    ->label('Product')
+                                                    ->label('Spare Parts')
                                                     ->options(Product::pluck('name', 'id'))
                                                     ->searchable()
                                                     ->required()

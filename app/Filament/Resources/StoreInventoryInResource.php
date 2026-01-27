@@ -204,7 +204,7 @@ class StoreInventoryInResource extends Resource
                             ->reactive()
                             ->schema([
                                 Select::make('product_id')
-                                    ->label('Product')
+                                    ->label('Spare Parts')
                                     ->options(function () {
                                         return Product::query()
                                             ->orderBy('name')

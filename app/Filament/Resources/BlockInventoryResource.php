@@ -64,7 +64,7 @@ class BlockInventoryResource extends Resource
                     ->searchable(),
 
                 Tables\Columns\TextColumn::make('product.name')
-                    ->label('Product')
+                    ->label('Spare Parts')
                     ->sortable()
                     ->searchable(),
 

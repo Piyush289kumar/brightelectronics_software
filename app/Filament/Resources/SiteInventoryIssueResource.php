@@ -66,7 +66,7 @@ class SiteInventoryIssueResource extends Resource
                         ->schema([
 
                             Select::make('product_id')
-                                ->label('Product')
+                                ->label('Spare Parts')
                                 ->relationship('product', 'name')
                                 ->required()
                                 ->searchable()
@@ -154,7 +154,7 @@ class SiteInventoryIssueResource extends Resource
 
                 // Or list product names
                 Tables\Columns\TextColumn::make('items.product.name')
-                    ->label('Products')
+                    ->label('Spare Parts')
                     ->listWithLineBreaks()
                     ->limit(50),
 

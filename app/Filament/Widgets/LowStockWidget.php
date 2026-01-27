@@ -32,7 +32,7 @@ class LowStockWidget extends BaseWidget
             )
             ->columns([
                 Tables\Columns\TextColumn::make('product.name')
-                    ->label('Product')
+                    ->label('Spare Parts')
                     ->searchable()
                     ->sortable(),
 

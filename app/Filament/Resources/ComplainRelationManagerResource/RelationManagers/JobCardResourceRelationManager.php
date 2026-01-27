@@ -78,10 +78,10 @@ class JobCardResourceRelationManager extends RelationManager
                             ->required(),
 
                         Forms\Components\MultiSelect::make('product_id')
-                            ->label('Products')
+                            ->label('Spare Parts')
                             ->options(Product::all()->pluck('name', 'id')->toArray())
                             ->searchable()
-                            ->hint('Select one or more products'),
+                            ->hint('Select one or more spare parts'),
 
                         Forms\Components\Select::make('size')
                             ->label('Screen Sizes')

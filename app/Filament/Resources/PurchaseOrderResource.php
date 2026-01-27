@@ -172,7 +172,7 @@ class PurchaseOrderResource extends Resource
 
 
                                                 Select::make('product_id')
-                                                    ->label('Product')
+                                                    ->label('Spare Parts')
                                                     ->options(function () {
                                                         return Product::query()
                                                             ->orderBy('name')

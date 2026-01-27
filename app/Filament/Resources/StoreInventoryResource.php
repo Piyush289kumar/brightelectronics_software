@@ -36,7 +36,7 @@ class StoreInventoryResource extends Resource
                     ->required(),
 
                 Forms\Components\Select::make('product_id')
-                    ->label('Product')
+                    ->label('Spare Parts')
                     ->required()
                     ->searchable()
                     ->preload()

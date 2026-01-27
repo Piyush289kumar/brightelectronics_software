@@ -92,7 +92,7 @@ class JobCardResource extends Resource
 
 
                         Forms\Components\Select::make('product_id')
-                            ->label('Select Products (Expenses)')
+                            ->label('Select Spare Parts (Expenses)')
                             ->multiple()             // multiple select
                             ->reactive()
                             ->searchable()
