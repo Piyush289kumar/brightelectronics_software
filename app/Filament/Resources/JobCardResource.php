@@ -50,14 +50,14 @@ class JobCardResource extends Resource
 
                                 $options = [
                                     'Pending' => 'Pending',
-                                    'Delivered' => 'Delivered',
+                                    'Complete' => 'Complete',
                                     'Return' => 'Return',
                                     'Cancelled' => 'Cancelled',
                                 ];
 
                                 // ✅ Only Admin / Manager / Team Lead can see "Complete"
-                                if ($user && $user->hasAnyRole(['Administrator','admin', 'Manager', 'Team Lead'])) {
-                                    $options['Complete'] = 'Complete';
+                                if ($user && $user->hasAnyRole(['Administrator', 'admin', 'Manager', 'Team Lead'])) {
+                                    $options['Delivered'] = 'Delivered';
                                 }
 
                                 return $options;
