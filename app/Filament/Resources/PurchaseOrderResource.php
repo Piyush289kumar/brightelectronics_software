@@ -562,7 +562,8 @@ class PurchaseOrderResource extends Resource
                 <td style='padding:2px; text-align:center;'>₹ " . number_format($item->total_amount, 2) . "</td>
             </tr>";
                             })->implode('');
-                            $map = [
+                            $map = [                                
+                                '$PURCHAS_REQ_NUMBER' => (string) ($record->purchase_req_to_purchase_order_no ?? "--"),
                                 '$NUMBER' => (string) $record->number,
                                 '$DOCUMENT_DATE' => Carbon::parse($record->document_date)->format('d-m-Y'),
                                 '$PLACE_OF_SUPPLY' => (string) ($record->place_of_supply ?? ''),
@@ -633,6 +634,7 @@ class PurchaseOrderResource extends Resource
             </tr>";
                             })->implode('');
                             $map = [
+                                '$PURCHAS_REQ_NUMBER' => (string) ($record->purchase_req_to_purchase_order_no ?? "--"),
                                 '$NUMBER' => (string) $record->number,
                                 '$DOCUMENT_DATE' => Carbon::parse($record->document_date)->format('d-m-Y'),
                                 '$PLACE_OF_SUPPLY' => (string) ($record->place_of_supply ?? ''),
