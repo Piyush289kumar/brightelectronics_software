@@ -45,15 +45,25 @@ class JobCardResource extends Resource
                             ->columnSpan(1),
                         Forms\Components\Select::make('status')
                             ->label('Status')
-                            ->options([
-                                'Pending' => 'Pending',
-                                'Complete' => 'Complete',
-                                'Delivered' => 'Delivered',
-                                'Return' => 'Return',
-                                'Cancelled' => 'Cancelled',
-                            ])
+                            ->options(function () {
+                                $user = Auth::user();
+
+                                $options = [
+                                    'Pending' => 'Pending',
+                                    'Delivered' => 'Delivered',
+                                    'Return' => 'Return',
+                                    'Cancelled' => 'Cancelled',
+                                ];
+
+                                // ✅ Only Admin / Manager / Team Lead can see "Complete"
+                                if ($user && $user->hasAnyRole(['Administrator','admin', 'Manager', 'Team Lead'])) {
+                                    $options['Complete'] = 'Complete';
+                                }
+
+                                return $options;
+                            })
                             ->default('Pending')
-                            ->columnSpan(1),
+                            ->required()->columnSpan(1),
                         Forms\Components\CheckboxList::make('check_list')
                             ->label('Check List')
                             ->options([
@@ -255,16 +265,7 @@ class JobCardResource extends Resource
                                             ->suffixIcon('heroicon-o-currency-rupee')
                                             ->extraAttributes(['class' => 'text-blue-600 font-semibold']),
 
-                                        Forms\Components\Select::make('status')
-                                            ->label('Status')
-                                            ->options([
-                                                'Pending' => 'Pending',
-                                                'Complete' => 'Complete',
-                                                'Delivered' => 'Delivered',
-                                                'Return' => 'Return',
-                                                'Cancelled' => 'Cancelled',
-                                            ])
-                                            ->default('Pending'),
+
 
                                         Forms\Components\Toggle::make('job_verified_by_admin')
                                             ->label('Verified by Admin')
