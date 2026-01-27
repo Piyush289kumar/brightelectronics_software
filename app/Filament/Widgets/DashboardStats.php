@@ -32,7 +32,7 @@ class DashboardStats extends BaseWidget
     protected function getStats(): array
     {
         // ---------------- Purchases ----------------
-        $purchaseRequisitionCount = PurchaseRequisition::count();
+        $purchaseRequisitionCount = PurchaseRequisition::where('status', 'pending')->count();
 
         $pendingPurchaseAmount = Invoice::where('document_type', 'purchase')
             ->where('status', 'pending')
@@ -63,8 +63,8 @@ class DashboardStats extends BaseWidget
             // ---------------- Purchases ----------------
             Stat::make('Purchase Requisitions', $purchaseRequisitionCount)
                 ->icon('heroicon-o-clipboard-document')
-                ->color('primary')
-                ->description('Total purchase requests'),
+                ->color('warning')
+                ->description('Total pending purchase requests'),
 
             // ---------------- Branch Target ----------------
             Stat::make(

@@ -23,6 +23,7 @@ class ProductVendorResource extends Resource
 
     // Group vendors under a sidebar section
     protected static ?string $navigationGroup = 'Suppliers & Customers';
+    protected static ?string $label = 'Spare Parts Vendors';
     // Optional: sort order inside group
     protected static ?int $navigationSort = 12;
 

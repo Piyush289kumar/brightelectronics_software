@@ -335,11 +335,11 @@ class ProductResource extends Resource
      * Show nly active products
      */
 
-    public static function getEloquentQuery(): Builder
-    {
-        return parent::getEloquentQuery()
-            ->where('is_active', true); // Only active products
-    }
+    // public static function getEloquentQuery(): Builder
+    // {
+    //     return parent::getEloquentQuery()
+    //         ->where('is_active', true); // Only active products
+    // }
 
 
 

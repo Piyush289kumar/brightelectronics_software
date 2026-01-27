@@ -70,7 +70,7 @@ class PurchaseRequisitionResource extends Resource
                     ->relationship('items')
                     ->label('Requested Items')
                     ->schema([
-                        Grid::make(12)->schema([
+                        Grid::make(columns: 3)->schema([
 
                             Select::make('product_id')
                                 ->label('Spare Parts')
@@ -82,6 +82,32 @@ class PurchaseRequisitionResource extends Resource
                                 ->searchable()
                                 ->reactive()
                                 ->required()
+
+
+                                // ✅ Create Product Button
+                                ->createOptionForm([
+                                    TextInput::make('name')
+                                        ->label('Spare Part Name')
+                                        ->required()
+                                        ->maxLength(255),
+
+                                    TextInput::make('barcode')
+                                        ->label('Barcode')
+                                        ->maxLength(100),
+                                ])
+
+                                // ✅ Save logic
+                                ->createOptionUsing(function (array $data): int {
+                                    $product = Product::create([
+                                        'name' => $data['name'],
+                                        'barcode' => $data['barcode'] ?? null,
+                                        'is_active' => false,   // ❗ inactive by default
+                                        'purchase_price' => 0,
+                                        'selling_price' => 0,
+                                    ]);
+
+                                    return $product->id;
+                                })
                                 ->afterStateUpdated(function ($state, callable $set) {
                                     if ($state) {
                                         $product = Product::find($state);
@@ -89,7 +115,7 @@ class PurchaseRequisitionResource extends Resource
                                             $set('purchase_price', $product->purchase_price);
                                         }
                                     }
-                                })->columnSpan(6),
+                                })->columnSpanFull(),
 
                             TextInput::make('quantity')
                                 ->label('Quantity')
@@ -99,32 +125,38 @@ class PurchaseRequisitionResource extends Resource
                                 ->reactive()
                                 ->afterStateUpdated(function ($state, callable $get, callable $set) {
                                     $set('total_price', $state * ($get('purchase_price') ?? 0));
-                                })->columnSpan(2),
+                                }),
+
+                            TextInput::make('purchase_price')
+                                ->label('Rete')
+                                ->numeric()
+                                ->disabled()
+                                ->dehydrated()
+                                ->required()
+                                ->reactive()
+                                ->default(0)
+                                ->afterStateUpdated(function ($state, callable $get, callable $set) {
+                                    $set('total_price', $state * ($get('quantity') ?? 0));
+                                }),
+
+                            TextInput::make('total_price')
+                                ->label('Total Price')
+                                ->numeric()
+                                ->disabled()
+                                ->default(0)
+                                ->dehydrated(true) // 👈 important: store in DB
+                                ->required(),
+                            Textarea::make('note')->label('Note')->rows(1)->columnSpanFull(),
+
                             Forms\Components\FileUpload::make('uom')->label('Product Picture')
                                 ->disk('public')
                                 ->directory('request_products')
                                 ->image()
-                                ->nullable()->columnSpan(4),
-                            // TextInput::make('purchase_price')
-                            //     ->label('Purchase Unit Price')
-                            //     ->numeric()
-                            //     ->disabled()
-                            //     ->dehydrated()
-                            //     ->required()
-                            //     ->reactive()
-                            //     ->default(0)
-                            //     ->afterStateUpdated(function ($state, callable $get, callable $set) {
-                            //         $set('total_price', $state * ($get('quantity') ?? 0));
-                            //     }),
+                                ->nullable()
+                                ->columnSpanFull(),
+
                             Grid::make(1)->schema([
-                                // TextInput::make('total_price')
-                                //     ->label('Total Price')
-                                //     ->numeric()
-                                //     ->disabled()
-                                //     ->default(0)
-                                //     ->dehydrated(true) // 👈 important: store in DB
-                                //     ->required(),
-                                Textarea::make('note')->label('Note')->rows(1),
+
                             ])
                         ])
                     ])
@@ -132,7 +164,7 @@ class PurchaseRequisitionResource extends Resource
             ]);
     }
 
-     public static function getEloquentQuery(): Builder
+    public static function getEloquentQuery(): Builder
     {
         $user = Auth::user();
 
@@ -222,31 +254,53 @@ class PurchaseRequisitionResource extends Resource
                                 ->schema([
                                     Grid::make(4)->schema([
                                         TextInput::make('id')->hidden()->dehydrated(),
-                                        TextInput::make('product_name')->label('Spare Parts')->disabled(),
-                                        TextInput::make('quantity')->label('Requested Qty')->disabled(),
-                                        // TextInput::make('purchase_price')->label('Requested Price')->disabled(),
+
+                                        TextInput::make('product_name')
+                                            ->label('Spare Parts')
+                                            ->disabled(),
+
+                                        TextInput::make('quantity')
+                                            ->label('Requested Qty')
+                                            ->disabled(),
+
                                         Select::make('vendor_id')
                                             ->label('Vendor')
                                             ->options(Vendor::pluck('name', 'id'))
                                             ->searchable()
                                             ->required()
-                                            ->dehydrated(true)
                                             ->reactive(),
+
                                         TextInput::make('approved_quantity')
                                             ->label('Approved Qty')
                                             ->numeric()
-                                            ->required(),
+                                            ->required()
+                                            ->default(0)
+                                            ->lazy()
+                                            ->afterStateUpdated(function ($state, callable $get, callable $set) {
+                                                $price = (float) ($get('approved_price') ?? 0);
+                                                $set('approved_total', (float) $state * $price);
+                                            }),
+
                                         TextInput::make('approved_price')
                                             ->label('Approved Price')
                                             ->numeric()
+                                            ->required()
                                             ->default(0)
-                                            ->required(),
+                                            ->lazy()
+                                            ->afterStateUpdated(function ($state, callable $get, callable $set) {
+                                                $qty = (float) ($get('approved_quantity') ?? 0);
+                                                $set('approved_total', $qty * (float) $state);
+                                            }),
+
                                         TextInput::make('approved_total')
                                             ->label('Approved Total')
                                             ->disabled()
-                                            ->dehydrated(true),
+                                            ->dehydrated(true)
+                                            ->numeric()
+                                            ->default(0),
                                     ]),
                                 ])
+                                ->columns('full')
                                 ->default(function ($record, $get) {
                                     $globalVendor = $get('vendor_id');
                                     return $record?->items?->map(fn($i) => [
