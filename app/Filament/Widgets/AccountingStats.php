@@ -77,7 +77,7 @@ class AccountingStats extends BaseWidget
                 ->color('info')
                 ->description('Assigned complaints'),
 
-            Stat::make('PKD Complaints', $cncComplaints)
+            Stat::make('CNC Complaints', $cncComplaints)
                 ->icon('heroicon-o-arrow-down-tray')
                 ->color('warning')
                 ->description('CNC complaints'),
