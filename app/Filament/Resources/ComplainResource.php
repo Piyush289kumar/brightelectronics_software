@@ -66,10 +66,61 @@ class ComplainResource extends Resource
                 ->columns(1),
             Forms\Components\Section::make('Complaint Details')
                 ->schema([
+
                     Forms\Components\Select::make('lead_source_id')
                         ->label('Lead Source')
                         ->relationship('leadSource', 'lead_name')
-                        ->required(),
+                        ->required()
+                        ->reactive()
+                        ->afterStateUpdated(function (callable $set) {
+                            // reset dependent fields
+                            $set('vendor_id', null);
+                            $set('staff_id', null);
+                        }),
+
+
+                    Forms\Components\Select::make('vendor_id')
+                        ->label('Vendor')
+                        ->options(
+                            \App\Models\Vendor::where('is_active', true)
+                                ->pluck('name', 'id')
+                                ->toArray()
+                        )
+                        ->searchable()
+                        ->preload()
+                        ->visible(function (callable $get) {
+                            $leadSourceId = $get('lead_source_id');
+
+                            if (!$leadSourceId)
+                                return false;
+
+                            return LeadSource::find($leadSourceId)?->lead_name === 'Partnership';
+                        })
+                        ->required(
+                            fn(callable $get) =>
+                            LeadSource::find($get('lead_source_id'))?->lead_name === 'Partnership'
+                        ),
+
+                    Forms\Components\Select::make('staff_id')
+                        ->label('Staff')
+                        ->options(
+                            User::pluck('name', 'id')->toArray()
+                        )
+                        ->searchable()
+                        ->preload()
+                        ->visible(function (callable $get) {
+                            $leadSourceId = $get('lead_source_id');
+
+                            if (!$leadSourceId)
+                                return false;
+
+                            return LeadSource::find($leadSourceId)?->lead_name === 'Staff Call';
+                        })
+                        ->required(
+                            fn(callable $get) =>
+                            LeadSource::find($get('lead_source_id'))?->lead_name === 'Staff Call'
+                        ),
+
 
 
                     Forms\Components\Select::make('product_id')

@@ -19,6 +19,8 @@ class Complain extends Model
         'address',
         'google_map_location',
         'lead_source_id',
+        'vendor_id',
+        'staff_id',
         'complain_id',
         'product_id',
         'device',

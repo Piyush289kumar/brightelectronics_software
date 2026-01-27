@@ -18,6 +18,8 @@ return new class extends Migration {
             $table->text('address')->nullable();
             $table->string('google_map_location')->nullable(); // Default can be set via frontend JS
             $table->foreignId('lead_source_id')->constrained('lead_sources')->onDelete('cascade');
+            $table->foreignId('vendor_id')->nullable()->constrained()->nullOnDelete();
+            $table->foreignId('staff_id')->nullable()->constrained('users')->nullOnDelete();
             $table->string('complain_id')->unique();
             $table->json('product_id')->nullable(); // Multi-select devices (Products)
             $table->json('size')->nullable();   // Multi-select sizes
