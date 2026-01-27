@@ -31,6 +31,9 @@ class Invoice extends Model
         'document_id',
         'created_by',
         'document_path',
+        // Reference No.
+        'purchase_req_to_purchase_order_no',
+        'purchase_order_to_purchase_invoice_no'
     ];
     /**
      * Polymorphic relation for billable (customer, vendor, etc.)

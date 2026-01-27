@@ -97,8 +97,13 @@ return new class extends Migration {
 
             $table->string('document_path')->nullable();
 
+            // Reference No.
+            $table->string('purchase_req_to_purchase_order_no')->nullable(); // e.g., 23
+            $table->string('purchase_order_to_purchase_invoice_no')->nullable(); // e.g., PON0001
+
+
             $table->softDeletes();
-            $table->timestamps();
+            $table->timestamps();            
 
             // 🔑 Composite index for performance
             $table->index(['document_type', 'number']);

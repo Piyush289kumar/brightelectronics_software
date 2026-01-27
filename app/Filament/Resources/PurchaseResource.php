@@ -158,10 +158,11 @@ class PurchaseResource extends Resource
                 Grid::make('1')
                     ->schema([
 
+
                         Select::make('purchase_order_id')
                             ->label('Load from Purchase Order')
                             ->options(
-                                \App\Models\Invoice::where('document_type', 'purchase_order')
+                                Invoice::where('document_type', 'purchase_order')
                                     ->latest('id')
                                     ->pluck('number', 'id')
                             )
@@ -173,12 +174,15 @@ class PurchaseResource extends Resource
                                     return;
                                 }
 
-                                $po = \App\Models\Invoice::with('items')->find($state);
+                                $po = Invoice::with('items')->find($state);
 
                                 if (!$po) {
                                     return;
                                 }
 
+
+                                // ✅ 1️⃣ Save purchase order number
+                                $set('purchase_order_to_purchase_invoice_no', $po->number);
                                 /*
                                 |--------------------------------------------------------------------------
                                 | 1️⃣ Auto-fill Vendor
@@ -237,6 +241,11 @@ class PurchaseResource extends Resource
                                 \App\Filament\Resources\InvoiceResource::recalculateInvoiceTotals($set, $get);
                             }),
 
+                        Forms\Components\TextInput::make('purchase_order_to_purchase_invoice_no')
+                            ->label('Purchase Order No.')
+                            ->readonly()
+                            ->dehydrated(true)
+                            ->visible(fn($get) => filled($get('purchase_order_to_purchase_invoice_no'))),
 
                         Repeater::make('items')
                             ->relationship('items')
@@ -540,6 +549,7 @@ class PurchaseResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('number')->sortable()->searchable()->toggleable(),
+                Tables\Columns\TextColumn::make('purchase_order_to_purchase_invoice_no')->label('Purchase Order')->searchable()->sortable()->default('--'),
                 Tables\Columns\TextColumn::make('billable.name')->label('Billed To')->sortable()->searchable()->toggleable(),
                 Tables\Columns\TextColumn::make('document_date')->date()->sortable()->toggleable(),
                 Tables\Columns\TextColumn::make('due_date')->date()->sortable()->toggleable(),

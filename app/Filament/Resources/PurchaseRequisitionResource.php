@@ -360,6 +360,8 @@ class PurchaseRequisitionResource extends Resource
                                         'status' => 'pending',
                                         'notes' => $record->notes,
                                         'created_by' => Auth::id(),
+                                        // ✅ LINK TO PURCHASE REQUISITION
+                                        'purchase_req_to_purchase_order_no' => $record->id,
                                     ]);
 
                                     $invoiceItems = $vendorItems->map(function ($i) {
@@ -392,6 +394,8 @@ class PurchaseRequisitionResource extends Resource
                                     'status' => 'pending',
                                     'notes' => $record->notes,
                                     'created_by' => Auth::id(),
+                                    // ✅ LINK TO PURCHASE REQUISITION
+                                    'purchase_req_to_purchase_order_no' => $record->id,
                                 ]);
 
                                 $items = $record->items->map(function ($item) {
