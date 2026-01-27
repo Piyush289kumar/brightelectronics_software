@@ -66,7 +66,7 @@ class AccountingStats extends BaseWidget
             ->count();
 
         $jobCardCompleted = (clone $jobCardQuery)
-            ->where('status', 'completed')
+            ->where('status', 'Complete')
             ->count();
 
         return [
