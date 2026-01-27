@@ -114,7 +114,11 @@ class Complain extends Model
             $letters = substr($namePart->first(), 0, 2);
         }
 
-        $phonePart = substr($mobile ?? '0000000000', -4);
+        // $phonePart = substr($mobile ?? '0000000000', -4);
+
+        // ✅ FIRST 4 digits (safe)
+        $phone = preg_replace('/\D/', '', $mobile ?? '');
+        $phonePart = substr($phone . '0000', 0, 4);
 
         return "{$datePart}{$letters}{$phonePart}";
     }
