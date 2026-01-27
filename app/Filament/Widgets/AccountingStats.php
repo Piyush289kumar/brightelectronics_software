@@ -32,7 +32,8 @@ class AccountingStats extends BaseWidget
             $complainQuery->whereJsonContains('assigned_engineers', $user->id);
         }
 
-        $complainCount = $complainQuery->count();
+        $complainCount = $complainQuery->where('first_action_code', 'NEW')
+            ->count();
 
         // 🔥 NEW COUNTS
         $pkdComplaints = (clone $complainQuery)
