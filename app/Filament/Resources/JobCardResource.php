@@ -46,12 +46,13 @@ class JobCardResource extends Resource
                         Forms\Components\Select::make('status')
                             ->label('Status')
                             ->options([
-                                'Open' => 'Open',
-                                'In Progress' => 'In Progress',
-                                'Completed' => 'Completed',
+                                'Pending' => 'Pending',
+                                'Complete' => 'Complete',
+                                'Delivered' => 'Delivered',
+                                'Return' => 'Return',
                                 'Cancelled' => 'Cancelled',
                             ])
-                            ->default('Open')
+                            ->default('Pending')
                             ->columnSpan(1),
                         Forms\Components\CheckboxList::make('check_list')
                             ->label('Check List')
@@ -258,8 +259,9 @@ class JobCardResource extends Resource
                                             ->label('Status')
                                             ->options([
                                                 'Pending' => 'Pending',
-                                                'In Progress' => 'In Progress',
-                                                'Completed' => 'Completed',
+                                                'Complete' => 'Complete',
+                                                'Delivered' => 'Delivered',
+                                                'Return' => 'Return',
                                                 'Cancelled' => 'Cancelled',
                                             ])
                                             ->default('Pending'),
@@ -354,8 +356,8 @@ class JobCardResource extends Resource
                     ->badge()
                     ->color(fn($state) => match ($state) {
                         'Pending' => 'warning',
-                        'In Progress' => 'info',
                         'Completed' => 'success',
+                        'Return' => 'Return',
                         'Cancelled' => 'danger',
                         default => 'secondary',
                     })
@@ -432,9 +434,10 @@ class JobCardResource extends Resource
                 Tables\Filters\SelectFilter::make('status')
                     ->label('Status')
                     ->options([
-                        'Open' => 'Open',
-                        'In Progress' => 'In Progress',
-                        'Completed' => 'Completed',
+                        'Pending' => 'Pending',
+                        'Complete' => 'Complete',
+                        'Delivered' => 'Delivered',
+                        'Return' => 'Return',
                         'Cancelled' => 'Cancelled',
                     ])
                     ->searchable(),

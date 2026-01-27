@@ -3,7 +3,7 @@
         <div class="flex justify-between items-center">
             <!-- Left side: Company name -->
             <div>
-                <h2 class="text-lg font-bold text-gray-800">{{ $companyName }}</h2>
+                <h2 class="text-lg font-bold text-gray-800 dark:text-white">{{ $companyName }}</h2>
                 <p class="text-xs text-gray-400 mt-1">Software built by {{ $companyName }}</p>
             </div>
             <!-- Right side: Company website -->

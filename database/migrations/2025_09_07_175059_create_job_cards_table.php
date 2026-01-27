@@ -14,7 +14,7 @@ return new class extends Migration {
             $table->id();
             $table->foreignId('complain_id')->constrained()->cascadeOnDelete();
             $table->string('job_id')->unique();
-            $table->string('status')->default('Open');
+            $table->string('status')->default('Pending');
             $table->json('product_id')->nullable(); // Multi-select devices (Products)
             $table->json('check_list')->nullable(); // Multi-select Check List
             $table->decimal('amount', 10, 2)->nullable();

@@ -85,7 +85,7 @@ class ComplainObserver
             JobCard::create([
                 'complain_id' => $complain->id,
                 'job_id' => 'JOB-' . $newNumber,
-                'status' => 'Open',
+                'status' => 'Pending',
                 'amount' => 0,
                 'gst_amount' => 0,
                 'expense' => 0,

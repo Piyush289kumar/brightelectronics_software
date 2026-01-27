@@ -34,6 +34,15 @@ class AccountingStats extends BaseWidget
 
         $complainCount = $complainQuery->count();
 
+        // 🔥 NEW COUNTS
+        $pkdComplaints = (clone $complainQuery)
+            ->where('first_action_code', 'PKD')
+            ->count();
+
+        $jobCancelComplaints = (clone $complainQuery)
+            ->where('first_action_code', 'Job Cancel')
+            ->count();
+
         // -------------------------
         // Job Cards Query
         // -------------------------
@@ -60,11 +69,24 @@ class AccountingStats extends BaseWidget
             ->count();
 
         return [
+
+            // ---------------- Complaints ----------------
             Stat::make('Total Complaints', $complainCount)
                 ->icon('heroicon-o-chat-bubble-left-right')
                 ->color('info')
                 ->description('Assigned complaints'),
 
+            Stat::make('PKD Complaints', $pkdComplaints)
+                ->icon('heroicon-o-arrow-down-tray')
+                ->color('warning')
+                ->description('Picked complaints'),
+
+            Stat::make('Job Cancel Complaints', $jobCancelComplaints)
+                ->icon('heroicon-o-x-circle')
+                ->color('danger')
+                ->description('Cancelled complaints'),
+
+            // ---------------- Job Cards ----------------
             Stat::make('Total Job Cards', $jobCardTotal)
                 ->icon('heroicon-o-clipboard-document-list')
                 ->color('primary')
@@ -73,7 +95,7 @@ class AccountingStats extends BaseWidget
             Stat::make('Pending Job Cards', $jobCardPending)
                 ->icon('heroicon-o-clock')
                 ->color('warning')
-                ->description('Jobs in progress'),
+                ->description('Pending jobs'),
 
             Stat::make('Completed Job Cards', $jobCardCompleted)
                 ->icon('heroicon-o-check-circle')

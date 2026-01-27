@@ -250,12 +250,14 @@ class ComplainResource extends Resource
                     }),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('status')
+                Tables\Filters\SelectFilter::make('first_action_code')
                     ->options([
-                        'Pending' => 'Pending',
-                        'In Progress' => 'In Progress',
-                        'Completed' => 'Completed',
-                        'Cancelled' => 'Cancelled',
+                        'NEW' => 'NEW',
+                        'PKD' => 'Picked (PKD)',
+                        'Visit' => 'Visit',
+                        'RSD' => 'Reschedule Visit (RSD)',
+                        'CNC' => 'Call Not Connected (CNC)',
+                        'Job Cancel' => 'Job Cancel',
                     ]),
             ])
             ->defaultSort('created_at', 'desc')
