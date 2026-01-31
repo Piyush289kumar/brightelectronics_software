@@ -109,8 +109,16 @@ class StoreTargetResource extends Resource
                                 Auth::user()
                             );
                         }
-                    })
-                    ->visible(fn(StoreTarget $record) => !$record->distributed),
+                    })->visible(
+                        fn(StoreTarget $record) =>
+                        !$record->distributed &&
+                        auth()->user()->hasRole([
+                            'Administrator',
+                            'Developer',
+                            'admin',
+                            'Store Manager',
+                        ])
+                    ),
                 Tables\Actions\DeleteAction::make(),
             ])
             ->bulkActions([

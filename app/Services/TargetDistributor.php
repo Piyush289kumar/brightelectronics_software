@@ -68,10 +68,9 @@ class TargetDistributor
             UserTarget::where('store_target_id', $storeTarget->id)->delete();
 
             // Fetch store members (excluding admins)
+            // Distribution
             $members = $store->users()
-                ->whereHas('roles', function ($q) {
-                    $q->where('name', '!=', 'admin');
-                })
+                ->whereHas('roles', fn($q) => $q->where('name', 'Engineer'))
                 ->get();
 
             $count = $members->count();
