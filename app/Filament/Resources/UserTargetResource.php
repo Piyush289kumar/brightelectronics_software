@@ -15,6 +15,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Filament\Forms\Get;
 use Filament\Forms\Set;
+use Illuminate\Support\Facades\Auth;
 
 class UserTargetResource extends Resource
 {
@@ -30,9 +31,8 @@ class UserTargetResource extends Resource
         return $form
             ->schema([
                 TextInput::make('assigned_amount')
-                    ->label('Target Amount (₹)')
+                    ->label('Assigned Target (₹)')
                     ->numeric()
-                    ->disabled() // Target is fixed once distributed
                     ->suffix('INR'),
 
                 TextInput::make('achieved_amount')
@@ -71,12 +71,12 @@ class UserTargetResource extends Resource
                     ->formatStateUsing(fn($state, $record) => "{$record->storeTarget->month}/{$record->storeTarget->year}"),
 
                 Tables\Columns\TextColumn::make('assigned_amount')
-                    ->label('Target (₹)')
+                    ->label('Assigned Target (₹)')
                     ->money('INR')
                     ->sortable(),
 
                 Tables\Columns\TextColumn::make('achieved_amount')
-                    ->label('Collection (₹)')
+                    ->label('Total Collection (₹)')
                     ->money('INR')
                     ->sortable(),
 
@@ -91,7 +91,12 @@ class UserTargetResource extends Resource
                 //
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
+                Tables\Actions\EditAction::make()
+                    ->visible(fn() => auth()->user()->hasRole([
+                        'Administrator',
+                        'Developer',
+                        'admin',
+                    ]) || auth()->user()->email === 'vipprow@gmail.com'),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -105,6 +110,35 @@ class UserTargetResource extends Resource
         return [
             //
         ];
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        $query = parent::getEloquentQuery();
+        $user = Auth::user();
+
+        // Safety
+        if (!$user) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        // 🔹 Admin / Developer / Super access → see ALL
+        if (
+            $user->hasRole(['Administrator', 'Developer', 'admin']) ||
+            $user->email === 'vipprow@gmail.com'
+        ) {
+            return $query;
+        }
+
+        // 🔹 Store Manager restriction (optional – keep if needed)
+        if ($user->hasRole('Store Manager')) {
+            return $query->whereHas('storeTarget', function ($q) use ($user) {
+                $q->where('store_id', $user->store_id);
+            });
+        }
+
+        // 🔹 Normal user → see ONLY own targets
+        return $query->where('user_id', $user->id);
     }
 
     public static function getPages(): array
