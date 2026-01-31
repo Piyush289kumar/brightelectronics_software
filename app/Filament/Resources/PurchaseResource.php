@@ -163,11 +163,22 @@ class PurchaseResource extends Resource
 
                         Select::make('purchase_order_id')
                             ->label('Load from Purchase Order')
-                            ->options(
-                                Invoice::where('document_type', 'purchase_order')
+                            ->options(function () {
+
+                                // 🔹 Get PO numbers that are already used in purchase invoices
+                                $usedPoNumbers = Invoice::query()
+                                    ->where('document_type', 'purchase')
+                                    ->whereNotNull('purchase_order_to_purchase_invoice_no')
+                                    ->pluck('purchase_order_to_purchase_invoice_no')
+                                    ->toArray();
+
+                                // 🔹 Load only UNUSED purchase orders
+                                return Invoice::query()
+                                    ->where('document_type', 'purchase_order')
+                                    ->whereNotIn('number', $usedPoNumbers)
                                     ->latest('id')
-                                    ->pluck('number', 'id')
-                            )
+                                    ->pluck('number', 'id');
+                            })
                             ->searchable()
                             ->reactive()
                             ->afterStateUpdated(function ($state, callable $set, callable $get) {
@@ -182,12 +193,12 @@ class PurchaseResource extends Resource
                                     return;
                                 }
 
-
                                 // ✅ 1️⃣ Save purchase order number
                                 $set('purchase_order_to_purchase_invoice_no', $po->number);
+
                                 /*
                                 |--------------------------------------------------------------------------
-                                | 1️⃣ Auto-fill Vendor
+                                | 2️⃣ Auto-fill Vendor
                                 |--------------------------------------------------------------------------
                                 */
                                 if ($po->billable_type && $po->billable_id) {
@@ -197,47 +208,25 @@ class PurchaseResource extends Resource
 
                                 /*
                                 |--------------------------------------------------------------------------
-                                | 2️⃣ Prepare temp items (quantity - 1 trick)
+                                | 3️⃣ Copy PO Items
                                 |--------------------------------------------------------------------------
                                 */
-                                $tempItems = $po->items->map(function ($item) {
-                                    return [
-                                        'product_id' => $item->product_id,
-                                        'quantity' => max(0, $item->quantity - 1),
-                                        'unit_price' => $item->unit_price,
-                                        'discount' => $item->discount ?? 0,
-                                        'discount_amount_per_item' => 0,
-                                        'gst_rate' => $item->gst_rate ?? 0,
-                                        'gst_amount' => 0,
-                                        'total_amount' => 0,
-                                    ];
-                                })->toArray();
+                                $items = $po->items->map(fn($item) => [
+                                    'product_id' => $item->product_id,
+                                    'quantity' => $item->quantity,
+                                    'unit_price' => $item->unit_price,
+                                    'discount' => $item->discount ?? 0,
+                                    'discount_amount_per_item' => 0,
+                                    'gst_rate' => $item->gst_rate ?? 0,
+                                    'gst_amount' => 0,
+                                    'total_amount' => 0,
+                                ])->toArray();
 
-                                $set('items', $tempItems);
+                                $set('items', $items);
 
                                 /*
                                 |--------------------------------------------------------------------------
-                                | 3️⃣ Final correct quantities (this triggers recalculation)
-                                |--------------------------------------------------------------------------
-                                */
-                                $finalItems = $po->items->map(function ($item) {
-                                    return [
-                                        'product_id' => $item->product_id,
-                                        'quantity' => $item->quantity,
-                                        'unit_price' => $item->unit_price,
-                                        'discount' => $item->discount ?? 0,
-                                        'discount_amount_per_item' => 0,
-                                        'gst_rate' => $item->gst_rate ?? 0,
-                                        'gst_amount' => 0,
-                                        'total_amount' => 0,
-                                    ];
-                                })->toArray();
-
-                                $set('items', $finalItems);
-
-                                /*
-                                |--------------------------------------------------------------------------
-                                | 4️⃣ Recalculate totals
+                                | 4️⃣ Recalculate Totals
                                 |--------------------------------------------------------------------------
                                 */
                                 \App\Filament\Resources\InvoiceResource::recalculateInvoiceTotals($set, $get);
