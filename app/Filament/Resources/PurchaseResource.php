@@ -32,7 +32,9 @@ use TomatoPHP\FilamentDocs\Filament\Resources\DocumentResource\Pages\PrintDocume
 use TomatoPHP\FilamentDocs\Models\Document;
 use TomatoPHP\FilamentDocs\Models\DocumentTemplate;
 use Filament\Tables\Filters\Filter;
-
+use Filament\Tables\Actions\BulkAction;
+use Illuminate\Support\Collection;
+use Filament\Forms\Components\Hidden;
 class PurchaseResource extends Resource
 {
     protected static ?string $model = Invoice::class;
@@ -860,6 +862,129 @@ class PurchaseResource extends Resource
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
+
+
+                    BulkAction::make('bulkMakePayment')
+                        ->label('Make Payment')
+                        ->icon('heroicon-m-banknotes')
+                        ->color('warning')
+                        ->requiresConfirmation()
+
+                        /* ---------------------------------
+                            FORM
+                        --------------------------------- */
+                        ->form(function (?Collection $records) {
+
+                            $records ??= collect();
+
+                            $rows = $records
+                                ->filter(
+                                    fn($r) =>
+                                    $r->document_type === 'purchase'
+                                    && in_array($r->status, ['draft', 'pending'])
+                                )
+                                ->map(function ($record) {
+
+                                    $balance = $record->balance;
+
+                                    return [
+                                        'invoice_id' => $record->id,
+                                        'invoice_no' => $record->number,
+                                        'amount' => number_format($balance, 2, '.', ''),
+                                        'payment_date' => now(),
+                                    ];
+                                })
+                                ->values()
+                                ->toArray();
+
+                            return [
+                                Repeater::make('payments')
+                                    ->label('Payments')
+                                    ->schema([
+
+                                        Grid::make(2)->schema([
+
+
+                                            Hidden::make('invoice_id'),
+
+                                            TextInput::make('invoice_no')
+                                                ->label('Invoice')
+                                                ->disabled(),
+
+                                            TextInput::make('amount')
+                                                ->label('Amount to Pay')
+                                                ->numeric()
+                                                ->readOnly()
+                                                ->dehydrated(true)
+                                                ->required(),
+
+                                            DatePicker::make('payment_date')
+                                                ->default(now())
+                                                ->required(),
+
+                                            Select::make('method')
+                                                ->required()
+                                                ->options([
+                                                    'cash' => 'Cash',
+                                                    'bank' => 'Bank Transfer',
+                                                    'upi' => 'UPI',
+                                                    'cheque' => 'Cheque',
+                                                    'card' => 'Card',
+                                                ]),
+
+                                            TextInput::make('reference_no')
+                                                ->label('Reference No.')->columnSpanFull(),
+                                        ]),
+
+                                    ])
+                                    ->default($rows)
+                                    ->reorderable(false)
+                                    ->addable(false)
+                                    ->deletable(false)
+                                    ->disabled(fn() => empty($rows)),
+                            ];
+                        })
+
+                        /* ---------------------------------
+                            ACTION
+                        --------------------------------- */
+                        ->action(function (?Collection $records, array $data) {
+
+                            if (empty($data['payments'])) {
+                                return;
+                            }
+
+                            foreach ($data['payments'] as $row) {
+
+                                $invoice = Invoice::find($row['invoice_id']);
+
+                                if (
+                                    !$invoice ||
+                                    $invoice->document_type !== 'purchase' ||
+                                    $invoice->status === 'paid'
+                                ) {
+                                    continue;
+                                }
+
+                                Payment::create([
+                                    'invoice_id' => $invoice->id,
+                                    'payable_id' => $invoice->id,
+                                    'payable_type' => Invoice::class,
+                                    'type' => 'outgoing',
+                                    'amount' => $row['amount'],
+                                    'payment_date' => $row['payment_date'],
+                                    'method' => $row['method'],
+                                    'reference_no' => $row['reference_no'] ?? null,
+                                    'status' => 'completed',
+                                    'received_by' => auth()->id(),
+                                    'created_by' => auth()->id(),
+                                ]);
+                            }
+                        }),
+
+
+
+
                     Tables\Actions\DeleteBulkAction::make(),
                     ExportBulkAction::make()
                 ]),
