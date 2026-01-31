@@ -28,6 +28,7 @@ return new class extends Migration {
             $table->decimal('lead_incentive_amount', 10, 2)->nullable();
             $table->decimal('bright_electronics_profit', 10, 2)->nullable();
             $table->string('job_verified_by_admin')->nullable();
+            $table->string('payment_reference_image_path')->nullable();
             $table->text('note')->nullable();
             $table->softDeletes();
             $table->timestamps();

@@ -28,6 +28,7 @@ class JobCard extends Model
         'lead_incentive_percent',
         'bright_electronics_profit',
         'job_verified_by_admin',
+        'payment_reference_image_path',
         'note',
     ];
     protected $casts = [

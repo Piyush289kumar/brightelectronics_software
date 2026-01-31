@@ -196,7 +196,24 @@ class JobCardResource extends Resource
                             ->disabled()
                             ->dehydrated()
                             ->reactive(),
-                    ]),
+
+                        Forms\Components\FileUpload::make('payment_reference_image_path')
+                            ->label('Payment Reference')
+                            ->disk('public')
+                            ->directory('job_card_payment_reference')
+                            ->image()
+                            ->nullable()
+                            ->maxSize(10240) // 10 MB
+                            ->acceptedFileTypes(['image/*'])
+                            ->helperText('Tap “Take Photo” to capture payment proof')
+                            ->extraAttributes([
+                                'accept' => 'image/*',
+                                'capture' => 'environment',
+                            ])
+                            ->imageEditor()
+                            ->imageResizeTargetWidth(1600),
+
+                    ])->columnSpanFull(),
                 ])
                 ->columns(3)
                 ->collapsible(),
