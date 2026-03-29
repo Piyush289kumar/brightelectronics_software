@@ -6,6 +6,7 @@ use App\Filament\Resources\PaymentAdviceItemResource\RelationManagers\ItemsRelat
 use App\Filament\Resources\PaymentAdviceResource\Pages;
 use App\Filament\Resources\PaymentAdviceResource\RelationManagers;
 use App\Models\Invoice;
+use App\Models\Payment;
 use App\Models\PaymentAdvice;
 use App\Models\Vendor;
 use Filament\Forms;
@@ -86,12 +87,27 @@ class PaymentAdviceResource extends Resource
                                 $rows = [];
 
                                 foreach ($pos as $po) {
+                                    // ✅ Correct polymorphic fetch
+                                    $payment = Payment::where('payable_id', $po->id)
+                                        ->where('payable_type', Invoice::class) // VERY IMPORTANT
+                                        ->where('type', 'outgoing')
+                                        ->where('status', 'completed')
+                                        ->latest()
+                                        ->first();
+
+
                                     $rows[] = [
                                         'purchase_order_id' => $po->id,
                                         'po_date' => $po->document_date,
                                         'po_number' => $po->number,
                                         'amount' => $po->total_amount,
-                                        'payment_doc_no' => 0,
+                                        // 🔥 AUTO FILL
+                                        'payment_doc_no' => $payment?->reference_no ?? '',
+
+                                        // ✅ ADD THIS
+                                        'place_of_supply' => $po->place_of_supply
+                                            ?? $po->vendor?->state
+                                            ?? '',
                                     ];
                                 }
 
@@ -110,7 +126,7 @@ class PaymentAdviceResource extends Resource
                         ->schema([
                             Forms\Components\DatePicker::make('po_date')->label('PCH Date')->disabled(),
                             Forms\Components\TextInput::make('po_number')->label('PCH')->disabled(),
-                            Forms\Components\TextInput::make('invoice_no')->label('Invoice No.'),
+                            Forms\Components\TextInput::make('place_of_supply')->label('Vendor Invoice No.'),
                             Forms\Components\TextInput::make('amount')->label('Invoice Amount'),
                             Forms\Components\TextInput::make('payment_doc_no')->default(0)->label('Payment doc no.'),
                         ])
