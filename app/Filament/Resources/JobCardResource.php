@@ -82,6 +82,46 @@ class JobCardResource extends Resource
                         )
                         ->columnSpanFull(),
 
+                    Forms\Components\Section::make('Lead Information')
+                        ->icon('heroicon-o-user-group')
+                        ->schema([
+
+                            Grid::make(3)->schema([
+
+                                Forms\Components\Placeholder::make('lead_source_name')
+                                    ->label('Lead Source')
+                                    ->content(
+                                        fn($record) =>
+                                        $record?->complain?->leadSource?->lead_name ?? 'N/A'
+                                    )
+                                    ->extraAttributes([
+                                        'class' => 'text-primary-600 font-semibold text-sm'
+                                    ]),
+
+                                Forms\Components\TextInput::make('lead_incentive_percent')
+                                    ->label('Commission')
+                                    ->suffix('%')
+                                    ->disabled()
+                                    ->prefixIcon('heroicon-o-percent-badge')
+                                    ->extraAttributes([
+                                        'class' => 'font-semibold text-warning-600'
+                                    ]),
+
+                                Forms\Components\TextInput::make('lead_incentive_amount')
+                                    ->label('Lead Earnings')
+                                    ->prefix('₹')
+                                    ->disabled()
+                                    ->prefixIcon('heroicon-o-currency-rupee')
+                                    ->extraAttributes([
+                                        'class' => 'font-bold text-danger-600'
+                                    ]),
+                            ]),
+
+                        ])
+                        ->collapsible()
+                        ->collapsed(false)
+                        ->columnSpanFull(),
+
                     // ✅ KEY FIX: Repeater uses ->relationship-style static options
                     // NO getSearchResultsUsing inside live() repeater — that causes closure serialization
                     Forms\Components\Repeater::make('spare_parts')
@@ -229,10 +269,30 @@ class JobCardResource extends Resource
         $gross = $amount;
         $profit = $gross - $expense;
 
+        // ✅ GET LEAD % FROM COMPLAIN
+        $complainId = $get('complain_id');
+
+        $leadPercent = 0;
+
+        if ($complainId) {
+            $complain = \App\Models\Complain::with('leadSource')->find($complainId);
+            $leadPercent = (float) ($complain?->leadSource?->lead_incentive ?? 0);
+        }
+
+        // ✅ LEAD CUT FROM PROFIT
+        $leadAmount = round(($profit * $leadPercent) / 100, 2);
+
+        // ✅ FINAL PROFIT
+        $finalProfit = $profit - $leadAmount;
+
+        // ✅ SET VALUES
+        $set('lead_incentive_percent', $leadPercent);
+        $set('lead_incentive_amount', $leadAmount);
+        $set('bright_electronics_profit', round($finalProfit, 2));
+
         $set('expense', $expense);
         $set('gst_amount', $gstAmount);
         $set('gross_amount', $gross);
-        $set('bright_electronics_profit', round($profit, 2));
     }
     public static function table(Table $table): Table
     {
