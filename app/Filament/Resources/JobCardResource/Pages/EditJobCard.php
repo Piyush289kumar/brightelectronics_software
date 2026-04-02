@@ -24,22 +24,34 @@ class EditJobCard extends EditRecord
     // ✅ Runs ONCE on page load — maps DB → form
     protected function mutateFormDataBeforeFill(array $data): array
     {
-        // ✅ spare parts mapping
+        // ✅ Spare parts mapping
         $data['spare_parts'] = $data['product_id'] ?? [];
 
-        // ✅ AUTO LOAD LEAD SOURCE DATA FROM COMPLAIN
         if (!empty($data['complain_id'])) {
+
             $complain = Complain::with('leadSource')->find($data['complain_id']);
 
-            $data['lead_incentive_percent'] = $complain?->leadSource?->lead_incentive ?? 0;
+            // ✅ Lead %
+            $leadPercent = (float) ($complain?->leadSource?->lead_incentive ?? 0);
+            $data['lead_incentive_percent'] = $leadPercent;
 
-            // optional: prefill amount also (will be recalculated anyway)
+            // ✅ Lead Amount (approx preload)
             $profit = (float) ($data['amount'] ?? 0) - (float) ($data['expense'] ?? 0);
+            $data['lead_incentive_amount'] = round(($profit * $leadPercent) / 100, 2);
 
-            $data['lead_incentive_amount'] = round(
-                ($profit * ($data['lead_incentive_percent'] ?? 0)) / 100,
-                2
-            );
+            // ✅ AUTO LOAD ENGINEERS (ONLY IF EMPTY)
+            if (empty($data['incentive_percentages'])) {
+
+                $assigned = $complain?->assigned_engineers ?? [];
+
+                $data['incentive_percentages'] = collect($assigned)
+                    ->map(fn($id) => [
+                        'user_id' => $id,
+                        'percent' => 0,
+                        'amount' => 0,
+                    ])
+                    ->toArray();
+            }
         }
 
         return $data;
@@ -48,8 +60,24 @@ class EditJobCard extends EditRecord
     // ✅ Runs on save — maps form → DB
     protected function mutateFormDataBeforeSave(array $data): array
     {
-        $data['product_id'] = $data['spare_parts'] ?? [];
+        // spare parts → product_id
+        $data['product_id'] = collect($data['spare_parts'] ?? [])
+            ->map(function ($item) {
+                return [
+                    'product_id' => is_array($item['product_id'])
+                        ? $item['product_id']['value'] ?? null
+                        : $item['product_id'],
+                    'qty' => (int) ($item['qty'] ?? 1),
+                ];
+            })
+            ->filter(fn($item) => !empty($item['product_id']))
+            ->values()
+            ->toArray();
+
         unset($data['spare_parts']);
+
+        // ensure engineer data saved
+        $data['incentive_percentages'] = array_values($data['incentive_percentages'] ?? []);
 
         return $data;
     }

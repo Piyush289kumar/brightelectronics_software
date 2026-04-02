@@ -73,6 +73,7 @@ class JobCardResource extends Resource
 
                     Forms\Components\TextInput::make('amount')
                         ->numeric()
+                        ->dehydrated(true)
                         ->label('Job Amount (₹)')
                         ->reactive()
                         ->live(onBlur: true)
@@ -102,6 +103,7 @@ class JobCardResource extends Resource
                                     ->label('Commission')
                                     ->suffix('%')
                                     ->disabled()
+                                    ->dehydrated(true)
                                     ->prefixIcon('heroicon-o-percent-badge')
                                     ->extraAttributes([
                                         'class' => 'font-semibold text-warning-600'
@@ -111,11 +113,79 @@ class JobCardResource extends Resource
                                     ->label('Lead Earnings')
                                     ->prefix('₹')
                                     ->disabled()
+                                    ->dehydrated(true)
                                     ->prefixIcon('heroicon-o-currency-rupee')
                                     ->extraAttributes([
                                         'class' => 'font-bold text-danger-600'
                                     ]),
                             ]),
+
+                            Forms\Components\Section::make('Engineer Incentives')
+                                ->icon('heroicon-o-users')
+                                ->schema([
+
+                                    Forms\Components\Repeater::make('incentive_percentages')
+                                        ->dehydrated(true)
+                                        ->label('Engineers')
+                                        ->schema([
+
+                                            Forms\Components\Select::make('user_id')
+                                                ->label('Engineer')
+                                                ->options(function ($get) {
+
+                                                    $complainId = $get('../../complain_id');
+
+                                                    $assigned = [];
+
+                                                    if ($complainId) {
+                                                        $complain = \App\Models\Complain::find($complainId);
+                                                        $assigned = $complain?->assigned_engineers ?? [];
+                                                    }
+
+                                                    return \App\Models\User::role('Engineer')
+                                                        ->get()
+                                                        ->sortByDesc(fn($u) => in_array($u->id, $assigned)) // assigned first
+                                                        ->mapWithKeys(fn($u) => [
+                                                            $u->id => in_array($u->id, $assigned)
+                                                                ? "⭐ {$u->name}"
+                                                                : $u->name
+                                                        ])
+                                                        ->toArray();
+                                                })
+                                                ->searchable()
+                                                ->required()
+                                                ->disableOptionsWhenSelectedInSiblingRepeaterItems(), // 🔥 prevent duplicate
+
+                                            Forms\Components\TextInput::make('percent')
+                                                ->label('Incentive %')
+                                                ->numeric()
+                                                ->suffix('%')
+                                                ->required()
+                                                ->reactive()
+                                                ->afterStateUpdated(
+                                                    fn($set, $get) =>
+                                                    \App\Filament\Resources\JobCardResource::recalculateAll($set, $get)
+                                                ),
+
+                                            Forms\Components\Placeholder::make('amount')
+                                                ->label('Amount')
+                                                ->content(
+                                                    fn($get) =>
+                                                    "₹ " . ($get('amount') ?? 0)
+                                                ),
+
+                                        ])
+                                        ->columns(3)
+                                        ->addActionLabel('Add Engineer')
+                                        ->reorderable(false)
+                                        ->reactive()
+                                        ->afterStateUpdated(
+                                            fn($set, $get) =>
+                                            \App\Filament\Resources\JobCardResource::recalculateAll($set, $get)
+                                        ),
+
+                                ])
+                                ->columnSpanFull(),
 
                         ])
                         ->collapsible()
@@ -126,6 +196,7 @@ class JobCardResource extends Resource
                     // NO getSearchResultsUsing inside live() repeater — that causes closure serialization
                     Forms\Components\Repeater::make('spare_parts')
                         ->label('Spare Parts')
+                        ->dehydrated(true)
                         ->addActionLabel('Add Spare Part')
                         ->schema([
 
@@ -162,25 +233,38 @@ class JobCardResource extends Resource
                         ->reactive()
                         ->afterStateUpdated(fn($set, $get) => self::recalculateAll($set, $get)),
 
-                    Grid::make(4)->schema([
+                    Grid::make(5)->schema([
                         Forms\Components\TextInput::make('expense')
                             ->label('Product Expense (₹)')
                             ->disabled()
+                            ->dehydrated(true)
                             ->reactive(),
 
                         Forms\Components\TextInput::make('gst_amount')
                             ->label('GST Amount (18%)')
                             ->disabled()
+                            ->dehydrated(true)
                             ->reactive(),
 
                         Forms\Components\TextInput::make('gross_amount')
                             ->label('Gross After Expense (₹)')
                             ->disabled()
+                            ->dehydrated(true)
                             ->reactive(),
+
+                        Forms\Components\TextInput::make('incentive_amount')
+                            ->label('Engineer Total Cut (₹)')
+                            ->disabled()
+                            ->dehydrated(true)
+                            ->prefix('₹')
+                            ->extraAttributes([
+                                'class' => 'font-bold text-warning-600'
+                            ]),
 
                         Forms\Components\TextInput::make('bright_electronics_profit')
                             ->label('Profit (₹)')
                             ->disabled()
+                            ->dehydrated(true)
                             ->reactive(),
                     ]),
                 ])
@@ -282,13 +366,38 @@ class JobCardResource extends Resource
         // ✅ LEAD CUT FROM PROFIT
         $leadAmount = round(($profit * $leadPercent) / 100, 2);
 
+
+
         // ✅ FINAL PROFIT
         $finalProfit = $profit - $leadAmount;
+
+        // ✅ ENGINEER CALCULATION
+        $engineers = $get('incentive_percentages') ?? [];
+
+        $totalEngineerAmount = 0;
+
+        foreach ($engineers as $index => $row) {
+
+            $percent = (float) ($row['percent'] ?? 0);
+
+            $amount = round(($finalProfit * $percent) / 100, 2);
+
+            $engineers[$index]['amount'] = $amount;
+
+            $totalEngineerAmount += $amount;
+        }
+
+        // ✅ FINAL PROFIT AFTER ENGINEERS
+        $companyProfit = $finalProfit - $totalEngineerAmount;
+
+        // ✅ SET ENGINEER VALUES
+        $set('incentive_percentages', $engineers);
+        $set('incentive_amount', round($totalEngineerAmount, 2));
 
         // ✅ SET VALUES
         $set('lead_incentive_percent', $leadPercent);
         $set('lead_incentive_amount', $leadAmount);
-        $set('bright_electronics_profit', round($finalProfit, 2));
+        $set('bright_electronics_profit', round($companyProfit, 2));
 
         $set('expense', $expense);
         $set('gst_amount', $gstAmount);
