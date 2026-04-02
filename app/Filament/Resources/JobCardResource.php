@@ -63,6 +63,21 @@ class JobCardResource extends Resource
                             })
                             ->default('Pending')
                             ->required(),
+
+                        Forms\Components\CheckboxList::make('check_list')
+                            ->label('Accessories Checklist')
+                            ->options([
+                                'Remote' => 'Remote',
+                                'Remote Battery' => 'Remote Battery',
+                                'Adapter' => 'Adapter',
+                                'Power Cable' => 'Power Cable',
+                                'Wall Stand' => 'Wall Stand',
+                                'Table Stand' => 'Table Stand',
+                                'Box' => 'Box',
+                            ])
+                            ->columns(7) // ✅ 1 row (7 items = 1 line)
+                            ->columnSpanFull()
+                            ->dehydrated(true)
                     ]),
                 ])
                 ->columns(3)
@@ -570,9 +585,9 @@ class JobCardResource extends Resource
                                 '$REMOTE' => in_array('Remote', $check) ? '✔' : '✘',
                                 '$REMOTE_BATTERY' => in_array('Remote Battery', $check) ? '✔' : '✘',
                                 '$ADAPTER' => in_array('Adapter', $check) ? '✔' : '✘',
-                                '$POWERCABLE' => in_array('Powercable', $check) ? '✔' : '✘',
-                                '$WALLSTAND' => in_array('Wallstand', $check) ? '✔' : '✘',
-                                '$TABLE_STAND' => in_array('Table stand', $check) ? '✔' : '✘',
+                                '$POWERCABLE' => in_array('Power Cable', $check) ? '✔' : '✘',
+                                '$WALLSTAND' => in_array('Wall Stand', $check) ? '✔' : '✘',
+                                '$TABLE_STAND' => in_array('Table Stand', $check) ? '✔' : '✘',
                                 '$BOX' => in_array('Box', $check) ? '✔' : '✘',
                             ];
                             uksort($map, fn($a, $b) => strlen($b) - strlen($a));
@@ -614,9 +629,9 @@ class JobCardResource extends Resource
                                 '$REMOTE' => in_array('Remote', $check) ? '✔' : '✘',
                                 '$REMOTE_BATTERY' => in_array('Remote Battery', $check) ? '✔' : '✘',
                                 '$ADAPTER' => in_array('Adapter', $check) ? '✔' : '✘',
-                                '$POWERCABLE' => in_array('Powercable', $check) ? '✔' : '✘',
-                                '$WALLSTAND' => in_array('Wallstand', $check) ? '✔' : '✘',
-                                '$TABLE_STAND' => in_array('Table stand', $check) ? '✔' : '✘',
+                                '$POWERCABLE' => in_array('Power Cable', $check) ? '✔' : '✘',
+                                '$WALLSTAND' => in_array('Wall Stand', $check) ? '✔' : '✘',
+                                '$TABLE_STAND' => in_array('Table Stand', $check) ? '✔' : '✘',
                                 '$BOX' => in_array('Box', $check) ? '✔' : '✘',
                             ];
                             uksort($map, fn($a, $b) => strlen($b) - strlen($a));
@@ -665,9 +680,9 @@ class JobCardResource extends Resource
                                 '$REMOTE' => in_array('Remote', $check) ? '✔' : '✘',
                                 '$REMOTE_BATTERY' => in_array('Remote Battery', $check) ? '✔' : '✘',
                                 '$ADAPTER' => in_array('Adapter', $check) ? '✔' : '✘',
-                                '$POWERCABLE' => in_array('Powercable', $check) ? '✔' : '✘',
-                                '$WALLSTAND' => in_array('Wallstand', $check) ? '✔' : '✘',
-                                '$TABLE_STAND' => in_array('Table stand', $check) ? '✔' : '✘',
+                                '$POWERCABLE' => in_array('Power Cable', $check) ? '✔' : '✘',
+                                '$WALLSTAND' => in_array('Wall Stand', $check) ? '✔' : '✘',
+                                '$TABLE_STAND' => in_array('Table Stand', $check) ? '✔' : '✘',
                                 '$BOX' => in_array('Box', $check) ? '✔' : '✘',
                             ];
                             foreach ($map as $k => $v) {
