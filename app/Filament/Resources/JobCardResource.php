@@ -182,12 +182,14 @@ class JobCardResource extends Resource
                                                     \App\Filament\Resources\JobCardResource::recalculateAll($set, $get)
                                                 ),
 
-                                            Forms\Components\Placeholder::make('amount')
+                                            // ✅ SAVE होने वाला field
+                                            Forms\Components\Hidden::make('amount')
+                                                ->dehydrated(true),
+
+                                            // ✅ UI display
+                                            Forms\Components\Placeholder::make('amount_display')
                                                 ->label('Amount')
-                                                ->content(
-                                                    fn($get) =>
-                                                    "₹ " . ($get('amount') ?? 0)
-                                                ),
+                                                ->content(fn($get) => "₹ " . ($get('amount') ?? 0)),
 
                                         ])
                                         ->columns(3)
