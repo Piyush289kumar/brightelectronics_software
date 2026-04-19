@@ -14,6 +14,11 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
+use Filament\Forms\Components\Repeater;
+use Filament\Forms\Components\Grid;
+use Filament\Forms\Components\Select;
+use Filament\Forms\Components\TextInput;
+use App\Models\Category;
 
 class ProductVendorResource extends Resource
 {
@@ -29,38 +34,102 @@ class ProductVendorResource extends Resource
 
     public static function form(Form $form): Form
     {
-        return $form
-            ->schema([
-                Forms\Components\Select::make('product_id')
-                    ->relationship('product', 'barcode')
-                    ->label('Product Part No.')
-                    ->options(
-                        Product::all()->mapWithKeys(
-                            fn($p) => [$p->id => $p->name . ' (' . $p->barcode . ')']
-                        )
-                    )
-                    ->searchable()
-                    ->preload()
-                    ->required(),
-                Forms\Components\Select::make('vendor_id')
-                    ->relationship('vendor', 'name')
-                    ->required(),
-                Forms\Components\TextInput::make('last_purchase_price')->numeric()->nullable(),
-                Forms\Components\TextInput::make('average_purchase_price')->numeric()->nullable(),
-                Forms\Components\DatePicker::make('last_purchase_date')->nullable(),
-            ]);
+        return $form->schema([
+
+            Select::make('vendor_id')
+                ->relationship('vendor', 'name')
+                ->required()
+                ->preload()
+                ->searchable(),
+
+            // ✅ Repeater for multiple products
+            Repeater::make('items')
+                ->relationship('items') // ⚠️ make sure relation exists
+                ->schema([
+
+                    Grid::make(4)->schema([
+
+                        Select::make('category_id')
+                            ->label('Category')
+                            ->options(Category::whereNull('parent_id')->pluck('name', 'id'))
+                            ->required()
+                            ->reactive(),
+
+                        Select::make('sub_category_id')
+                            ->label('Sub Category')
+                            ->options(function ($get) {
+                                return Category::where('parent_id', $get('category_id'))
+                                    ->pluck('name', 'id');
+                            })
+                            ->visible(fn($get) => $get('category_id'))
+                            ->reactive(),
+
+                        // ✅ Product (Filtered)
+                        Select::make('product_id')
+                            ->label('Part No.')
+                            ->options(function ($get) {
+
+                                $categoryId = $get('sub_category_id') ?? $get('category_id');
+
+                                if (!$categoryId)
+                                    return [];
+
+                                return Product::where('category_id', $categoryId)
+                                    ->pluck('barcode', 'id'); // show part no
+                            })
+                            ->searchable()
+                            ->required(),
+
+                        // ✅ Purchase Price
+                        TextInput::make('last_purchase_price')
+                            ->label('Purchase Price')
+                            ->numeric(),
+
+                    ]),
+
+                ])
+                ->columnSpanFull()
+                ->addActionLabel('Add Spare Part')
+                ->defaultItems(1)
+
+        ]);
     }
 
     public static function table(Table $table): Table
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('product.name'),
-                Tables\Columns\TextColumn::make('vendor.name'),
-                Tables\Columns\TextColumn::make('last_purchase_price')->money('INR'),
-                Tables\Columns\TextColumn::make('average_purchase_price')->money('INR'),
-                Tables\Columns\TextColumn::make('last_purchase_date')->date(),
-            ])->defaultSort('created_at', 'desc')
+
+                // ✅ Vendor
+                Tables\Columns\TextColumn::make('vendor.name')
+                    ->label('Vendor')
+                    ->searchable(),
+
+                // ✅ Products (Name + Barcode)
+                Tables\Columns\TextColumn::make('items')
+                    ->label('Products')
+                    ->formatStateUsing(function ($record) {
+                        return $record->items
+                            ->map(
+                                fn($item) =>
+                                $item->product?->name . ' (' . $item->product?->barcode . ')'
+                            )
+                            ->join(', ');
+                    })
+                    ->wrap(),
+
+                // ✅ Total Items Count (optional but useful)
+                Tables\Columns\TextColumn::make('items_count')
+                    ->counts('items')
+                    ->label('Total Parts'),
+
+                // ✅ Created Date
+                Tables\Columns\TextColumn::make('created_at')
+                    ->date()
+                    ->label('Created'),
+
+            ])
+            ->defaultSort('created_at', 'desc')
             ->filters([
                 Tables\Filters\SelectFilter::make('product_id')
                     ->label('Spare Parts')
@@ -100,6 +169,7 @@ class ProductVendorResource extends Resource
                     ),
             ])
             ->actions([
+                Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
             ])
             ->bulkActions([

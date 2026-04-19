@@ -11,9 +11,7 @@ return new class extends Migration {
     public function up(): void
     {
         Schema::create('product_vendors', function (Blueprint $table) {
-            $table->id();
-
-            $table->foreignId('product_id')->constrained()->cascadeOnDelete();
+            $table->id();            
             $table->foreignId('vendor_id')->constrained()->cascadeOnDelete();
 
             $table->decimal('last_purchase_price', 15, 2)->nullable();
@@ -22,7 +20,7 @@ return new class extends Migration {
 
             $table->timestamps();
 
-            $table->unique(['product_id', 'vendor_id']);
+            $table->unique([ 'vendor_id']);
 
         });
     }
