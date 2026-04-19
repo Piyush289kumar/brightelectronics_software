@@ -34,8 +34,7 @@ class AccountingStats extends BaseWidget
 
         $complainCount = (clone $complainQuery)->where('first_action_code', 'NEW')
             ->count();
-
-        // 🔥 NEW COUNTS
+        
         $cncComplaints = (clone $complainQuery)
             ->where('first_action_code', 'CNC')
             ->count();
