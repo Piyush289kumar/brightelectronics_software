@@ -32,7 +32,7 @@ class AccountingStats extends BaseWidget
             $complainQuery->whereJsonContains('assigned_engineers', $user->id);
         }
 
-        $complainCount = $complainQuery->where('first_action_code', 'NEW')
+        $complainCount = (clone $complainQuery)->where('first_action_code', 'NEW')
             ->count();
 
         // 🔥 NEW COUNTS
@@ -82,7 +82,7 @@ class AccountingStats extends BaseWidget
                 ->color('warning')
                 ->description('CNC complaints'),
 
-            Stat::make('Job Cancel Complaints', $jobCancelComplaints)
+            Stat::make('Cancel Complaints', $jobCancelComplaints)
                 ->icon('heroicon-o-x-circle')
                 ->color('danger')
                 ->description('Cancelled complaints'),
