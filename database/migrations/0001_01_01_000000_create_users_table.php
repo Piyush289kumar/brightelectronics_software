@@ -18,6 +18,8 @@ return new class extends Migration {
             $table->string('password');
              $table->enum('role', ['admin', 'manager', 'staff'])->default('staff');
             $table->foreignId('store_id')->nullable()->constrained()->cascadeOnDelete();
+             $table->decimal('basic_salary', 10, 2)->nullable();
+            $table->decimal('incentive', 10, 2)->nullable();
             $table->rememberToken();
             $table->timestamps();
         });

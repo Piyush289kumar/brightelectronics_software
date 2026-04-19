@@ -20,6 +20,8 @@ class User extends Authenticatable
         'email',
         'password',
         'store_id',
+        'basic_salary',
+        'incentive'
     ];
 
     protected function casts(): array
@@ -27,6 +29,8 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'basic_salary' => 'decimal:2',
+            'incentive' => 'decimal:2',
         ];
     }
 

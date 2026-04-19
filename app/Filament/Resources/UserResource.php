@@ -46,6 +46,18 @@ class UserResource extends Resource
                 ->relationship('roles', 'name')
                 ->preload(),
 
+            Forms\Components\TextInput::make('basic_salary')
+                ->label('Basic Salary (₹)')
+                ->numeric()
+                ->prefix('₹')
+                ->nullable(),
+
+            Forms\Components\TextInput::make('incentive')
+                ->label('Incentive (%)')
+                ->numeric()
+                ->suffix('%')
+                ->nullable(),
+
             Forms\Components\TextInput::make('password')
                 ->label('Password')
                 ->password()
@@ -61,7 +73,7 @@ class UserResource extends Resource
     public static function table(Table $table): Table
     {
         return $table->columns([
-            Tables\Columns\TextColumn::make('id')->label('ID')->formatStateUsing(fn ($state) => 'EMP-' . str_pad($state, 4, '0', STR_PAD_LEFT))->searchable()->sortable(),
+            Tables\Columns\TextColumn::make('id')->label('ID')->formatStateUsing(fn($state) => 'EMP-' . str_pad($state, 4, '0', STR_PAD_LEFT))->searchable()->sortable(),
             Tables\Columns\TextColumn::make('name')->searchable()->sortable(),
             Tables\Columns\TextColumn::make('email')->searchable()->sortable(),
             Tables\Columns\TextColumn::make('store.name')->label('Store')->sortable(),
@@ -75,6 +87,14 @@ class UserResource extends Resource
                 ])
                 ->formatStateUsing(fn($state) => is_array($state) ? implode(', ', $state) : $state),
 
+            Tables\Columns\TextColumn::make('basic_salary')
+                ->label('Basic Salary')
+                ->money('INR')
+                ->sortable(),
+            Tables\Columns\TextColumn::make('incentive')
+                ->label('Incentive (%)')
+                ->suffix('%')
+                ->sortable(),
             Tables\Columns\TextColumn::make('created_at')->dateTime()->label('Created'),
         ])
             ->filters([])
