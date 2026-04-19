@@ -23,6 +23,8 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Tables\Actions\Action;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
+use Filament\Forms\Components\FileUpload;
+use App\Models\Category;
 
 class PurchaseRequisitionResource extends Resource
 {
@@ -84,24 +86,62 @@ class PurchaseRequisitionResource extends Resource
                                 ->required()
 
 
-                                // ✅ Create Product Button
                                 ->createOptionForm([
-                                    TextInput::make('name')
-                                        ->label('Spare Part Name')
-                                        ->required()
-                                        ->maxLength(255),
+                                    Grid::make(2)->schema([
 
-                                    TextInput::make('barcode')
-                                        ->label('Barcode')
-                                        ->maxLength(100),
+                                        TextInput::make('name')
+                                            ->label('Spare Part Name')
+                                            ->required()
+                                            ->maxLength(255),
+
+                                        TextInput::make('barcode')
+                                            ->label('Barcode')
+                                            ->maxLength(100),
+
+                                        // ✅ Category
+                                        Select::make('category_id')
+                                            ->label('Category')
+                                            ->options(Category::whereNull('parent_id')->pluck('name', 'id'))
+                                            ->reactive()
+                                            ->searchable(),
+
+                                        // ✅ Sub Category (only if category selected)
+                                        Select::make('sub_category_id')
+                                            ->label('Sub Category')
+                                            ->options(function (callable $get) {
+                                                $categoryId = $get('category_id');
+
+                                                if (!$categoryId) {
+                                                    return [];
+                                                }
+
+                                                return Category::where('parent_id', $categoryId)
+                                                    ->pluck('name', 'id');
+                                            })
+                                            ->visible(fn(callable $get) => $get('category_id'))
+                                            ->searchable(),
+
+                                        // ✅ Image Upload
+                                        FileUpload::make('image_path')
+                                            ->label('Product Image')
+                                            ->image()
+                                            ->directory('products')
+                                            ->imagePreviewHeight('100'),
+
+                                    ])
                                 ])
 
                                 // ✅ Save logic
                                 ->createOptionUsing(function (array $data): int {
+
+                                    $categoryId = $data['sub_category_id'] ?? $data['category_id'] ?? null;
+
                                     $product = Product::create([
                                         'name' => $data['name'],
                                         'barcode' => $data['barcode'] ?? null,
-                                        'is_active' => false,   // ❗ inactive by default
+                                        'category_id' => $categoryId, // ✅ save subcategory if exists
+                                        'image_path' => $data['image_path'] ?? null,
+                                        'is_active' => false, // ✅ always inactive
                                         'purchase_price' => 0,
                                         'selling_price' => 0,
                                     ]);
