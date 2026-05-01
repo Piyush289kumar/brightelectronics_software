@@ -187,7 +187,7 @@ class ComplainResource extends Resource
                         ->disabled(fn() => !auth()->user()->hasAnyRole(['Administrator', 'Store Manager', 'Team Lead'])),
                     Forms\Components\MultiSelect::make('assigned_engineers')
                         ->label('Assigned Engineers')
-                        ->options(User::role('Engineer')->pluck('name', 'id')->toArray())
+                        ->options(User::role(['Engineer', 'Machine Men'])->pluck('name', 'id')->toArray())
                         ->default(fn() => [Auth::id()])
                         ->disabled(fn() => !auth()->user()->hasAnyRole(['Administrator', 'Store Manager', 'Team Lead']))
                         ->dehydrated(true)

@@ -157,7 +157,7 @@ class JobCardResource extends Resource
                                                         $assigned = $complain?->assigned_engineers ?? [];
                                                     }
 
-                                                    return \App\Models\User::role('Engineer')
+                                                    return \App\Models\User::role(['Engineer', 'Machine Men'])
                                                         ->get()
                                                         ->sortByDesc(fn($u) => in_array($u->id, $assigned)) // assigned first
                                                         ->mapWithKeys(fn($u) => [
@@ -171,16 +171,20 @@ class JobCardResource extends Resource
                                                 ->required()
                                                 ->disableOptionsWhenSelectedInSiblingRepeaterItems(), // 🔥 prevent duplicate
 
+                                            // Forms\Components\TextInput::make('percent')
+                                            //     ->label('Incentive %')
+                                            //     ->numeric()
+                                            //     ->suffix('%')
+                                            //     ->required()
+                                            //     ->reactive()
+                                            //     ->afterStateUpdated(
+                                            //         fn($set, $get) =>
+                                            //         \App\Filament\Resources\JobCardResource::recalculateAll($set, $get)
+                                            //     ),
+
                                             Forms\Components\TextInput::make('percent')
                                                 ->label('Incentive %')
-                                                ->numeric()
-                                                ->suffix('%')
-                                                ->required()
-                                                ->reactive()
-                                                ->afterStateUpdated(
-                                                    fn($set, $get) =>
-                                                    \App\Filament\Resources\JobCardResource::recalculateAll($set, $get)
-                                                ),
+                                                ->dehydrated(true),
 
                                             // ✅ SAVE होने वाला field
                                             Forms\Components\Hidden::make('amount')
@@ -336,6 +340,9 @@ class JobCardResource extends Resource
     {
         $amount = round((float) ($get('amount') ?? 0), 2);
 
+        // =============================
+        // ✅ EXPENSE CALCULATION
+        // =============================
         $products = collect($get('spare_parts') ?? []);
 
         $products = $products->map(function ($row) {
@@ -351,7 +358,7 @@ class JobCardResource extends Resource
             ];
         })->filter(fn($p) => !empty($p['product_id']));
 
-        $productData = Product::whereIn('id', $products->pluck('product_id'))
+        $productData = \App\Models\Product::whereIn('id', $products->pluck('product_id'))
             ->get()
             ->keyBy('id');
 
@@ -363,14 +370,19 @@ class JobCardResource extends Resource
             2
         );
 
-        // ✅ GST सिर्फ दिखाने के लिए
+        // =============================
+// ✅ CORRECT GST (DISPLAY ONLY)
+// =============================
         $gstAmount = round(($amount * 18) / 100, 2);
 
-        // ✅ MAIN LOGIC
-        $gross = $amount;
-        $profit = $gross - $expense;
+        // =============================
+// ✅ CORRECT EXPENSE
+// =============================
+        $profit = $amount - $expense;
 
-        // ✅ GET LEAD % FROM COMPLAIN
+        // =============================
+// ✅ LEAD CALCULATION (ON PROFIT)
+// =============================
         $complainId = $get('complain_id');
 
         $leadPercent = 0;
@@ -380,45 +392,72 @@ class JobCardResource extends Resource
             $leadPercent = (float) ($complain?->leadSource?->lead_incentive ?? 0);
         }
 
-        // ✅ LEAD CUT FROM PROFIT
+        // 🔥 FIX: lead on PROFIT (not amount)
         $leadAmount = round(($profit * $leadPercent) / 100, 2);
 
+        // =============================
+// ✅ AFTER LEAD PROFIT
+// =============================
+        $afterLeadProfit = $profit - $leadAmount;
 
-
-        // ✅ FINAL PROFIT
-        $finalProfit = $profit - $leadAmount;
-
-        // ✅ ENGINEER CALCULATION
+        // =============================
+// ✅ ENGINEER CALCULATION
+// =============================
         $engineers = $get('incentive_percentages') ?? [];
+
+        $userIds = collect($engineers)->pluck('user_id')->filter()->toArray();
+
+        $users = \App\Models\User::whereIn('id', $userIds)->get()->keyBy('id');
+
+        $machineManExists = $users->contains(fn($u) => $u->hasRole('Machine Man'));
 
         $totalEngineerAmount = 0;
 
         foreach ($engineers as $index => $row) {
 
-            $percent = (float) ($row['percent'] ?? 0);
+            $user = $users[$row['user_id']] ?? null;
 
-            $amount = round(($finalProfit * $percent) / 100, 2);
+            if (!$user)
+                continue;
 
-            $engineers[$index]['amount'] = $amount;
+            $basePercent = (float) ($user->incentive ?? 0);
 
-            $totalEngineerAmount += $amount;
+            if ($machineManExists && $user->hasRole('Machine Man')) {
+                $percent = $basePercent;
+            } elseif ($machineManExists) {
+                $percent = $basePercent / 2;
+            } else {
+                $percent = $basePercent;
+            }
+
+            // 🔥 FIX: engineer on AFTER LEAD PROFIT
+            $amountCalc = round(($afterLeadProfit * $percent) / 100, 2);
+
+            $engineers[$index]['percent'] = $percent;
+            $engineers[$index]['amount'] = $amountCalc;
+
+            $totalEngineerAmount += $amountCalc;
         }
 
-        // ✅ FINAL PROFIT AFTER ENGINEERS
-        $companyProfit = $finalProfit - $totalEngineerAmount;
+        // =============================
+// ✅ FINAL PROFIT
+// =============================
+        $companyProfit = $afterLeadProfit - $totalEngineerAmount;
 
-        // ✅ SET ENGINEER VALUES
+        // =============================
+// ✅ SET VALUES
+// =============================
         $set('incentive_percentages', $engineers);
         $set('incentive_amount', round($totalEngineerAmount, 2));
 
-        // ✅ SET VALUES
         $set('lead_incentive_percent', $leadPercent);
         $set('lead_incentive_amount', $leadAmount);
+
         $set('bright_electronics_profit', round($companyProfit, 2));
 
         $set('expense', $expense);
         $set('gst_amount', $gstAmount);
-        $set('gross_amount', $gross);
+        $set('gross_amount', $amount);
     }
     public static function table(Table $table): Table
     {
