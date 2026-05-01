@@ -371,20 +371,19 @@ class JobCardResource extends Resource
         );
 
         // =============================
-// ✅ CORRECT GST (DISPLAY ONLY)
-// =============================
+        // ✅ GST (DISPLAY ONLY)
+        // =============================
         $gstAmount = round(($amount * 18) / 100, 2);
 
         // =============================
-// ✅ CORRECT EXPENSE
-// =============================
+        // ✅ PROFIT BEFORE LEAD
+        // =============================
         $profit = $amount - $expense;
 
         // =============================
-// ✅ LEAD CALCULATION (ON PROFIT)
-// =============================
+        // ✅ LEAD CALCULATION (ON PROFIT)
+        // =============================
         $complainId = $get('complain_id');
-
         $leadPercent = 0;
 
         if ($complainId) {
@@ -392,24 +391,27 @@ class JobCardResource extends Resource
             $leadPercent = (float) ($complain?->leadSource?->lead_incentive ?? 0);
         }
 
-        // 🔥 FIX: lead on PROFIT (not amount)
         $leadAmount = round(($profit * $leadPercent) / 100, 2);
 
         // =============================
-// ✅ AFTER LEAD PROFIT
-// =============================
+        // ✅ AFTER LEAD PROFIT
+        // =============================
         $afterLeadProfit = $profit - $leadAmount;
 
         // =============================
-// ✅ ENGINEER CALCULATION
-// =============================
+        // ✅ ENGINEER + MACHINE MAN LOGIC
+        // =============================
         $engineers = $get('incentive_percentages') ?? [];
 
         $userIds = collect($engineers)->pluck('user_id')->filter()->toArray();
 
         $users = \App\Models\User::whereIn('id', $userIds)->get()->keyBy('id');
 
-        $machineManExists = $users->contains(fn($u) => $u->hasRole('Machine Man'));
+        // 🔥 USE SAME ROLE NAME EVERYWHERE
+        $ROLE_MACHINE = 'Machine Men';
+
+        // 🔥 Detect Machine Man
+        $machineManExists = $users->contains(fn($user) => $user->hasRole($ROLE_MACHINE));
 
         $totalEngineerAmount = 0;
 
@@ -422,15 +424,22 @@ class JobCardResource extends Resource
 
             $basePercent = (float) ($user->incentive ?? 0);
 
-            if ($machineManExists && $user->hasRole('Machine Man')) {
-                $percent = $basePercent;
-            } elseif ($machineManExists) {
-                $percent = $basePercent / 2;
+            // 🎯 RULE APPLY
+            if ($machineManExists) {
+
+                if ($user->hasRole($ROLE_MACHINE)) {
+                    // ✅ Machine Man → FULL %
+                    $percent = $basePercent;
+                } else {
+                    // ✅ Engineers → HALF %
+                    $percent = $basePercent / 2;
+                }
+
             } else {
+                // ✅ Normal case (no machine man)
                 $percent = $basePercent;
             }
 
-            // 🔥 FIX: engineer on AFTER LEAD PROFIT
             $amountCalc = round(($afterLeadProfit * $percent) / 100, 2);
 
             $engineers[$index]['percent'] = $percent;
@@ -440,13 +449,13 @@ class JobCardResource extends Resource
         }
 
         // =============================
-// ✅ FINAL PROFIT
-// =============================
+        // ✅ FINAL COMPANY PROFIT
+        // =============================
         $companyProfit = $afterLeadProfit - $totalEngineerAmount;
 
         // =============================
-// ✅ SET VALUES
-// =============================
+        // ✅ SET VALUES
+        // =============================
         $set('incentive_percentages', $engineers);
         $set('incentive_amount', round($totalEngineerAmount, 2));
 
@@ -459,6 +468,9 @@ class JobCardResource extends Resource
         $set('gst_amount', $gstAmount);
         $set('gross_amount', $amount);
     }
+
+
+
     public static function table(Table $table): Table
     {
         return $table
