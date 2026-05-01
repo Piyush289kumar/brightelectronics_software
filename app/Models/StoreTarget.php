@@ -44,4 +44,14 @@ class StoreTarget extends Model
     {
         return $this->belongsTo(User::class, 'created_by');
     }
+
+    public function getTeamLeadTargetAttribute()
+    {
+        return $this->amount;
+    }
+
+    public function getManagerTargetAttribute()
+    {
+        return $this->amount + 30000;
+    }
 }

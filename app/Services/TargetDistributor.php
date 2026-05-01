@@ -12,18 +12,30 @@ class TargetDistributor
     /**
      * Create or update & distribute a store target for month/year.
      */
-    public static function createAndDistribute(Store $store, int $year, int $month, float $amount, bool $includePrevious = false, $createdBy = null): StoreTarget
-    {
+    public static function createAndDistribute(
+        Store $store,
+        int $year,
+        int $month,
+        float $amount,
+        bool $includePrevious = false,
+        $createdBy = null
+    ): StoreTarget {
+
         return DB::transaction(function () use ($store, $year, $month, $amount, $includePrevious, $createdBy) {
 
-            // Calculate previous remaining total
+            // =============================
+            // ✅ PREVIOUS REMAINING CALCULATION
+            // =============================
             $previousRemainingSum = $includePrevious
                 ? DB::table('store_targets')
                     ->join('user_targets', 'store_targets.id', '=', 'user_targets.store_target_id')
                     ->where('store_targets.store_id', $store->id)
                     ->where(function ($q) use ($year, $month) {
                         $q->where('store_targets.year', '<', $year)
-                            ->orWhere(fn($q2) => $q2->where('store_targets.year', $year)->where('store_targets.month', '<', $month));
+                            ->orWhere(function ($q2) use ($year, $month) {
+                                $q2->where('store_targets.year', $year)
+                                    ->where('store_targets.month', '<', $month);
+                            });
                     })
                     ->where('user_targets.remaining_amount', '>', 0)
                     ->sum('user_targets.remaining_amount')
@@ -31,27 +43,32 @@ class TargetDistributor
 
             $totalAmount = round($amount + $previousRemainingSum, 2);
 
-            // ✅ Check if target already exists for this store, month, and year
+            // =============================
+            // ✅ FIND OR CREATE STORE TARGET
+            // =============================
             $storeTarget = StoreTarget::where('store_id', $store->id)
                 ->where('year', $year)
                 ->where('month', $month)
                 ->first();
 
             if ($storeTarget) {
-                // If already distributed, skip to prevent duplicates
+
+                // 🚫 Prevent duplicate distribution
                 if ($storeTarget->distributed) {
                     return $storeTarget;
                 }
 
-                // Update existing record
+                // ✅ Update existing
                 $storeTarget->update([
                     'amount' => $totalAmount,
                     'include_previous' => $includePrevious,
                     'previous_remaining_sum' => $previousRemainingSum,
                     'created_by' => optional($createdBy)->id,
                 ]);
+
             } else {
-                // Otherwise, create a new record
+
+                // ✅ Create new
                 $storeTarget = StoreTarget::create([
                     'store_id' => $store->id,
                     'year' => $year,
@@ -64,13 +81,21 @@ class TargetDistributor
                 ]);
             }
 
-            // Delete any existing user_targets before redistributing
+            // =============================
+            // ✅ DELETE OLD DISTRIBUTION
+            // =============================
             UserTarget::where('store_target_id', $storeTarget->id)->delete();
 
-            // Fetch store members (excluding admins)
-            // Distribution
+            // =============================
+            // ✅ FETCH MEMBERS (Engineer + Machine Men)
+            // =============================
             $members = $store->users()
-                ->whereHas('roles', fn($q) => $q->where('name', 'Engineer'))
+                ->whereHas('roles', function ($q) {
+                    $q->whereIn('name', ['Engineer', 'Machine Men']);
+                })
+                ->whereDoesntHave('roles', function ($q) {
+                    $q->whereIn('name', ['Manager', 'Team Lead', 'Administrator', 'admin']);
+                })
                 ->get();
 
             $count = $members->count();
@@ -79,12 +104,17 @@ class TargetDistributor
                 return $storeTarget;
             }
 
-            // Equal distribution
+            // =============================
+            // ✅ EQUAL DISTRIBUTION
+            // =============================
             $base = floor(($totalAmount / $count) * 100) / 100;
             $remainder = round($totalAmount - ($base * $count), 2);
 
             foreach ($members as $index => $member) {
+
+                // Give remainder to first user
                 $extra = $index === 0 ? $remainder : 0;
+
                 $assigned = round($base + $extra, 2);
 
                 UserTarget::create([
@@ -96,6 +126,9 @@ class TargetDistributor
                 ]);
             }
 
+            // =============================
+            // ✅ MARK AS DISTRIBUTED
+            // =============================
             $storeTarget->update(['distributed' => true]);
 
             return $storeTarget;

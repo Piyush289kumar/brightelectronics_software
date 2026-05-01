@@ -72,6 +72,15 @@ class StoreTargetResource extends Resource
             TextColumn::make('year')->sortable(),
             TextColumn::make('month')->sortable(),
             TextColumn::make('amount')->label('Target (₹)')->money('INR'),
+            TextColumn::make('team_lead_target')
+                ->label('Team Target')
+                ->state(fn($record) => $record->amount)
+                ->money('INR'),
+
+            TextColumn::make('manager_target')
+                ->label('Manager Target')
+                ->state(fn($record) => $record->amount + 30000)
+                ->money('INR'),
             TextColumn::make('previous_remaining_sum')->label('Prev. Remaining (₹)')->money('INR'),
             TextColumn::make('userTargets_sum_assigned_amount')
                 ->label('Distributed Total (₹)')
