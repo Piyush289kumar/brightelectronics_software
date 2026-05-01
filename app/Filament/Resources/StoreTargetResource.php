@@ -18,6 +18,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Illuminate\Support\Facades\Auth;
+use Filament\Forms\Get;
 
 class StoreTargetResource extends Resource
 {
@@ -43,13 +44,38 @@ class StoreTargetResource extends Resource
                 ->maxValue(now()->year + 1)
                 ->required(),
 
-            TextInput::make('month')
-                ->label('Month (1–12)')
-                ->numeric()
-                ->minValue(1)
-                ->maxValue(12)
+            Select::make('month')
+                ->label('Month')
+                ->options([
+                    1 => 'Jan',
+                    2 => 'Feb',
+                    3 => 'Mar',
+                    4 => 'Apr',
+                    5 => 'May',
+                    6 => 'Jun',
+                    7 => 'Jul',
+                    8 => 'Aug',
+                    9 => 'Sep',
+                    10 => 'Oct',
+                    11 => 'Nov',
+                    12 => 'Dec',
+                ])
                 ->default(now()->month)
-                ->required(),
+                ->required()
+                ->disableOptionWhen(function ($value, Get $get) {
+
+                    $storeId = $get('store_id');
+                    $year = $get('year');
+
+                    if (!$storeId || !$year)
+                        return false;
+
+                    return StoreTarget::where('store_id', $storeId)
+                        ->where('year', $year)
+                        ->where('month', $value)
+                        ->exists();
+                })
+                ->helperText('Already created months are disabled'),
 
             TextInput::make('amount')
                 ->label('Target Amount (₹)')
@@ -70,7 +96,10 @@ class StoreTargetResource extends Resource
             TextColumn::make('id')->sortable(),
             TextColumn::make('store.name')->label('Store')->sortable()->searchable(),
             TextColumn::make('year')->sortable(),
-            TextColumn::make('month')->sortable(),
+            TextColumn::make('month')
+                ->label('Month')
+                ->formatStateUsing(fn($state) => \Carbon\Carbon::create()->month($state)->format('F'))
+                ->sortable(),
             TextColumn::make('amount')->label('Target (₹)')->money('INR'),
             TextColumn::make('team_lead_target')
                 ->label('Team Target')
@@ -100,6 +129,56 @@ class StoreTargetResource extends Resource
             IconColumn::make('distributed')->label('Distributed')->boolean(),
             TextColumn::make('created_at')->label('Created')->dateTime(),
         ])
+            ->filters([
+                Tables\Filters\Filter::make('current_month')
+                    ->label('Current Month')
+                    ->default() // ✅ auto apply
+                    ->query(function ($query) {
+                        return $query
+                            ->where('month', now()->month)
+                            ->where('year', now()->year);
+                    }),
+
+                Tables\Filters\SelectFilter::make('month')
+                    ->label('Month')
+                    ->options([
+                        1 => 'Jan',
+                        2 => 'Feb',
+                        3 => 'Mar',
+                        4 => 'Apr',
+                        5 => 'May',
+                        6 => 'Jun',
+                        7 => 'Jul',
+                        8 => 'Aug',
+                        9 => 'Sep',
+                        10 => 'Oct',
+                        11 => 'Nov',
+                        12 => 'Dec',
+                    ])
+                    ->query(
+                        fn($query, $data) =>
+                        $query->when(
+                            $data['value'],
+                            fn($q, $month) =>
+                            $q->where('month', $month)
+                        )
+                    ),
+
+                Tables\Filters\SelectFilter::make('year')
+                    ->label('Year')
+                    ->options(
+                        collect(range(now()->year - 5, now()->year + 1))
+                            ->mapWithKeys(fn($y) => [$y => $y])
+                    )
+                    ->query(
+                        fn($query, $data) =>
+                        $query->when(
+                            $data['value'],
+                            fn($q, $year) =>
+                            $q->where('year', $year)
+                        )
+                    ),
+            ])
             ->actions([
                 Tables\Actions\EditAction::make(),
                 Action::make('distribute')

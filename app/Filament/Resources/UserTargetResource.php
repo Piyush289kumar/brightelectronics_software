@@ -88,7 +88,55 @@ class UserTargetResource extends Resource
                 Tables\Columns\TextColumn::make('created_at')->label('Created')->dateTime(),
             ])
             ->filters([
-                //
+                Tables\Filters\Filter::make('current_month')
+                    ->label('Current Month')
+                    ->default()
+                    ->query(function ($query) {
+                        return $query->whereHas('storeTarget', function ($q) {
+                            $q->where('month', now()->month)
+                                ->where('year', now()->year);
+                        });
+                    }),
+
+                Tables\Filters\SelectFilter::make('month')
+                    ->label('Month')
+                    ->options([
+                        1 => 'Jan',
+                        2 => 'Feb',
+                        3 => 'Mar',
+                        4 => 'Apr',
+                        5 => 'May',
+                        6 => 'Jun',
+                        7 => 'Jul',
+                        8 => 'Aug',
+                        9 => 'Sep',
+                        10 => 'Oct',
+                        11 => 'Nov',
+                        12 => 'Dec',
+                    ])
+                    ->query(
+                        fn($query, $data) =>
+                        $query->when(
+                            $data['value'],
+                            fn($q, $month) =>
+                            $q->whereHas('storeTarget', fn($sq) => $sq->where('month', $month))
+                        )
+                    ),
+
+                Tables\Filters\SelectFilter::make('year')
+                    ->label('Year')
+                    ->options(
+                        collect(range(now()->year - 5, now()->year + 1))
+                            ->mapWithKeys(fn($y) => [$y => $y])
+                    )
+                    ->query(
+                        fn($query, $data) =>
+                        $query->when(
+                            $data['value'],
+                            fn($q, $year) =>
+                            $q->whereHas('storeTarget', fn($sq) => $sq->where('year', $year))
+                        )
+                    ),
             ])
             ->actions([
                 Tables\Actions\EditAction::make()
