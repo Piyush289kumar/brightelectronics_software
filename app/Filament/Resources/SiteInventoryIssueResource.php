@@ -2,6 +2,7 @@
 namespace App\Filament\Resources;
 use App\Filament\Resources\SiteInventoryIssueResource\Pages;
 use App\Filament\Resources\SiteInventoryIssueResource\RelationManagers;
+use App\Models\Product;
 use App\Models\SiteInventoryIssue;
 use Auth;
 use Filament\Forms;
@@ -42,8 +43,12 @@ class SiteInventoryIssueResource extends Resource
                         ->dehydrated(), // <-- ensures value is saved even when disabled
 
                     Select::make('job_card_id')
-                        ->label(label: 'Job Card')
-                        ->relationship('jobCard', 'job_id')
+                        ->label('Job Card')
+                        ->relationship(
+                            name: 'jobCard',
+                            titleAttribute: 'job_id',
+                            modifyQueryUsing: fn($query) => $query->orderBy('id', 'desc')
+                        )
                         ->required()
                         ->searchable()
                         ->preload()
@@ -67,7 +72,13 @@ class SiteInventoryIssueResource extends Resource
 
                             Select::make('product_id')
                                 ->label('Spare Parts')
-                                ->relationship('product', 'name')
+                                ->options(
+                                    Product::all()
+                                        ->mapWithKeys(fn($p) => [
+                                            $p->id => "{$p->name} ({$p->barcode})"
+                                        ])
+                                        ->toArray()
+                                )
                                 ->required()
                                 ->searchable()
                                 ->preload()
@@ -80,24 +91,14 @@ class SiteInventoryIssueResource extends Resource
                                 ->label('Issued Qty')
                                 ->numeric()
                                 ->minValue(1)
+                                ->reactive()
+                                ->live()
                                 ->required()
-                                ->maxValue(function (callable $get) {
+                                ->maxValue(function (callable $get, $state) {
+
                                     $storeId = $get('../../store_id');
                                     $productId = $get('product_id');
 
-                                    if (!$storeId || !$productId) {
-                                        return null;
-                                    }
-
-                                    $inventory = \App\Models\StoreInventory::where('store_id', $storeId)
-                                        ->where('product_id', $productId)
-                                        ->first();
-
-                                    return $inventory?->quantity ?? 0;
-                                })
-                                ->helperText(function (callable $get) {
-                                    $storeId = $get('../../store_id');
-                                    $productId = $get('product_id');
                                     if (!$storeId || !$productId)
                                         return null;
 
@@ -105,22 +106,60 @@ class SiteInventoryIssueResource extends Resource
                                         ->where('product_id', $productId)
                                         ->first();
 
-                                    return "Available stock: " . ($inventory?->quantity ?? 0);
+                                    $availableStock = $inventory?->quantity ?? 0;
+
+                                    $items = collect($get('../../items') ?? []);
+
+                                    $usedQty = $items
+                                        ->where('product_id', $productId)
+                                        ->sum('quantity');
+
+                                    return max($availableStock - ($usedQty - ($state ?? 0)), 0);
+                                })
+                                ->helperText(function (callable $get) {
+
+                                    $storeId = $get('../../store_id');
+                                    $productId = $get('product_id');
+
+                                    if (!$storeId || !$productId)
+                                        return null;
+
+                                    $inventory = \App\Models\StoreInventory::where('store_id', $storeId)
+                                        ->where('product_id', $productId)
+                                        ->first();
+
+                                    $availableStock = $inventory?->quantity ?? 0;
+
+                                    $items = collect($get('../../items') ?? []);
+
+                                    $usedQty = $items
+                                        ->where('product_id', $productId)
+                                        ->sum('quantity');
+
+                                    return "Stock: {$availableStock} | Used: {$usedQty} | Remaining: " . max($availableStock - $usedQty, 0);
                                 })
                                 ->disabled(fn(callable $get) => $get('../../status') === 'returned'), // ❌ cannot edit when returning
-
-
                             // ----------------------------------------------------
                             //  RETURN QUANTITY (Visible only when Returning)
                             // ----------------------------------------------------
                             TextInput::make('return_qty')
                                 ->label('Return Qty')
                                 ->numeric()
+                                ->default(0)
                                 ->minValue(0)
                                 ->maxValue(
                                     fn(callable $get) =>
                                     $get('quantity') ?? 0 // cannot return more than issued
                                 )
+                                ->reactive()
+                                ->afterStateUpdated(function ($state, callable $set, callable $get) {
+
+                                    $issued = $get('quantity') ?? 0;
+
+                                    if ($state > $issued) {
+                                        $set('return_qty', $issued);
+                                    }
+                                })
                                 ->helperText(
                                     fn(callable $get) =>
                                     "Issued: " . ($get('quantity') ?? 0)
@@ -143,7 +182,8 @@ class SiteInventoryIssueResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('store.name')->label('Branch')->sortable()->searchable(),
+                Tables\Columns\TextColumn::make('store.name')->label('Branch')->sortable()->searchable(),                
+                Tables\Columns\TextColumn::make('job_card_id')->label('Job Card')->sortable()->searchable(),
                 Tables\Columns\TextColumn::make('site.name')->label('Site')->sortable()->searchable(),
                 Tables\Columns\TextColumn::make('issuer.name')->label('Issued By')->sortable(),
 

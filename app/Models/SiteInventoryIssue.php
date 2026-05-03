@@ -54,5 +54,6 @@ class SiteInventoryIssue extends Model
     {
         return $this->belongsTo(User::class, 'returned_by');
     }
+    
 
 }
