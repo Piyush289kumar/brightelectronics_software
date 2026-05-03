@@ -290,7 +290,7 @@ class JobCardResource extends Resource
                     ]),
                 ])
                 ->collapsible(),
-        ]);
+        ])->disabled(fn() => !auth()->user()->hasAnyRole(['Administrator', 'Team Lead']));
     }
 
     protected static function calculateExpense($get)
