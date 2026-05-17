@@ -55,7 +55,14 @@ class ComplainResource extends Resource
                             ->label('Google Map Location')
                             ->placeholder('Paste Google Maps URL here…')
                             ->maxLength(500)
-                            ->reactive()
+                            // ✅ Live reactive
+                            ->live()                    
+                            // ✅ Required only for PKD & Visit
+                            ->required(
+                                fn(callable $get) =>
+                                in_array($get('first_action_code'), ['PKD', 'Visit'])
+                            )
+
                             ->columnSpan(1),
                         Forms\Components\Textarea::make('address')
                             ->label('Customer Address')
