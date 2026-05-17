@@ -650,6 +650,7 @@ class PurchaseResource extends Resource
             </tr>";
                             })->implode('');
                             $map = [
+                                '$PURCHAS_INVOICE_NUMBER' => (string) ($record->number ?? "--"),
                                 '$PURCHAS_ORDER_NUMBER' => (string) ($record->purchase_order_to_purchase_invoice_no ?? "--"),
                                 '$NUMBER' => (string) ($record->place_of_supply ?? 'N/A'),
                                 '$DOCUMENT_DATE' => Carbon::parse($record->document_date)->format('d-m-Y'),
@@ -721,6 +722,7 @@ class PurchaseResource extends Resource
             </tr>";
                             })->implode('');
                             $map = [
+                                '$PURCHAS_INVOICE_NUMBER' => (string) ($record->number ?? "--"),
                                 '$PURCHAS_ORDER_NUMBER' => (string) ($record->purchase_order_to_purchase_invoice_no ?? "--"),
                                 '$NUMBER' => (string) ($record->place_of_supply ?? 'N/A'),
                                 '$DOCUMENT_DATE' => Carbon::parse($record->document_date)->format('d-m-Y'),
