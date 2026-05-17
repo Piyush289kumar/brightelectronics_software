@@ -39,6 +39,10 @@ class AccountingStats extends BaseWidget
             ->where('first_action_code', 'CNC')
             ->count();
 
+        $rsdComplaints = (clone $complainQuery)
+            ->where('first_action_code', 'RSD')
+            ->count();
+
         $jobCancelComplaints = (clone $complainQuery)
             ->where('first_action_code', 'Job Cancel')
             ->count();
@@ -71,15 +75,20 @@ class AccountingStats extends BaseWidget
         return [
 
             // ---------------- Complaints ----------------
-            Stat::make('Total Complaints', $complainCount)
+            Stat::make('Total Complaints (New)', $complainCount)
                 ->icon('heroicon-o-chat-bubble-left-right')
                 ->color('info')
                 ->description('Assigned complaints'),
 
             Stat::make('CNC Complaints', $cncComplaints)
-                ->icon('heroicon-o-arrow-down-tray')
+                ->icon('heroicon-o-clock')
                 ->color('warning')
                 ->description('CNC complaints'),
+
+            Stat::make('RSD Complaints', $rsdComplaints)
+                ->icon('heroicon-o-clock')
+                ->color('warning')
+                ->description('RSD complaints'),
 
             Stat::make('Cancel Complaints', $jobCancelComplaints)
                 ->icon('heroicon-o-x-circle')

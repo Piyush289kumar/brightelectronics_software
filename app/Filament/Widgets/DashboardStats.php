@@ -35,7 +35,7 @@ class DashboardStats extends BaseWidget
         $purchaseRequisitionCount = PurchaseRequisition::where('status', 'pending')->count();
 
         $pendingPurchaseAmount = Invoice::where('document_type', 'purchase')
-            ->where('status', 'pending')
+            ->whereIn('status', ['pending', 'draft'])
             ->sum('total_amount');
 
         // ---------------- Store Target (This Month) ----------------
