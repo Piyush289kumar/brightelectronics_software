@@ -95,7 +95,7 @@ class PurchaseRequisitionResource extends Resource
                                             ->maxLength(255),
 
                                         TextInput::make('barcode')
-                                            ->label('Barcode')
+                                            ->label('Part No.')
                                             ->maxLength(100),
 
                                         // ✅ Category
@@ -121,12 +121,12 @@ class PurchaseRequisitionResource extends Resource
                                             ->visible(fn(callable $get) => $get('category_id'))
                                             ->searchable(),
 
-                                        // ✅ Image Upload
-                                        FileUpload::make('image_path')
-                                            ->label('Product Image')
-                                            ->image()
-                                            ->directory('products')
-                                            ->imagePreviewHeight('100'),
+                                        // // ✅ Image Upload
+                                        // FileUpload::make('image_path')
+                                        //     ->label('Product Image')
+                                        //     ->image()
+                                        //     ->directory('products')
+                                        //     ->imagePreviewHeight('100'),
 
                                     ])
                                 ])
@@ -291,6 +291,15 @@ class PurchaseRequisitionResource extends Resource
                                 ->required(fn($get) => $get('method') === 'transfer'),
                             Repeater::make('items')
                                 ->label('Approve quantities (per item)')
+                                // ✅ REMOVE ADD BUTTON
+                                ->addable(false)
+
+                                // ✅ REMOVE DELETE BUTTON
+                                ->deletable(false)
+
+                                // ✅ REMOVE REORDER
+                                ->reorderable(false)
+
                                 ->schema([
                                     Grid::make(4)->schema([
                                         TextInput::make('id')->hidden()->dehydrated(),
