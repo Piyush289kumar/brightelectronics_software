@@ -219,6 +219,11 @@ class JobCardResource extends Resource
                         ->label('Spare Parts')
                         ->dehydrated(true)
                         ->afterStateHydrated(function ($state, $set, $get) {
+
+                            if (request()->has('components')) {
+                                return;
+                            }
+
                             \App\Filament\Resources\JobCardResource::recalculateAll(
                                 $set,
                                 $get
