@@ -218,13 +218,20 @@ class JobCardResource extends Resource
                     Forms\Components\Repeater::make('spare_parts')
                         ->label('Spare Parts')
                         ->dehydrated(true)
+                        ->afterStateHydrated(function ($state, $set, $get) {
+                            \App\Filament\Resources\JobCardResource::recalculateAll(
+                                $set,
+                                $get
+                            );
+
+                        })
                         ->addActionLabel('Add Spare Part')
                         ->schema([
 
                             Forms\Components\Select::make('product_id')
                                 ->label('Product')
                                 ->options(
-                                    \App\Models\Product::all()
+                                    Product::all()
                                         ->mapWithKeys(fn($p) => [
                                             $p->id => "{$p->name} ({$p->barcode})"
                                         ])
@@ -287,6 +294,29 @@ class JobCardResource extends Resource
                             ->disabled()
                             ->dehydrated(true)
                             ->reactive(),
+
+                        Forms\Components\TextInput::make('payment_reference_number')
+                            ->label('Payment Reference Number')
+                            ->placeholder('Enter UPI / Transaction Ref No.')
+                            ->maxLength(255)
+                            ->columnSpan(2),
+
+                        Forms\Components\FileUpload::make('payment_reference_image_path')
+                            ->label('Payment Reference Image')
+                            ->image()
+                            ->directory('payment-references')
+                            ->disk('public')
+                            ->visibility('public')
+                            ->imagePreviewHeight('150')
+                            ->downloadable()
+                            ->openable()
+                            ->acceptedFileTypes([
+                                'image/jpeg',
+                                'image/png',
+                                'image/webp',
+                            ])
+                            ->maxSize(2048)
+                            ->columnSpan(3),
                     ]),
                 ])
                 ->collapsible(),
@@ -343,7 +373,9 @@ class JobCardResource extends Resource
         // =============================
         // ✅ EXPENSE CALCULATION
         // =============================
-        $products = collect($get('spare_parts') ?? []);
+        // $products = collect($get('spare_parts') ?? []);
+
+        $products = collect($get('spare_parts') ?: []);
 
         $products = $products->map(function ($row) {
             $id = $row['product_id'] ?? null;
@@ -466,7 +498,7 @@ class JobCardResource extends Resource
 
         $set('expense', $expense);
         $set('gst_amount', $gstAmount);
-        $set('gross_amount', $amount);
+        $set('gross_amount', $profit);
     }
 
 

@@ -120,12 +120,14 @@ class JobCardResourceRelationManager extends RelationManager
 
                         Forms\Components\TextInput::make('estimate_repair_amount')
                             ->label('Estimate Repair Amount')
+                            ->prefix('₹')
                             ->numeric()
                             ->minValue(0)
                             ->step(0.01),
 
                         Forms\Components\TextInput::make('estimate_new_amount')
                             ->label('Estimate New Amount')
+                            ->prefix('₹')
                             ->numeric()
                             ->minValue(0)
                             ->step(0.01),
@@ -184,8 +186,8 @@ class JobCardResourceRelationManager extends RelationManager
                 // Tables\Columns\TextColumn::make('cancel_reason')->label('Cancel Reason')->sortable(),
                 Tables\Columns\TextColumn::make('status')->label('Status')->sortable(),
 
-                Tables\Columns\TextColumn::make('estimate_repair_amount')->label('Estimate Repair Amount')->money('usd')->sortable(),
-                Tables\Columns\TextColumn::make('estimate_new_amount')->label('Estimate New Amount')->money('usd')->sortable(),
+                Tables\Columns\TextColumn::make('estimate_repair_amount')->label('Estimate Repair Amount')->money('inr')->sortable(),
+                Tables\Columns\TextColumn::make('estimate_new_amount')->label('Estimate New Amount')->money('inr')->sortable(),
 
                 // Tables\Columns\TextColumn::make('assigner.name')->label('Assigned By')->sortable(),
 
