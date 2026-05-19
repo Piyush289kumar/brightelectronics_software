@@ -479,8 +479,8 @@ class JobCardResource extends Resource
 
             $amountCalc = round(($afterLeadProfit * $percent) / 100, 2);
 
-            $engineers[$index]['percent'] = $percent;
-            $engineers[$index]['amount'] = $amountCalc;
+            // $engineers[$index]['percent'] = $percent;
+            // $engineers[$index]['amount'] = $amountCalc;
 
             $totalEngineerAmount += $amountCalc;
         }
@@ -493,7 +493,7 @@ class JobCardResource extends Resource
         // =============================
         // ✅ SET VALUES
         // =============================
-        $set('incentive_percentages', $engineers);
+        // $set('incentive_percentages', $engineers);
         $set('incentive_amount', round($totalEngineerAmount, 2));
 
         $set('lead_incentive_percent', $leadPercent);
