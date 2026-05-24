@@ -217,6 +217,7 @@ class JobCardResource extends Resource
                     // NO getSearchResultsUsing inside live() repeater — that causes closure serialization
                     Forms\Components\Repeater::make('spare_parts')
                         ->label('Spare Parts')
+                         ->addable(false)
                         ->dehydrated(true)
                         ->afterStateHydrated(function ($state, $set, $get) {
 
