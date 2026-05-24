@@ -34,7 +34,7 @@ class AccountingStats extends BaseWidget
 
         $complainCount = (clone $complainQuery)->where('first_action_code', 'NEW')
             ->count();
-        
+
         $cncComplaints = (clone $complainQuery)
             ->where('first_action_code', 'CNC')
             ->count();
@@ -66,6 +66,10 @@ class AccountingStats extends BaseWidget
 
         $jobCardPending = (clone $jobCardQuery)
             ->where('status', 'pending')
+            ->count();
+
+        $jobCardReturn = (clone $jobCardQuery)
+            ->where('status', 'Return')
             ->count();
 
         $jobCardCompleted = (clone $jobCardQuery)
@@ -105,6 +109,11 @@ class AccountingStats extends BaseWidget
                 ->icon('heroicon-o-clock')
                 ->color('warning')
                 ->description('Pending jobs'),
+
+            Stat::make('Return Job Cards', $jobCardReturn)
+                ->icon('heroicon-o-arrow-path')
+                ->color('danger')
+                ->description('Returned jobs'),
 
             Stat::make('Completed Job Cards', $jobCardCompleted)
                 ->icon('heroicon-o-check-circle')
