@@ -306,7 +306,25 @@ class PurchaseRequisitionResource extends Resource
 
                                         TextInput::make('product_name')
                                             ->label('Spare Parts')
-                                            ->disabled(),
+                                            ->disabled()
+                                            ->dehydrated(false)
+
+                                            ->afterStateHydrated(function ($component, $state, $record) {
+
+                                                if (!$record?->product_id) {
+                                                    return;
+                                                }
+
+                                                $product = Product::find($record->product_id);
+
+                                                if (!$product) {
+                                                    return;
+                                                }
+
+                                                $component->state(
+                                                    $product->name . ' (' . $product->barcode . ')'
+                                                );
+                                            }),
 
                                         TextInput::make('quantity')
                                             ->label('Requested Qty')
@@ -351,16 +369,41 @@ class PurchaseRequisitionResource extends Resource
                                 ])
                                 ->columns('full')
                                 ->default(function ($record, $get) {
+
                                     $globalVendor = $get('vendor_id');
+
                                     return $record?->items?->map(fn($i) => [
+
                                         'id' => $i->id,
-                                        'product_name' => $i->product->name,
+
+                                        // ✅ IMPORTANT
+                                        'product_id' => $i->product_id,
+
+                                        // ✅ SHOW NAME + BARCODE
+                                        'product_name' =>
+                                            $i->product?->name .
+                                            ' (' .
+                                            $i->product?->barcode .
+                                            ')',
+
                                         'quantity' => $i->quantity,
+
                                         'purchase_price' => $i->purchase_price,
-                                        'approved_quantity' => $i->approved_quantity ?? $i->quantity,
-                                        'approved_price' => $i->approved_price ?? $i->purchase_price,
-                                        'approved_total' => ($i->approved_quantity ?? $i->quantity) * ($i->approved_price ?? $i->purchase_price),
-                                        'vendor_id' => $i->vendor_id ?? $globalVendor, // 👈 correctly set default vendor_id
+
+                                        'approved_quantity' =>
+                                            $i->approved_quantity ?? $i->quantity,
+
+                                        'approved_price' =>
+                                            $i->approved_price ?? $i->purchase_price,
+
+                                        'approved_total' =>
+                                            ($i->approved_quantity ?? $i->quantity)
+                                            *
+                                            ($i->approved_price ?? $i->purchase_price),
+
+                                        'vendor_id' =>
+                                            $i->vendor_id ?? $globalVendor,
+
                                     ])->toArray() ?? [];
                                 })
                                 ->columns('full'),
