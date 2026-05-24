@@ -101,7 +101,7 @@ class JobCard extends Model
 
             $qty = (int) ($part['qty'] ?? 1);
 
-            $expense += ($product->purchase_price * $qty);
+            $expense += ($product->selling_price * $qty);
         }
 
         $expense = round($expense, 2);

@@ -73,13 +73,17 @@ class SiteInventoryIssue extends Model
             // Convert stock issue items to spare_parts
             $spareParts = $issue->items->map(function ($item) {
 
+                $rate = $item->product?->selling_price ?? 0;
+
                 return [
                     'product_id' => $item->product_id,
                     'qty' => $item->quantity,
+                    'unit_rate' => $rate,
+                    'amount' => $rate * $item->quantity,
                 ];
 
             })->values()->toArray();
-
+            
             // Save into job card
             $existing = collect($jobCard->spare_parts ?? []);
 

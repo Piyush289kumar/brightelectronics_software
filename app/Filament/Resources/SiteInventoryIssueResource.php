@@ -136,7 +136,7 @@ class SiteInventoryIssueResource extends Resource
                                         ->where('product_id', $productId)
                                         ->sum('quantity');
 
-                                    return "Stock: {$availableStock} | Used: {$usedQty} | Remaining: " . max($availableStock - $usedQty, 0);
+                                    return "Stock Available: {$availableStock}";
                                 })
                                 ->disabled(fn(callable $get) => $get('../../status') === 'returned'), // ❌ cannot edit when returning
                             // ----------------------------------------------------

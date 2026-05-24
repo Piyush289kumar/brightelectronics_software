@@ -217,7 +217,7 @@ class JobCardResource extends Resource
                     // NO getSearchResultsUsing inside live() repeater — that causes closure serialization
                     Forms\Components\Repeater::make('spare_parts')
                         ->label('Spare Parts')
-                         ->addable(false)
+                        ->addable(false)
                         ->dehydrated(true)
                         ->afterStateHydrated(function ($state, $set, $get) {
 
@@ -251,6 +251,26 @@ class JobCardResource extends Resource
                                     \App\Filament\Resources\JobCardResource::recalculateAll($set, $get)
                                 ),
 
+                            Forms\Components\TextInput::make('unit_rate')
+                                ->label('Unit Rate')
+                                ->prefix('₹')
+                                ->disabled()
+                                ->dehydrated(false)
+                                ->reactive()
+                                ->afterStateHydrated(function ($set, $get) {
+
+                                    $productId = $get('product_id');
+
+                                    if (!$productId) {
+                                        $set('unit_rate', 0);
+                                        return;
+                                    }
+
+                                    $product = Product::find($productId);
+
+                                    $set('unit_rate', $product?->selling_price ?? 0);
+                                }),
+
                             Forms\Components\TextInput::make('qty')
                                 ->numeric()
                                 ->default(1)
@@ -261,7 +281,7 @@ class JobCardResource extends Resource
                         ])
                         ->defaultItems(0)
                         ->collapsed()
-                        ->columns(2)
+                        ->columns(3)
                         ->reorderable(false)
                         ->columnSpanFull()
                         ->reactive()
@@ -350,7 +370,7 @@ class JobCardResource extends Resource
                 if (!$id || !isset($productData[$id]))
                     return 0;
 
-                return (float) $productData[$id]->purchase_price * $qty;
+                return (float) $productData[$id]->selling_price * $qty;
             }),
             2
         );
@@ -403,7 +423,7 @@ class JobCardResource extends Resource
         $expense = round(
             $products->sum(function ($row) use ($productData) {
                 $product = $productData[$row['product_id']] ?? null;
-                return $product ? $product->purchase_price * $row['qty'] : 0;
+                return $product ? $product->selling_price * $row['qty'] : 0;
             }),
             2
         );
