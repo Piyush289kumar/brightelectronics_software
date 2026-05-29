@@ -241,6 +241,7 @@ class PurchaseResource extends Resource
                         Repeater::make('items')
                             ->relationship('items')
                             ->label('Items')
+                            ->addable(false)
                             ->required()
                             ->reactive()
                             // Recalculate invoice totals only once when entire items array updates

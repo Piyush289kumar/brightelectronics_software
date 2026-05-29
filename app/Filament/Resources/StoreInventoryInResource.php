@@ -199,6 +199,7 @@ class StoreInventoryInResource extends Resource
                     ->schema([
                         Repeater::make('items')
                             ->relationship()
+                             ->addable(false)
                             ->label('Items')
                             ->required()
                             ->reactive()
