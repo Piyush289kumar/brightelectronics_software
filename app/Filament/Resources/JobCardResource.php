@@ -327,22 +327,27 @@ class JobCardResource extends Resource
                             ->maxLength(255)
                             ->columnSpan(2),
 
-                        // Forms\Components\FileUpload::make('payment_reference_image_path')
-                        //     ->label('Payment Reference Image')
-                        //     ->image()
-                        //     ->directory('payment-references')
-                        //     ->disk('public')
-                        //     ->visibility('public')
-                        //     ->imagePreviewHeight('150')
-                        //     ->downloadable()
-                        //     ->openable()
-                        //     ->acceptedFileTypes([
-                        //         'image/jpeg',
-                        //         'image/png',
-                        //         'image/webp',
-                        //     ])
-                        //     ->maxSize(2048)
-                        //     ->columnSpan(3),
+                        Forms\Components\FileUpload::make('payment_reference_image_path')
+                            ->label('Payment Reference Image')
+                            ->image()
+                            ->directory('payment-references')
+                            ->disk('public')
+                            ->visibility('public')
+                            ->imagePreviewHeight('150')
+                            ->downloadable()
+                            ->openable()
+                            ->acceptedFileTypes([
+                                'image/jpeg',
+                                'image/png',
+                                'image/webp',
+                            ])
+                            ->maxSize(2048)
+                            ->required(fn(Forms\Get $get) => filled($get('payment_reference_number')))
+                            ->validationMessages([
+                                'required' => 'Payment reference image is required when a reference number is entered.',
+                            ])
+                            ->columnSpan(3),
+
                     ]),
                 ])
                 ->collapsible(),
