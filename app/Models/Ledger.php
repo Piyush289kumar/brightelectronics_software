@@ -19,6 +19,7 @@ class Ledger extends Model
         'amount',
         'balance',
         'journal_entry_id',
+        'narration',
     ];
 
     public function account()

@@ -72,6 +72,10 @@ class LedgerResource extends Resource
                     ->label('Running Balance'),
             ]),
 
+             Forms\Components\TextInput::make('narration')                    
+                    ->label('Narration')
+                    ->columnSpanFull(),
+
         ]);
     }
 
@@ -80,8 +84,9 @@ class LedgerResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('date')->date()->sortable(),
-                Tables\Columns\TextColumn::make('store.name')->label('Store')->searchable()->sortable(),
-                Tables\Columns\TextColumn::make('account.account_name')->label('Account')->searchable(),
+                Tables\Columns\TextColumn::make('narration')->limit(50)->toggleable(),
+                Tables\Columns\TextColumn::make('store.name')->label('Branch')->searchable()->sortable()->toggleable(),
+                // Tables\Columns\TextColumn::make('account.account_name')->label('Account')->searchable(),
                 Tables\Columns\BadgeColumn::make('transaction_type')
                     ->colors([
                         'success' => 'credit',
@@ -89,20 +94,19 @@ class LedgerResource extends Resource
                     ])
                     ->label('Type'),
 
-                Tables\Columns\TextColumn::make('amount')->money('inr')->sortable(),
+                Tables\Columns\TextColumn::make('amount')->money('inr')->sortable()->toggleable(),
 
-                Tables\Columns\TextColumn::make('balance')->money('inr')->sortable(),
+                // Tables\Columns\TextColumn::make('balance')->money('inr')->sortable(),
 
-                Tables\Columns\TextColumn::make('journalEntry.reference')
-                    ->label('Reference')
-                    ->toggleable(),
+                // Tables\Columns\TextColumn::make('journalEntry.reference')
+                //     ->label('Reference')
+                //     ->toggleable(),
             ])->defaultSort('created_at', 'desc')
             ->filters([
                 Tables\Filters\SelectFilter::make('store_id')
-                    ->relationship('store', 'name'),
+                    ->relationship('store', 'name')->label('Branch'),
                 Tables\Filters\SelectFilter::make('account_id')
-                    ->relationship('account', 'account_name')
-
+                    ->relationship('account', 'account_name')->label('Account')
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
