@@ -30,6 +30,7 @@ class StoreInventoryIn extends Model
         'documents',
         'notes',
         'transaction_type',
+        'purchase_order_id',
     ];
 
     protected $casts = [
@@ -66,8 +67,13 @@ class StoreInventoryIn extends Model
     protected static function booted()
     {
         static::created(function (StoreInventoryIn $record) {
+
             foreach ($record->items as $item) {
-                // Find or create inventory record for this store & product
+
+                if (!$item->product_id) {
+                    continue;
+                }
+
                 $storeInventory = StoreInventory::firstOrCreate(
                     [
                         'store_id' => $record->store_id,
@@ -78,9 +84,7 @@ class StoreInventoryIn extends Model
                     ]
                 );
 
-                // Increase quantity
-                $storeInventory->quantity += $item->quantity;
-                $storeInventory->save();
+                $storeInventory->increment('quantity', $item->quantity);
             }
         });
     }

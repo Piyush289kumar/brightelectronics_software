@@ -159,47 +159,45 @@ class StoreInventoryInResource extends Resource
                 // ----------------------------
                 // Inventory Items
                 // ----------------------------
-                Section::make('Import From Purchase Order')
-                    ->schema([
-                        Select::make('purchase_order_id')
-                            ->label('Load from Purchase Order')
-                            ->options(
-                                Invoice::where('document_type', 'purchase_order')
-                                    ->latest('id')
-                                    ->pluck('number', 'id')
+                Select::make('purchase_order_id')
+                    ->label('Load from Purchase Order')
+                    ->options(
+                        Invoice::where('document_type', 'purchase_order')
+                            ->whereNotIn(
+                                'id',
+                                StoreInventoryIn::whereNotNull('purchase_order_id')
+                                    ->pluck('purchase_order_id')
                             )
-                            ->searchable()
-                            ->reactive()
-                            ->afterStateUpdated(function ($state, callable $set) {
-                                if (!$state) {
-                                    return;
-                                }
+                            ->latest('id')
+                            ->pluck('number', 'id')
+                    )
+                    ->searchable()
+                    ->reactive()
+                    ->afterStateUpdated(function ($state, callable $set) {
+                        if (!$state) {
+                            return;
+                        }
 
-                                $po = Invoice::with('items')->find($state);
+                        $po = Invoice::with('items')->find($state);
 
-                                if (!$po) {
-                                    return;
-                                }
+                        if (!$po) {
+                            return;
+                        }
 
-                                // 🔹 Map PO items to Stock In items
-                                $items = $po->items->map(function ($item) {
-                                    return [
-                                        'product_id' => $item->product_id,
-                                        'quantity' => $item->quantity,
-                                        'note' => 'Imported from PO',
-                                    ];
-                                })->toArray();
+                        $items = $po->items->map(fn($item) => [
+                            'product_id' => $item->product_id,
+                            'quantity' => $item->quantity,
+                            'note' => 'Imported from PO',
+                        ])->toArray();
 
-                                // 🔹 Replace current repeater items
-                                $set('items', $items);
-                            }),
-                    ])
+                        $set('items', $items);
+                    })
                     ->columns(1),
                 Section::make('Stock Items')
                     ->schema([
                         Repeater::make('items')
                             ->relationship()
-                             ->addable(false)
+                            ->addable(false)
                             ->label('Items')
                             ->required()
                             ->reactive()
