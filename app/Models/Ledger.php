@@ -19,6 +19,7 @@ class Ledger extends Model
         'amount',
         'balance',
         'journal_entry_id',
+        'job_card_id',
         'narration',
     ];
 
@@ -34,7 +35,7 @@ class Ledger extends Model
     public function journalEntry()
     {
         return $this->belongsTo(JournalEntry::class);
-    }
+    }    
 
     protected static function booted()
     {
