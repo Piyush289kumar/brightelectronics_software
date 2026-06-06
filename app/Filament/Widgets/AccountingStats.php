@@ -4,9 +4,12 @@ namespace App\Filament\Widgets;
 
 use App\Models\Account;
 use App\Models\Complain;
+use App\Models\Invoice;
 use App\Models\JobCard;
 use App\Models\Ledger;
 use App\Models\Product;
+use App\Models\PurchaseRequisition;
+use App\Models\StoreTarget;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 use Illuminate\Support\Facades\Auth;
@@ -14,6 +17,21 @@ use Illuminate\Support\Facades\Auth;
 class AccountingStats extends BaseWidget
 {
     protected ?string $heading = 'Service Overview';
+
+    public static function canView(): bool
+    {
+        $user = Auth::user();
+
+        return $user
+            && (
+                $user->hasRole(['Administrator', 'Developer', 'admin'])
+            );
+    }
+
+    protected function getColumns(): int
+    {
+        return 4;
+    }
 
     protected function getStats(): array
     {
@@ -72,9 +90,41 @@ class AccountingStats extends BaseWidget
             ->where('status', 'Return')
             ->count();
 
+        $jobCardCancelled = (clone $jobCardQuery)
+            ->where('status', 'Cancelled')
+            ->count();
+
         $jobCardCompleted = (clone $jobCardQuery)
             ->where('status', 'Complete')
             ->count();
+
+
+        // ---------------- Purchases ----------------
+        $purchaseRequisitionCount = PurchaseRequisition::where('status', 'pending')->count();
+
+        $pendingPurchaseAmount = Invoice::where('document_type', 'purchase')
+            ->whereIn('status', ['pending', 'draft'])
+            ->sum('total_amount');
+
+        // ---------------- Store Target (This Month) ----------------
+        $year = now()->year;
+        $month = now()->month;
+
+        // If user belongs to a store
+        $storeId = Auth::user()?->store_id;
+
+        $storeTarget = StoreTarget::query()
+            ->when($storeId, fn($q) => $q->where('store_id', $storeId))
+            ->where('year', $year)
+            ->where('month', $month)
+            ->first();
+
+        $targetAmount = $storeTarget?->amount ?? 0;
+        $collectedAmount = $storeTarget?->collected_amount ?? 0;
+
+        $percentage = $targetAmount > 0
+            ? round(($collectedAmount / $targetAmount) * 100, 2)
+            : 0;
 
         return [
 
@@ -115,10 +165,50 @@ class AccountingStats extends BaseWidget
                 ->color('danger')
                 ->description('Returned jobs'),
 
+            Stat::make('Cancelled Job Cards', $jobCardCancelled)
+                ->icon('heroicon-o-x-circle')
+                ->color('danger')
+                ->description('Cancelled jobs'),
+
             Stat::make('Completed Job Cards', $jobCardCompleted)
                 ->icon('heroicon-o-check-circle')
                 ->color('success')
                 ->description('Successfully completed jobs'),
+
+
+            // ---------------- Purchases ----------------
+            Stat::make('Purchase Requisitions', $purchaseRequisitionCount)
+                ->icon('heroicon-o-clipboard-document')
+                ->color('warning')
+                ->description('Total pending purchase requests'),
+
+            // ---------------- Branch Target ----------------
+            Stat::make(
+                'Branch Target (This Month)',
+                $storeTarget
+                ? '₹' . number_format($collectedAmount, 2) . ' / ₹' . number_format($targetAmount, 2)
+                : '-'
+            )
+                ->icon('heroicon-o-flag')
+                ->color(
+                    $storeTarget && $collectedAmount >= $targetAmount
+                    ? 'success'
+                    : 'warning'
+                )
+                ->description(
+                    $storeTarget
+                    ? "Achieved {$percentage}%"
+                    : 'No target set for this month'
+                ),
+
+            // ---------------- Pending Purchase Amount ----------------
+            Stat::make(
+                'Pending Purchase Amount',
+                '₹' . number_format($pendingPurchaseAmount, 2)
+            )
+                ->icon('heroicon-o-banknotes')
+                ->color('danger')
+                ->description('Outstanding payable amount'),
         ];
     }
 }

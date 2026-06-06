@@ -60,39 +60,39 @@ class DashboardStats extends BaseWidget
 
         return [
 
-            // ---------------- Purchases ----------------
-            Stat::make('Purchase Requisitions', $purchaseRequisitionCount)
-                ->icon('heroicon-o-clipboard-document')
-                ->color('warning')
-                ->description('Total pending purchase requests'),
+            // // ---------------- Purchases ----------------
+            // Stat::make('Purchase Requisitions', $purchaseRequisitionCount)
+            //     ->icon('heroicon-o-clipboard-document')
+            //     ->color('warning')
+            //     ->description('Total pending purchase requests'),
 
-            // ---------------- Branch Target ----------------
-            Stat::make(
-                'Branch Target (This Month)',
-                $storeTarget
-                ? '₹' . number_format($collectedAmount, 2) . ' / ₹' . number_format($targetAmount, 2)
-                : '-'
-            )
-                ->icon('heroicon-o-flag')
-                ->color(
-                    $storeTarget && $collectedAmount >= $targetAmount
-                    ? 'success'
-                    : 'warning'
-                )
-                ->description(
-                    $storeTarget
-                    ? "Achieved {$percentage}%"
-                    : 'No target set for this month'
-                ),
+            // // ---------------- Branch Target ----------------
+            // Stat::make(
+            //     'Branch Target (This Month)',
+            //     $storeTarget
+            //     ? '₹' . number_format($collectedAmount, 2) . ' / ₹' . number_format($targetAmount, 2)
+            //     : '-'
+            // )
+            //     ->icon('heroicon-o-flag')
+            //     ->color(
+            //         $storeTarget && $collectedAmount >= $targetAmount
+            //         ? 'success'
+            //         : 'warning'
+            //     )
+            //     ->description(
+            //         $storeTarget
+            //         ? "Achieved {$percentage}%"
+            //         : 'No target set for this month'
+            //     ),
 
-            // ---------------- Pending Purchase Amount ----------------
-            Stat::make(
-                'Pending Purchase Amount',
-                '₹' . number_format($pendingPurchaseAmount, 2)
-            )
-                ->icon('heroicon-o-banknotes')
-                ->color('danger')
-                ->description('Outstanding payable amount'),
+            // // ---------------- Pending Purchase Amount ----------------
+            // Stat::make(
+            //     'Pending Purchase Amount',
+            //     '₹' . number_format($pendingPurchaseAmount, 2)
+            // )
+            //     ->icon('heroicon-o-banknotes')
+            //     ->color('danger')
+            //     ->description('Outstanding payable amount'),
         ];
 
     }
