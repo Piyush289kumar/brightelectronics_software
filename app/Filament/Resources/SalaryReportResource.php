@@ -7,6 +7,7 @@ use App\Filament\Resources\SalaryReportResource\RelationManagers;
 use App\Models\JobCard;
 use App\Models\SalaryReport;
 use App\Models\User;
+use App\Models\UserTarget;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -59,6 +60,73 @@ class SalaryReportResource extends Resource
                     ->label('Basic Salary')
                     ->money('INR'),
 
+                Tables\Columns\TextColumn::make('assigned_target')
+                    ->label('Assigned Target')
+                    ->money('INR')
+                    ->state(function ($record, $livewire) {
+
+                        $month = data_get(
+                            $livewire->tableFilters,
+                            'month.month',
+                            now()->month
+                        );
+
+                        return UserTarget::query()
+                            ->where('user_id', $record->id)
+                            ->whereHas('storeTarget', fn($q) => $q
+                                ->where('month', $month)
+                                ->where('year', now()->year))
+                            ->value('assigned_amount') ?? 0;
+                    }),
+
+                Tables\Columns\TextColumn::make('achieved_target')
+                    ->label('Achieved')
+                    ->money('INR')
+                    ->color('success')
+                    ->state(function ($record, $livewire) {
+
+                        $month = data_get(
+                            $livewire->tableFilters,
+                            'month.month',
+                            now()->month
+                        );
+
+                        return static::getUserIncentive(
+                            $record->id,
+                            $month
+                        );
+                    }),
+
+                Tables\Columns\TextColumn::make('remaining_target')
+                    ->label('Remaining')
+                    ->money('INR')
+                    ->color('danger')
+                    ->state(function ($record, $livewire) {
+
+                        $month = data_get(
+                            $livewire->tableFilters,
+                            'month.month',
+                            now()->month
+                        );
+
+                        $assigned = UserTarget::query()
+                            ->where('user_id', $record->id)
+                            ->whereHas('storeTarget', fn($q) => $q
+                                ->where('month', $month)
+                                ->where('year', now()->year))
+                            ->value('assigned_amount') ?? 0;
+
+                        $achieved = static::getUserIncentive(
+                            $record->id,
+                            $month
+                        );
+
+                        return max(
+                            0,
+                            $assigned - $achieved
+                        );
+                    }),
+
                 Tables\Columns\TextColumn::make('job_count')
                     ->label('Jobs')
                     ->state(function ($record, $livewire) {
@@ -71,9 +139,10 @@ class SalaryReportResource extends Resource
 
                         $count = 0;
 
-                        $jobCards = JobCard::where('status', 'Complete')
+                        $jobCards = JobCard::query()
+                            ->where('status', 'Complete')
                             ->whereMonth('created_at', $month)
-                            ->get();
+                            ->get(['incentive_percentages']);
 
                         foreach ($jobCards as $jobCard) {
 
@@ -92,6 +161,7 @@ class SalaryReportResource extends Resource
                 Tables\Columns\TextColumn::make('incentive_total')
                     ->label('Job Card Incentive')
                     ->money('INR')
+                    ->color('warning')
                     ->state(function ($record, $livewire) {
 
                         $month = data_get(
@@ -100,23 +170,10 @@ class SalaryReportResource extends Resource
                             now()->month
                         );
 
-                        $total = 0;
-
-                        $jobCards = JobCard::where('status', 'Complete')
-                            ->whereMonth('created_at', $month)
-                            ->get();
-
-                        foreach ($jobCards as $jobCard) {
-
-                            foreach (($jobCard->incentive_percentages ?? []) as $engineer) {
-
-                                if (($engineer['user_id'] ?? null) == $record->id) {
-                                    $total += (float) ($engineer['amount'] ?? 0);
-                                }
-                            }
-                        }
-
-                        return $total;
+                        return static::getUserIncentive(
+                            $record->id,
+                            $month
+                        );
                     }),
 
                 Tables\Columns\TextColumn::make('total_salary')
@@ -132,23 +189,13 @@ class SalaryReportResource extends Resource
                             now()->month
                         );
 
-                        $incentive = 0;
+                        $incentive = static::getUserIncentive(
+                            $record->id,
+                            $month
+                        );
 
-                        $jobCards = JobCard::where('status', 'Complete')
-                            ->whereMonth('created_at', $month)
-                            ->get();
-
-                        foreach ($jobCards as $jobCard) {
-
-                            foreach (($jobCard->incentive_percentages ?? []) as $engineer) {
-
-                                if (($engineer['user_id'] ?? null) == $record->id) {
-                                    $incentive += (float) ($engineer['amount'] ?? 0);
-                                }
-                            }
-                        }
-
-                        return ($record->basic_salary ?? 0) + $incentive;
+                        return ($record->basic_salary ?? 0)
+                            + $incentive;
                     }),
 
             ])
@@ -176,12 +223,34 @@ class SalaryReportResource extends Resource
                             ->default(now()->month),
 
                     ])
-                    ->query(fn($query) => $query), // IMPORTANT
+                    ->query(fn($query) => $query),
 
             ])
             ->defaultSort('name');
     }
 
+
+    protected static function getUserIncentive(int $userId, int $month): float
+    {
+        $total = 0;
+
+        $jobCards = JobCard::query()
+            ->where('status', 'Complete')
+            ->whereMonth('created_at', $month)
+            ->get(['incentive_percentages']);
+
+        foreach ($jobCards as $jobCard) {
+
+            foreach (($jobCard->incentive_percentages ?? []) as $engineer) {
+
+                if (($engineer['user_id'] ?? null) == $userId) {
+                    $total += (float) ($engineer['amount'] ?? 0);
+                }
+            }
+        }
+
+        return round($total, 2);
+    }
 
     public static function getEloquentQuery(): Builder
     {
