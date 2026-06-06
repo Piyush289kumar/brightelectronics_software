@@ -14,12 +14,26 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Support\Facades\Auth;
 
 class SalaryReportResource extends Resource
 {
     protected static ?string $model = User::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $navigationLabel = 'Salary Report';
+
+    protected static ?string $pluralLabel = 'Salary Reports';
+
+    protected static ?string $modelLabel = 'Salary Report';
+
+    protected static ?string $navigationIcon = 'heroicon-o-banknotes';
+
+    protected static ?string $navigationGroup = 'HR & Payroll';
+
+    public static function canCreate(): bool
+    {
+        return false;
+    }
 
     public static function form(Form $form): Form
     {
@@ -168,6 +182,28 @@ class SalaryReportResource extends Resource
             ->defaultSort('name');
     }
 
+
+    public static function getEloquentQuery(): Builder
+    {
+        $user = Auth::user();
+
+        // Admin, Manager, Team Lead, Developer => see all users
+        if (
+            $user->hasAnyRole([
+                'Administrator',
+                'Developer',
+                'Manager',
+                'Team Lead',
+                'admin'
+            ])
+        ) {
+            return parent::getEloquentQuery();
+        }
+
+        // Engineer / Machine Men => see only themselves
+        return parent::getEloquentQuery()
+            ->where('id', $user->id);
+    }
     public static function getPages(): array
     {
         return [
