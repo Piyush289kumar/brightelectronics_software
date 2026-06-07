@@ -101,23 +101,23 @@ class ComplainObserver
                 'status' => 'Pending',
 
                 // ✅ Default visit charge
-                'amount' => 300,
+                'amount' => 200,
 
                 'gst_amount' => 0,
                 'expense' => 0,
-                'gross_amount' => 300,
+                'gross_amount' => 200,
 
                 'incentive_type' => null,
                 'incentive_amount' => 0,
 
-                'net_profit' => 300,
+                'net_profit' => 200,
 
                 'lead_incentive_amount' => 0,
-                'bright_electronics_profit' => 300,
+                'bright_electronics_profit' => 200,
 
                 'job_verified_by_admin' => false,
 
-                'note' => 'Auto-generated job card with visit charge ₹300',
+                'note' => 'Auto-generated job card with visit charge ₹200',
             ]);
         }
     }

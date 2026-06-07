@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
+use pxlrbt\FilamentExcel\Exports\ExcelExport;
 use TomatoPHP\FilamentDocs\Models\Document;
 use TomatoPHP\FilamentDocs\Models\DocumentTemplate;
 use TomatoPHP\FilamentDocs\Filament\Resources\DocumentResource\Pages\PrintDocument;
@@ -546,85 +547,177 @@ class JobCardResource extends Resource
                     ->searchable()
                     ->sortable()
                     ->toggleable(),
+
+                // new
+
                 Tables\Columns\TextColumn::make('complain.complain_id')
                     ->label('Complain ID')
                     ->sortable()
                     ->searchable()
                     ->toggleable(),
-                Tables\Columns\TextColumn::make('status')
-                    ->label('Status')
-                    ->badge()
-                    ->color(fn($state) => match ($state) {
-                        'Pending' => 'warning',
-                        'Complete' => 'success',
-                        'Return' => 'danger',
-                        'Cancelled' => 'danger',
-                        default => 'secondary',
-                    })
-                    ->sortable()
+
+                Tables\Columns\TextColumn::make('complain.name')
+                    ->label('Customer Name')
+                    ->searchable()
                     ->toggleable(),
+
+                Tables\Columns\TextColumn::make('complain.mobile')
+                    ->label('Customer Phone')
+                    ->toggleable(),
+
+                Tables\Columns\TextColumn::make('complain.leadSource.lead_name')
+                    ->label('Lead Source')
+                    ->toggleable(),
+
+                Tables\Columns\TextColumn::make('assigned_engineers_text')
+                    ->label('Assigned Engineers')
+                    ->state(fn($record) => static::assignedEngineersText($record->complain?->assigned_engineers ?? []))
+                    ->wrap()
+                    ->toggleable(),
+
+                Tables\Columns\TextColumn::make('check_list_text')
+                    ->label('Checklist')
+                    ->state(fn($record) => static::checklistText($record->check_list ?? []))
+                    ->wrap()
+                    ->toggleable(),
+
+                Tables\Columns\TextColumn::make('spare_parts_text')
+                    ->label('Spare Parts')
+                    ->state(fn($record) => static::sparePartsText($record->spare_parts ?? []))
+                    ->wrap()
+                    ->toggleable(),
+
+                Tables\Columns\TextColumn::make('incentive_percentages_text')
+                    ->label('Engineer Incentives')
+                    ->state(fn($record) => static::incentiveBreakdown($record->incentive_percentages ?? []))
+                    ->wrap()
+                    ->toggleable(),
+
+                Tables\Columns\TextColumn::make('payment_reference_number')
+                    ->label('Payment Ref No.')
+                    ->toggleable(),
+
                 Tables\Columns\TextColumn::make('amount')
-                    ->label('Amount (₹)')
-                    ->money('inr')
+                    ->label('Job Amount (₹)')
+                    ->money('INR')
                     ->sortable()
-                    ->alignRight()
                     ->toggleable(),
+
                 Tables\Columns\TextColumn::make('gst_amount')
-                    ->label('GST (18%)')
-                    ->money('inr')
-                    ->alignRight()
-                    ->sortable()
+                    ->label('GST Amount (₹)')
+                    ->money('INR')
                     ->toggleable(),
+
                 Tables\Columns\TextColumn::make('expense')
                     ->label('Expense (₹)')
-                    ->money('inr')
-                    ->alignRight()
+                    ->money('INR')
                     ->toggleable(),
+
                 Tables\Columns\TextColumn::make('gross_amount')
-                    ->label('Gross (₹)')
-                    ->money('inr')
-                    ->alignRight()
+                    ->label('Gross Amount (₹)')
+                    ->money('INR')
                     ->toggleable(),
+
                 Tables\Columns\TextColumn::make('lead_incentive_percent')
-                    ->label('Lead Incentive (%)')
+                    ->label('Lead %')
                     ->suffix('%')
-                    ->sortable()
                     ->toggleable(),
+
                 Tables\Columns\TextColumn::make('lead_incentive_amount')
-                    ->label('Lead Incentive Amount (₹)')
-                    ->money('inr')
-                    ->alignRight()
+                    ->label('Lead Incentive (₹)')
+                    ->money('INR')
                     ->toggleable(),
+
                 Tables\Columns\TextColumn::make('incentive_amount')
-                    ->label('Engineer Incentive Total (₹)')
-                    ->money('inr')
-                    ->alignRight()
+                    ->label('Engineer Incentive (₹)')
+                    ->money('INR')
                     ->toggleable(),
+
                 Tables\Columns\TextColumn::make('bright_electronics_profit')
-                    ->label('Bright Electronics Profit (₹)')
-                    ->money('inr')
-                    ->color('success')
-                    ->weight('bold')
-                    ->alignRight()
+                    ->label('Profit (₹)')
+                    ->money('INR')
                     ->toggleable(),
-                Tables\Columns\IconColumn::make('job_verified_by_admin')
-                    ->label('Verified')
-                    ->boolean()
-                    ->trueIcon('heroicon-o-check-circle')
-                    ->falseIcon('heroicon-o-x-circle')
-                    ->trueColor('success')
-                    ->falseColor('danger')
-                    ->sortable()
-                    ->toggleable(),
+
+                // new
+                // Tables\Columns\TextColumn::make('complain.complain_id')
+                //     ->label('Complain ID')
+                //     ->sortable()
+                //     ->searchable()
+                //     ->toggleable(),
+                // Tables\Columns\TextColumn::make('status')
+                //     ->label('Status')
+                //     ->badge()
+                //     ->color(fn($state) => match ($state) {
+                //         'Pending' => 'warning',
+                //         'Complete' => 'success',
+                //         'Return' => 'danger',
+                //         'Cancelled' => 'danger',
+                //         default => 'secondary',
+                //     })
+                //     ->sortable()
+                //     ->toggleable(),
+                // Tables\Columns\TextColumn::make('amount')
+                //     ->label('Amount (₹)')
+                //     ->money('inr')
+                //     ->sortable()
+                //     ->alignRight()
+                //     ->toggleable(),
+                // Tables\Columns\TextColumn::make('gst_amount')
+                //     ->label('GST (18%)')
+                //     ->money('inr')
+                //     ->alignRight()
+                //     ->sortable()
+                //     ->toggleable(),
+                // Tables\Columns\TextColumn::make('expense')
+                //     ->label('Expense (₹)')
+                //     ->money('inr')
+                //     ->alignRight()
+                //     ->toggleable(),
+                // Tables\Columns\TextColumn::make('gross_amount')
+                //     ->label('Gross (₹)')
+                //     ->money('inr')
+                //     ->alignRight()
+                //     ->toggleable(),
+                // Tables\Columns\TextColumn::make('lead_incentive_percent')
+                //     ->label('Lead Incentive (%)')
+                //     ->suffix('%')
+                //     ->sortable()
+                //     ->toggleable(),
+                // Tables\Columns\TextColumn::make('lead_incentive_amount')
+                //     ->label('Lead Incentive Amount (₹)')
+                //     ->money('inr')
+                //     ->alignRight()
+                //     ->toggleable(),
+                // Tables\Columns\TextColumn::make('incentive_amount')
+                //     ->label('Engineer Incentive Total (₹)')
+                //     ->money('inr')
+                //     ->alignRight()
+                //     ->toggleable(),
+                // Tables\Columns\TextColumn::make('bright_electronics_profit')
+                //     ->label('Bright Electronics Profit (₹)')
+                //     ->money('inr')
+                //     ->color('success')
+                //     ->weight('bold')
+                //     ->alignRight()
+                //     ->toggleable(),
+                // Tables\Columns\IconColumn::make('job_verified_by_admin')
+                //     ->label('Verified')
+                //     ->boolean()
+                //     ->trueIcon('heroicon-o-check-circle')
+                //     ->falseIcon('heroicon-o-x-circle')
+                //     ->trueColor('success')
+                //     ->falseColor('danger')
+                //     ->sortable()
+                //     ->toggleable(),
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Created At')
                     ->dateTime('d M Y, h:i A')
                     ->sortable()
                     ->toggleable(),
-                Tables\Columns\TextColumn::make('updated_at')
-                    ->label('Updated At')
-                    ->dateTime('d M Y, h:i A')
-                    ->toggleable(),
+                // Tables\Columns\TextColumn::make('updated_at')
+                //     ->label('Updated At')
+                //     ->dateTime('d M Y, h:i A')
+                //     ->toggleable(),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('status')
@@ -845,12 +938,125 @@ HTML;
                         }),
                     Tables\Actions\EditAction::make(),
                     Tables\Actions\DeleteAction::make(),
+
+                    Tables\Actions\Action::make('details')
+                        ->label('Details')
+                        ->icon('heroicon-o-eye')
+                        ->slideOver()
+                        ->modalHeading('Job Card Details')
+                        ->infolist([
+                            \Filament\Infolists\Components\Section::make('Customer')
+                                ->schema([
+                                    \Filament\Infolists\Components\TextEntry::make('complain.complain_id')
+                                        ->label('Complain ID'),
+
+                                    \Filament\Infolists\Components\TextEntry::make('complain.name')
+                                        ->label('Customer'),
+
+                                    \Filament\Infolists\Components\TextEntry::make('complain.mobile')
+                                        ->label('Phone'),
+                                ]),
+                         
+                            \Filament\Infolists\Components\Section::make('Incentives')
+                                ->schema([
+                                    \Filament\Infolists\Components\TextEntry::make('incentives')
+                                        ->label('Engineer Incentives')
+                                        ->state(
+                                            fn($record) =>
+                                            static::incentiveBreakdown(
+                                                $record->incentive_percentages ?? []
+                                            )
+                                        )
+                                        ->columnSpanFull(),
+                                ]),
+
+                            \Filament\Infolists\Components\Section::make('Financial')
+                                ->schema([
+                                    \Filament\Infolists\Components\TextEntry::make('amount')
+                                        ->money('INR'),
+
+                                    \Filament\Infolists\Components\TextEntry::make('gst_amount')
+                                        ->money('INR'),
+
+                                    \Filament\Infolists\Components\TextEntry::make('expense')
+                                        ->money('INR'),
+
+                                    \Filament\Infolists\Components\TextEntry::make('lead_incentive_amount')
+                                        ->money('INR'),
+
+                                    \Filament\Infolists\Components\TextEntry::make('incentive_amount')
+                                        ->money('INR'),
+
+                                    \Filament\Infolists\Components\TextEntry::make('bright_electronics_profit')
+                                        ->money('INR'),
+                                ]),
+                        ])
                 ])->dropdown()->tooltip('Actions')
             ])
             ->bulkActions([
                 Tables\Actions\DeleteBulkAction::make(),
-                ExportBulkAction::make()->label('Export'),
+                ExportBulkAction::make()
+                    ->label('Export')
+                    ->exports([
+                        ExcelExport::make('job-cards')
+                            ->fromTable()
+                            ->withFilename(fn() => 'job-cards-' . now()->format('Y-m-d-His'))
+                            ->withWriterType(\Maatwebsite\Excel\Excel::XLSX),
+                    ]),
             ]);
+    }
+
+
+    protected static function assignedEngineersText(?array $ids): string
+    {
+        if (empty($ids)) {
+            return '-';
+        }
+
+        return User::whereIn('id', $ids)->pluck('name')->implode(', ');
+    }
+
+    protected static function checklistText(?array $items): string
+    {
+        if (empty($items)) {
+            return '-';
+        }
+
+        return implode(', ', $items);
+    }
+
+    protected static function incentiveBreakdown(?array $rows): string
+    {
+        if (empty($rows)) {
+            return '-';
+        }
+
+        return collect($rows)->map(function ($row) {
+            $user = User::find($row['user_id'] ?? null);
+
+            return trim(
+                ($user?->name ?? 'Unknown') .
+                ' | ' .
+                number_format((float) ($row['percent'] ?? 0), 2) . '% | ₹' .
+                number_format((float) ($row['amount'] ?? 0), 2)
+            );
+        })->implode(' ; ');
+    }
+
+    protected static function sparePartsText(?array $rows): string
+    {
+        if (empty($rows)) {
+            return '-';
+        }
+
+        return collect($rows)->map(function ($row) {
+            $product = Product::find($row['product_id'] ?? null);
+
+            return trim(
+                ($product?->name ?? 'Unknown Product') .
+                ' | Qty: ' . (int) ($row['qty'] ?? 1)
+            );
+        })->implode(' ; ');
     }
 
     public static function getRelations(): array
