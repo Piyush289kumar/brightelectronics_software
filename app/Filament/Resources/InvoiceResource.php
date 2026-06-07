@@ -99,20 +99,26 @@ class InvoiceResource extends Resource
                                 // 2) Auto-fill invoice items from job card products
                                 $items = [];
                                 if (!empty($job->product_id)) {
-                                    foreach ($job->product_id as $productId) {
-                                        $product = Product::find($productId);
-                                        if ($product) {
-                                            $items[] = [
-                                                'product_id' => $product->id,
-                                                'quantity' => 1,
-                                                'unit_price' => $product->selling_price,
-                                                'discount' => 0,
-                                                'gst_rate' => 18,
-                                                'discount_amount_per_item' => 0,
-                                                'gst_amount' => 0,
-                                                'total_amount' => 0,
-                                            ];
-                                        }
+
+                                    $productIds = collect($job->product_id)
+                                        ->flatten()
+                                        ->filter()
+                                        ->unique();
+
+                                    $products = Product::whereIn('id', $productIds)->get();
+
+                                    foreach ($products as $product) {
+
+                                        $items[] = [
+                                            'product_id' => $product->id,
+                                            'quantity' => 1,
+                                            'unit_price' => $product->selling_price ?? 0,
+                                            'discount' => 0,
+                                            'gst_rate' => 18,
+                                            'discount_amount_per_item' => 0,
+                                            'gst_amount' => 0,
+                                            'total_amount' => 0,
+                                        ];
                                     }
                                 }
 
@@ -158,7 +164,7 @@ class InvoiceResource extends Resource
                             ->dehydrated(true) // 👈 Force saving to DB
                             ->reactive(),
                         Select::make('billable_id')
-                            ->label('Select Client')
+                            ->label('Select Customer/Client')
                             ->options(function (callable $get) {
                                 $type = $get('billable_type');
                                 if (!$type) {
@@ -237,7 +243,7 @@ class InvoiceResource extends Resource
                                     ->schema([
                                         Grid::make(12)
                                             ->schema([
-                                                  Select::make('product_id')
+                                                Select::make('product_id')
                                                     ->label(label: 'Spare Parts')
                                                     ->options(function () {
                                                         return Product::query()
