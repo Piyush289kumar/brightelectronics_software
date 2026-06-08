@@ -334,8 +334,15 @@ class PurchaseRequisitionResource extends Resource
                                             ->label('Vendor')
                                             ->options(Vendor::pluck('name', 'id'))
                                             ->searchable()
-                                            ->required()
-                                            ->reactive(),
+                                            ->reactive()
+                                            ->visible(
+                                                fn($get) =>
+                                                $get('../../method') === 'purchase'
+                                            )
+                                            ->required(
+                                                fn($get) =>
+                                                $get('../../method') === 'purchase'
+                                            ),
 
                                         TextInput::make('approved_quantity')
                                             ->label('Approved Qty')
