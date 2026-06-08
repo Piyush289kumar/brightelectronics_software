@@ -238,9 +238,10 @@ class JobCardResource extends Resource
                             Forms\Components\Select::make('product_id')
                                 ->label('Product')
                                 ->options(
-                                    Product::all()
-                                        ->mapWithKeys(fn($p) => [
-                                            $p->id => "{$p->name} ({$p->barcode})"
+                                    Product::with('category.parent')
+                                        ->get()
+                                        ->mapWithKeys(fn($product) => [
+                                            $product->id => static::getProductLabel($product->id)
                                         ])
                                         ->toArray()
                                 )
@@ -279,10 +280,23 @@ class JobCardResource extends Resource
                                 ->reactive()
                                 ->afterStateUpdated(fn($set, $get) => \App\Filament\Resources\JobCardResource::recalculateAll($set, $get)),
 
+
+                            Forms\Components\TextInput::make('part_total')
+                                ->label('Total')
+                                ->disabled()
+                                ->dehydrated(true)
+                                ->reactive()
+                                ->afterStateHydrated(function ($set, $get) {
+                                    $qty = (int) ($get('qty') ?? 0);
+                                    $product = Product::find($get('product_id'));
+                                    $rate = $product?->selling_price ?? 0;
+                                    $set('part_total', '₹' . number_format($qty * $rate, 2));
+                                }),
+
                         ])
                         ->defaultItems(0)
                         ->collapsed()
-                        ->columns(3)
+                        ->columns(4)
                         ->reorderable(false)
                         ->columnSpanFull()
                         ->reactive()
@@ -956,7 +970,7 @@ HTML;
                                     \Filament\Infolists\Components\TextEntry::make('complain.mobile')
                                         ->label('Phone'),
                                 ]),
-                         
+
                             \Filament\Infolists\Components\Section::make('Incentives')
                                 ->schema([
                                     \Filament\Infolists\Components\TextEntry::make('incentives')
@@ -1057,6 +1071,35 @@ HTML;
                 ' | Qty: ' . (int) ($row['qty'] ?? 1)
             );
         })->implode(' ; ');
+    }
+
+    protected static function getProductLabel(?int $productId): string
+    {
+        $product = Product::with('category.parent')->find($productId);
+
+        if (!$product) {
+            return 'Unknown Product';
+        }
+
+        $category = $product->category;
+
+        $mainCategory = '-';
+        $subCategory = '-';
+
+        if ($category) {
+            if ($category->parent_id) {
+                $mainCategory = $category->parent?->name ?? '-';
+                $subCategory = $category->name;
+            } else {
+                $mainCategory = $category->name;
+            }
+        }
+
+        return "{$product->name} ({$product->barcode})
+                     -------------
+                     Category: {$mainCategory}
+                     -------------
+                    Sub Category: {$subCategory}";
     }
 
     public static function getRelations(): array
