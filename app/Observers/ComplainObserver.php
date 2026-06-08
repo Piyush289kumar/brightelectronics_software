@@ -66,7 +66,7 @@ class ComplainObserver
             $needsSave = true;
         }
 
-        if ($complain->first_action_code === 'Visit' && !$complain->visit_time) {
+        if ($complain->first_action_code === 'Visit-' && !$complain->visit_time) {
             $complain->visit_time = now();
             $needsSave = true;
         }
@@ -83,7 +83,7 @@ class ComplainObserver
     protected function createJobCardIfPkd(Complain $complain): void
     {
         if (
-            in_array($complain->first_action_code, ['PKD', 'Visit'])
+            in_array($complain->first_action_code, ['PKD'])
             && !$complain->jobCard
         ) {
 
