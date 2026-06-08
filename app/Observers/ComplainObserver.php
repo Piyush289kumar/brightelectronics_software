@@ -2,8 +2,10 @@
 
 namespace App\Observers;
 
+use App\Models\Account;
 use App\Models\Complain;
 use App\Models\JobCard;
+use App\Models\Ledger;
 
 class ComplainObserver
 {
@@ -14,6 +16,7 @@ class ComplainObserver
     {
         $this->handleTimestamps($complain);
         $this->createJobCardIfPkd($complain);
+        $this->createServiceChargeLedger($complain);
     }
 
     /**
@@ -21,10 +24,13 @@ class ComplainObserver
      */
     public function updated(Complain $complain): void
     {
-        // Only create JobCard if first_action_code changed to PKD
-        if ($complain->isDirty('first_action_code')) {
+        if ($complain->wasChanged('first_action_code')) {
+
             $this->handleTimestamps($complain);
+
             $this->createJobCardIfPkd($complain);
+
+            $this->createServiceChargeLedger($complain);
         }
     }
 
@@ -120,5 +126,38 @@ class ComplainObserver
                 'note' => 'Auto-generated job card with visit charge ₹200',
             ]);
         }
+    }
+
+    protected function createServiceChargeLedger(Complain $complain): void
+    {
+        if (!in_array($complain->first_action_code, ['PKD', 'Visit'])) {
+            return;
+        }
+
+        // Prevent duplicate entry
+        $alreadyExists = Ledger::where(
+            'narration',
+            'Visit Charge - ' . $complain->complain_id
+        )->exists();
+
+        if ($alreadyExists) {
+            return;
+        }
+
+        // Change account name as per your chart of accounts
+        $account = Account::first();
+
+        if (!$account) {
+            return;
+        }
+
+        Ledger::create([
+            'account_id' => $account->id,
+            'store_id' => $complain->store_id ?? 1,
+            'date' => now(),
+            'transaction_type' => 'credit',
+            'amount' => 200,
+            'narration' => 'Visit Charge - ' . $complain->complain_id,
+        ]);
     }
 }
