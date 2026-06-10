@@ -51,19 +51,88 @@ class ComplainResource extends Resource
                             ->email()
                             ->maxLength(255),
                         // ✅ Google Map field + Open Map button
+                        // Forms\Components\TextInput::make('google_map_location')
+                        //     ->label('Google Map Location')
+                        //     ->placeholder('Paste Google Maps URL here…')
+                        //     ->maxLength(500)
+                        //     // ✅ Live reactive
+                        //     ->live()                    
+                        //     // ✅ Required only for PKD & Visit
+                        //     ->required(
+                        //         fn(callable $get) =>
+                        //         in_array($get('first_action_code'), ['PKD', 'Visit'])
+                        //     )
+
+                        //     ->columnSpan(1),
+
+
                         Forms\Components\TextInput::make('google_map_location')
                             ->label('Google Map Location')
-                            ->placeholder('Paste Google Maps URL here…')
-                            ->maxLength(500)
-                            // ✅ Live reactive
-                            ->live()                    
-                            // ✅ Required only for PKD & Visit
-                            ->required(
-                                fn(callable $get) =>
-                                in_array($get('first_action_code'), ['PKD', 'Visit'])
-                            )
+                            ->live()
+                            ->suffixAction(
+                                Forms\Components\Actions\Action::make('fetchLocation')
+                                    ->icon('heroicon-o-map-pin')
+                                    ->alpineClickHandler(<<<'JS'
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        const lat = position.coords.latitude;
+                        const lng = position.coords.longitude;
 
-                            ->columnSpan(1),
+                        const url = `https://www.google.com/maps?q=${lat},${lng}`;
+
+                        console.log(url);
+
+                        $wire.set('data.google_map_location', url);
+
+                        alert('Location fetched successfully');
+                    },
+                    (error) => {
+                        console.error(error);
+                        alert(error.message);
+                    }
+                );
+            JS)
+                            ),
+
+                            
+
+                        Forms\Components\Placeholder::make('map_preview')
+                            ->label('Map Preview')
+                            ->content(function ($get) {
+
+                                $url = $get('google_map_location');
+
+                                if (!$url) {
+                                    return new \Illuminate\Support\HtmlString(
+                                        '<div class="text-gray-500">Location not selected</div>'
+                                    );
+                                }
+
+                                preg_match('/q=([-0-9.]+),([-0-9.]+)/', $url, $matches);
+
+                                if (count($matches) < 3) {
+                                    return new \Illuminate\Support\HtmlString(
+                                        '<div class="text-danger-500">Invalid location</div>'
+                                    );
+                                }
+
+                                $lat = $matches[1];
+                                $lng = $matches[2];
+
+                                return new \Illuminate\Support\HtmlString("
+            <iframe
+                width='100%'
+                height='300'
+                frameborder='0'
+                scrolling='no'
+                src='https://www.openstreetmap.org/export/embed.html?bbox="
+                                    . ($lng - 0.01) . "," . ($lat - 0.01) . "," . ($lng + 0.01) . "," . ($lat + 0.01) .
+                                    "&layer=mapnik&marker={$lat},{$lng}'>
+            </iframe>
+        ");
+                            })
+                            ->columnSpanFull(),
+
                         Forms\Components\Textarea::make('address')
                             ->label('Customer Address')
                             ->rows(1)
@@ -271,29 +340,6 @@ class ComplainResource extends Resource
             ->actions([
                 Tables\Actions\ActionGroup::make([
                     Tables\Actions\ViewAction::make(),
-                    // Tables\Actions\Action::make('updateFirstActionCode')
-                    //     ->label('Set Action') // short label
-                    //     ->icon('heroicon-o-cube-transparent') // concise editing icon
-                    //     ->color('warning')
-                    //     ->requiresConfirmation()
-                    //     ->form([
-                    //         Select::make('first_action_code')
-                    //             ->label('Action Code') // shorter label
-                    //             ->options([
-                    //                 'NEW' => 'NEW',
-                    //                 'PKD' => 'Picked (PKD)',
-                    //                 'Visit' => 'Visit',
-                    //                 'RSD' => 'Reschedule Visit (RSD)',
-                    //                 'CNC' => 'Call Not Connected (CNC)',
-                    //                 'Job Cancel' => 'Job Cancel',
-                    //             ])
-                    //             ->default(fn($record) => $record->first_action_code)
-                    //             ->required(),
-                    //     ])
-                    //     ->action(function ($record, array $data) {
-                    //         $record->update(['first_action_code' => $data['first_action_code']]);
-                    //     })
-                    //     ->visible(fn() => auth()->user()->hasAnyRole(['Administrator', 'Store Manager', 'Team Lead'])),
                     // ✅ Open Google Map Button
                     Tables\Actions\Action::make('open_map')
                         ->label('Open Map')
