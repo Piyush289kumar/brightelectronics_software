@@ -187,7 +187,7 @@ class PurchaseRequisitionResource extends Resource
                                 ->dehydrated(true) // 👈 important: store in DB
                                 ->required(),
                             Textarea::make('note')->label('Note')->rows(1)->columnSpanFull(),
-
+    
                             Forms\Components\FileUpload::make('uom')
                                 ->label('Product Picture')
                                 ->disk('public')
