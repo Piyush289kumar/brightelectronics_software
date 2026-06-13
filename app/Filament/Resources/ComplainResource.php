@@ -283,25 +283,6 @@ class ComplainResource extends Resource
                     ->wrap()
                     ->sortable()->toggleable(),
                 Tables\Columns\TextColumn::make('created_at')->label('Created At')->dateTime()->sortable()->toggleable(),
-                // ⭐ NEW MAP BUTTON COLUMN
-                Tables\Columns\TextColumn::make('map')
-                    ->label('Map')
-                    ->html()
-                    ->alignCenter()
-                    ->state(function ($record) {
-                        if (!$record->google_map_location) {
-                            return '<span class="text-gray-400 text-xs">No Map</span>';
-                        }
-                        $url = str_starts_with($record->google_map_location, 'http')
-                            ? $record->google_map_location
-                            : 'https://' . $record->google_map_location;
-                        return '
-                <a href="' . $url . '" target="_blank"
-                   class="px-2 py-1 text-xs rounded bg-green-600 text-white hover:bg-green-700" style="background:green;">
-                    Open Map
-                </a>
-            ';
-                    }),
             ])
             ->filters([
                 Tables\Filters\SelectFilter::make('first_action_code')
@@ -317,6 +298,17 @@ class ComplainResource extends Resource
             ->defaultSort('created_at', 'desc')
             ->actions([
                 Tables\Actions\ActionGroup::make([
+                    Tables\Actions\Action::make('directions')
+                        ->label('Directions')
+                        ->icon('heroicon-o-map')
+                        ->color('info')
+                        ->visible(fn($record) => $record->latitude && $record->longitude)
+                        ->url(
+                            fn($record) =>
+                            "https://www.google.com/maps/dir/?api=1&destination={$record->latitude},{$record->longitude}&travelmode=driving"
+                        )
+                        ->openUrlInNewTab(),
+
                     Tables\Actions\ViewAction::make(),
                     // ✅ Open Google Map Button
                     Tables\Actions\Action::make('open_map')
