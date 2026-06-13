@@ -18,6 +18,8 @@ class Complain extends Model
         'customer_email',
         'address',
         'google_map_location',
+        'latitude',
+        'longitude',
         'lead_source_id',
         'vendor_id',
         'staff_id',

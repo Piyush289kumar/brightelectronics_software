@@ -66,72 +66,54 @@ class ComplainResource extends Resource
                         //     ->columnSpan(1),
 
 
-                        Forms\Components\TextInput::make('google_map_location')
-                            ->label('Google Map Location')
-                            ->live()
-                            ->suffixAction(
-                                Forms\Components\Actions\Action::make('fetchLocation')
-                                    ->icon('heroicon-o-map-pin')
-                                    ->alpineClickHandler(<<<'JS'
-                navigator.geolocation.getCurrentPosition(
-                    (position) => {
-                        const lat = position.coords.latitude;
-                        const lng = position.coords.longitude;
+Forms\Components\Hidden::make('latitude'),
+Forms\Components\Hidden::make('longitude'),
 
-                        const url = `https://www.google.com/maps?q=${lat},${lng}`;
+Forms\Components\TextInput::make('google_map_location')
+    ->label('Google Map Location')
+    ->readOnly()
+    ->live()
+    ->required(fn (callable $get) =>
+        in_array($get('first_action_code'), ['PKD', 'Visit'])
+    )
+    ->suffixAction(
+        Forms\Components\Actions\Action::make('fetchLocation')
+            ->icon('heroicon-o-map-pin')
+            ->alpineClickHandler(<<<'JS'
+navigator.geolocation.getCurrentPosition(
+    (position) => {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+        const url = `https://www.google.com/maps?q=${lat},${lng}`;
 
-                        console.log(url);
+        $wire.set('data.latitude', lat);
+        $wire.set('data.longitude', lng);
+        $wire.set('data.google_map_location', url);
 
-                        $wire.set('data.google_map_location', url);
+        window.dispatchEvent(new CustomEvent('complain-map-updated', {
+            detail: { lat, lng }
+        }));
+    },
+    (error) => {
+        alert(error.message);
+    },
+    {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 0
+    }
+);
+JS)
+    ),
 
-                        alert('Location fetched successfully');
-                    },
-                    (error) => {
-                        console.error(error);
-                        alert(error.message);
-                    }
-                );
-            JS)
-                            ),
+Forms\Components\ViewField::make('map_picker')
+    ->view('filament.components.map-picker')
+    ->columnSpanFull(),
 
-                            
-
-                        Forms\Components\Placeholder::make('map_preview')
-                            ->label('Map Preview')
-                            ->content(function ($get) {
-
-                                $url = $get('google_map_location');
-
-                                if (!$url) {
-                                    return new \Illuminate\Support\HtmlString(
-                                        '<div class="text-gray-500">Location not selected</div>'
-                                    );
-                                }
-
-                                preg_match('/q=([-0-9.]+),([-0-9.]+)/', $url, $matches);
-
-                                if (count($matches) < 3) {
-                                    return new \Illuminate\Support\HtmlString(
-                                        '<div class="text-danger-500">Invalid location</div>'
-                                    );
-                                }
-
-                                $lat = $matches[1];
-                                $lng = $matches[2];
-
-                                return new \Illuminate\Support\HtmlString("
-            <iframe
-                width='100%'
-                height='300'
-                frameborder='0'
-                scrolling='no'
-                src='https://www.openstreetmap.org/export/embed.html?bbox="
-                                    . ($lng - 0.01) . "," . ($lat - 0.01) . "," . ($lng + 0.01) . "," . ($lat + 0.01) .
-                                    "&layer=mapnik&marker={$lat},{$lng}'>
-            </iframe>
-        ");
-                            })
-                            ->columnSpanFull(),
+Forms\Components\Textarea::make('address')
+    ->label('Customer Address')
+    ->rows(1)
+    ->columnSpanFull(),
 
                         Forms\Components\Textarea::make('address')
                             ->label('Customer Address')

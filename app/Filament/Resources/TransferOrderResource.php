@@ -35,7 +35,7 @@ class TransferOrderResource extends Resource
     protected static ?string $model = Invoice::class;
     protected static ?string $navigationIcon = 'heroicon-o-document-text';
     protected static ?string $navigationGroup = 'Purchase';
-    protected static ?string $pluralLabel = 'Transfer Order Invoice';
+    protected static ?string $pluralLabel = 'Branch Transfer Order';
     protected static ?int $navigationSort = 5;
 
 
