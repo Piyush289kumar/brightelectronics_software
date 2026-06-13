@@ -188,10 +188,15 @@ class PurchaseRequisitionResource extends Resource
                                 ->required(),
                             Textarea::make('note')->label('Note')->rows(1)->columnSpanFull(),
 
-                            Forms\Components\FileUpload::make('uom')->label('Product Picture')
+                            Forms\Components\FileUpload::make('uom')
+                                ->label('Product Picture')
                                 ->disk('public')
                                 ->directory('request_products')
                                 ->image()
+                                ->imageEditor()
+                                ->openable()
+                                ->downloadable()
+                                ->previewable(true)
                                 ->nullable()
                                 ->columnSpanFull(),
 
