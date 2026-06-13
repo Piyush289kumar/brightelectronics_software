@@ -18,7 +18,17 @@ class AppDownloadResource extends Resource
 {
     protected static ?string $model = User::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $navigationGroup = 'Mobile App';
+
+    protected static ?string $navigationLabel = 'Download App';
+
+    protected static ?string $label = 'Download App';
+
+    protected static ?string $pluralLabel = 'Download App';
+
+    protected static ?string $navigationIcon = 'heroicon-o-device-phone-mobile';
+
+    protected static ?int $navigationSort = 10;
 
 
     public static function getEloquentQuery(): Builder
