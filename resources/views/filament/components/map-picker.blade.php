@@ -6,72 +6,142 @@
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
 <script>
-    document.addEventListener('DOMContentLoaded', function () {
-        const mapElement = document.getElementById('complain-map');
-        if (!mapElement || mapElement.dataset.initialized === '1') {
-            return;
+    (function() {
+
+        function initMap() {
+
+            const mapElement = document.getElementById('complain-map');
+
+            if (!mapElement || mapElement.dataset.initialized === '1') {
+                return;
+            }
+
+            mapElement.dataset.initialized = '1';
+
+            // Wait until Filament has populated the form
+            const latitude = parseFloat(
+                document.getElementById('data.latitude')?.value || ''
+            );
+
+            const longitude = parseFloat(
+                document.getElementById('data.longitude')?.value || ''
+            );
+
+            const defaultLat = 23.1832696;
+            const defaultLng = 79.9393147;
+
+            const startLat = !isNaN(latitude) && latitude !== 0 ?
+                latitude :
+                defaultLat;
+
+            const startLng = !isNaN(longitude) && longitude !== 0 ?
+                longitude :
+                defaultLng;
+
+            const map = L.map(mapElement).setView(
+                [startLat, startLng],
+                17
+            );
+
+            L.tileLayer(
+                'https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    maxZoom: 19,
+                }
+            ).addTo(map);
+
+            let marker = null;
+
+            // Show existing marker on edit page
+            if (!isNaN(latitude) &&
+                !isNaN(longitude) &&
+                latitude !== 0 &&
+                longitude !== 0) {
+
+                marker = L.marker([latitude, longitude]).addTo(map);
+            }
+
+            function updateFields(lat, lng) {
+
+                const url = `https://www.google.com/maps?q=${lat},${lng}`;
+
+                const mapInput = document.getElementById('data.google_map_location');
+                const latInput = document.getElementById('data.latitude');
+                const lngInput = document.getElementById('data.longitude');
+
+                if (mapInput) {
+                    mapInput.value = url;
+                    mapInput.dispatchEvent(
+                        new Event('input', {
+                            bubbles: true
+                        })
+                    );
+                }
+
+                if (latInput) {
+                    latInput.value = lat;
+                    latInput.dispatchEvent(
+                        new Event('input', {
+                            bubbles: true
+                        })
+                    );
+                }
+
+                if (lngInput) {
+                    lngInput.value = lng;
+                    lngInput.dispatchEvent(
+                        new Event('input', {
+                            bubbles: true
+                        })
+                    );
+                }
+            }
+
+            map.on('click', function(e) {
+
+                const lat = e.latlng.lat;
+                const lng = e.latlng.lng;
+
+                updateFields(lat, lng);
+
+                if (marker) {
+                    map.removeLayer(marker);
+                }
+
+                marker = L.marker([lat, lng]).addTo(map);
+            });
+
+            window.addEventListener('complain-map-updated', function(event) {
+
+                const {
+                    lat,
+                    lng
+                } = event.detail;
+
+                map.setView([lat, lng], 17);
+
+                updateFields(lat, lng);
+
+                if (marker) {
+                    map.removeLayer(marker);
+                }
+
+                marker = L.marker([lat, lng]).addTo(map);
+            });
+
+            setTimeout(() => {
+                map.invalidateSize();
+            }, 300);
         }
 
-        mapElement.dataset.initialized = '1';
-
-        const map = L.map(mapElement).setView([22.7196, 75.8577], 13);
-
-        L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            maxZoom: 19,
-        }).addTo(map);
-
-        let marker = null;
-
-        function updateFields(lat, lng) {
-            const url = `https://www.google.com/maps?q=${lat},${lng}`;
-
-            const mapInput = document.querySelector('input[name="data[google_map_location]"]');
-            const latInput = document.querySelector('input[name="data[latitude]"]');
-            const lngInput = document.querySelector('input[name="data[longitude]"]');
-
-            if (mapInput) {
-                mapInput.value = url;
-                mapInput.dispatchEvent(new Event('input', { bubbles: true }));
-                mapInput.dispatchEvent(new Event('change', { bubbles: true }));
-            }
-
-            if (latInput) {
-                latInput.value = lat;
-                latInput.dispatchEvent(new Event('input', { bubbles: true }));
-                latInput.dispatchEvent(new Event('change', { bubbles: true }));
-            }
-
-            if (lngInput) {
-                lngInput.value = lng;
-                lngInput.dispatchEvent(new Event('input', { bubbles: true }));
-                lngInput.dispatchEvent(new Event('change', { bubbles: true }));
-            }
-        }
-
-        map.on('click', function (e) {
-            const lat = e.latlng.lat;
-            const lng = e.latlng.lng;
-
-            if (marker) {
-                map.removeLayer(marker);
-            }
-
-            marker = L.marker([lat, lng]).addTo(map);
-            updateFields(lat, lng);
+        // Wait for Filament/Livewire hydration
+        document.addEventListener('livewire:init', () => {
+            setTimeout(initMap, 1000);
         });
 
-        window.addEventListener('complain-map-updated', function (event) {
-            const { lat, lng } = event.detail;
-
-            map.setView([lat, lng], 17);
-
-            if (marker) {
-                map.removeLayer(marker);
-            }
-
-            marker = L.marker([lat, lng]).addTo(map);
+        // Fallback
+        document.addEventListener('DOMContentLoaded', () => {
+            setTimeout(initMap, 1000);
         });
 
-        setTimeout(() => map.invalidateSize(), 300);
-    });
+    })();
 </script>

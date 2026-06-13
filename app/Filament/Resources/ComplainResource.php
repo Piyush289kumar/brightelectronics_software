@@ -66,54 +66,50 @@ class ComplainResource extends Resource
                         //     ->columnSpan(1),
 
 
-Forms\Components\Hidden::make('latitude'),
-Forms\Components\Hidden::make('longitude'),
+                        Forms\Components\TextInput::make('latitude'),
+                        Forms\Components\TextInput::make('longitude'),
 
-Forms\Components\TextInput::make('google_map_location')
-    ->label('Google Map Location')
-    ->readOnly()
-    ->live()
-    ->required(fn (callable $get) =>
-        in_array($get('first_action_code'), ['PKD', 'Visit'])
-    )
-    ->suffixAction(
-        Forms\Components\Actions\Action::make('fetchLocation')
-            ->icon('heroicon-o-map-pin')
-            ->alpineClickHandler(<<<'JS'
-navigator.geolocation.getCurrentPosition(
-    (position) => {
-        const lat = position.coords.latitude;
-        const lng = position.coords.longitude;
-        const url = `https://www.google.com/maps?q=${lat},${lng}`;
+                        Forms\Components\TextInput::make('google_map_location')
+                            ->label('Google Map Location')
+                            ->readOnly()
+                            ->live()
+                            ->required(
+                                fn(callable $get) =>
+                                in_array($get('first_action_code'), ['PKD', 'Visit'])
+                            )
+                            ->suffixAction(
+                                Forms\Components\Actions\Action::make('fetchLocation')
+                                    ->icon('heroicon-o-map-pin')
+                                    ->alpineClickHandler(<<<'JS'
+                                    navigator.geolocation.getCurrentPosition(
+                                        (position) => {
+                                            const lat = position.coords.latitude;
+                                            const lng = position.coords.longitude;
+                                            const url = `https://www.google.com/maps?q=${lat},${lng}`;
 
-        $wire.set('data.latitude', lat);
-        $wire.set('data.longitude', lng);
-        $wire.set('data.google_map_location', url);
+                                            $wire.set('data.latitude', lat);
+                                            $wire.set('data.longitude', lng);
+                                            $wire.set('data.google_map_location', url);
 
-        window.dispatchEvent(new CustomEvent('complain-map-updated', {
-            detail: { lat, lng }
-        }));
-    },
-    (error) => {
-        alert(error.message);
-    },
-    {
-        enableHighAccuracy: true,
-        timeout: 15000,
-        maximumAge: 0
-    }
-);
-JS)
-    ),
+                                            window.dispatchEvent(new CustomEvent('complain-map-updated', {
+                                                detail: { lat, lng }
+                                            }));
+                                        },
+                                        (error) => {
+                                            alert(error.message);
+                                        },
+                                        {
+                                            enableHighAccuracy: true,
+                                            timeout: 15000,
+                                            maximumAge: 0
+                                        }
+                                    );
+                                    JS)
+                            ),
 
-Forms\Components\ViewField::make('map_picker')
-    ->view('filament.components.map-picker')
-    ->columnSpanFull(),
-
-Forms\Components\Textarea::make('address')
-    ->label('Customer Address')
-    ->rows(1)
-    ->columnSpanFull(),
+                        Forms\Components\ViewField::make('map_picker')
+                            ->view('filament.components.map-picker')
+                            ->columnSpanFull(),
 
                         Forms\Components\Textarea::make('address')
                             ->label('Customer Address')
