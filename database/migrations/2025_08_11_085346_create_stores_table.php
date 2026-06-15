@@ -42,6 +42,29 @@ return new class extends Migration {
             // Store Settings
             $table->enum('status', ['active', 'inactive'])->default('active');
             $table->json('settings')->nullable(); // JSON for store-specific settings
+
+            // Legal Documents
+            $table->string('rent_agreement')->nullable();
+            $table->string('gumasta_license')->nullable();
+            $table->string('trade_license')->nullable();
+
+            // IVRS
+            $table->string('ivrs_number')->nullable();
+
+            // DVR / NVR
+            $table->string('dvr_nvr_ip')->nullable();
+            $table->string('dvr_nvr_username')->nullable();
+            $table->string('dvr_nvr_password')->nullable();
+
+            // Shutter Lock
+            $table->string('shutter_lock_number')->nullable();
+
+            // Internet
+            $table->string('internet_provider')->nullable();
+            $table->string('router_ip')->nullable();
+            $table->string('router_username')->nullable();
+            $table->string('router_password')->nullable();
+
             $table->timestamps();
         });
     }

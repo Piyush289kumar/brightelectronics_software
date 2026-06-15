@@ -45,6 +45,86 @@ class StoreResource extends Resource
                         Forms\Components\TextInput::make('country')->default('India')->maxLength(100),
                     ])->columns(3),
 
+                Forms\Components\Section::make('Branch Infrastructure Details')
+                    ->schema([
+
+                        Forms\Components\FileUpload::make('rent_agreement')
+                            ->label('Rent Agreement')
+                            ->disk('public')
+                            ->directory('branch-documents/rent-agreement')
+                            ->acceptedFileTypes([
+                                'application/pdf',
+                                'image/jpeg',
+                                'image/png',
+                                'image/webp',
+                            ])
+                            ->downloadable()
+                            ->openable(),
+
+                        Forms\Components\FileUpload::make('gumasta_license')
+                            ->label('Gumasta Certificate')
+                            ->disk('public')
+                            ->directory('branch-documents/gumasta')
+                            ->acceptedFileTypes([
+                                'application/pdf',
+                                'image/jpeg',
+                                'image/png',
+                                'image/webp',
+                            ])
+                            ->downloadable()
+                            ->openable(),
+
+                        Forms\Components\FileUpload::make('trade_license')
+                            ->label('Trade / Shop License')
+                            ->disk('public')
+                            ->directory('branch-documents/trade-license')
+                            ->acceptedFileTypes([
+                                'application/pdf',
+                                'image/jpeg',
+                                'image/png',
+                                'image/webp',
+                            ])
+                            ->downloadable()
+                            ->openable(),
+
+                        Forms\Components\TextInput::make('ivrs_number')
+                            ->label('IVRS Number'),
+
+                        Forms\Components\TextInput::make('shutter_lock_number')
+                            ->label('Shutter Lock Number 🔒'),
+
+                        Forms\Components\Select::make('internet_provider')
+                            ->options([
+                                'Airtel' => 'Airtel',
+                                'Jio Fiber' => 'Jio Fiber',
+                                'BSNL' => 'BSNL',
+                                'ACT' => 'ACT',
+                                'Other' => 'Other',
+                            ])
+                            ->searchable(),
+
+                        Forms\Components\TextInput::make('router_ip')
+                            ->label('Router IP'),
+
+                        Forms\Components\TextInput::make('router_username'),
+
+                        Forms\Components\TextInput::make('router_password')
+                            ->password()
+                            ->revealable(),
+
+                        Forms\Components\TextInput::make('dvr_nvr_ip')
+                            ->label('DVR/NVR IP'),
+
+                        Forms\Components\TextInput::make('dvr_nvr_username'),
+
+                        Forms\Components\TextInput::make('dvr_nvr_password')
+                            ->password()
+                            ->revealable(),
+
+                    ])
+                    ->columns(3)
+                    ->collapsible(),
+
 
                 Forms\Components\Section::make('Account Details')
                     ->schema([
@@ -116,6 +196,31 @@ class StoreResource extends Resource
                 Tables\Columns\TextColumn::make('state')->sortable(),
                 Tables\Columns\TextColumn::make('gst_number'),
                 Tables\Columns\TextColumn::make('phone'),
+
+                Tables\Columns\TextColumn::make('ivrs_number')
+                    ->label('IVRS'),
+
+                Tables\Columns\TextColumn::make('internet_provider')
+                    ->label('Internet'),
+
+                Tables\Columns\TextColumn::make('shutter_lock_number')
+                    ->label('Lock No.')
+                    ->toggleable(),
+
+                Tables\Columns\IconColumn::make('rent_agreement')
+                    ->label('Rent')
+                    ->boolean()
+                    ->getStateUsing(fn($record) => filled($record->rent_agreement)),
+
+                Tables\Columns\IconColumn::make('gumasta_license')
+                    ->label('Gumasta')
+                    ->boolean()
+                    ->getStateUsing(fn($record) => filled($record->gumasta_license)),
+
+                Tables\Columns\IconColumn::make('trade_license')
+                    ->label('License')
+                    ->boolean()
+                    ->getStateUsing(fn($record) => filled($record->trade_license)),
                 Tables\Columns\TextColumn::make('status')
                     ->sortable()
                     ->formatStateUsing(fn($state) => match ($state) {

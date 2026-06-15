@@ -32,11 +32,25 @@ class Store extends Model
         'email',
         'status',
         'settings',
+        'rent_agreement',
+        'gumasta_license',
+        'trade_license',
+        'ivrs_number',
+        'dvr_nvr_ip',
+        'dvr_nvr_username',
+        'dvr_nvr_password',
+        'shutter_lock_number',
+        'internet_provider',
+        'router_ip',
+        'router_username',
+        'router_password',
     ];
 
     protected $casts = [
         'default_tax_rate' => 'decimal:2',
         'settings' => 'array',
+        'dvr_nvr_password' => 'encrypted',
+        'router_password' => 'encrypted',
     ];
 
     public function users()
