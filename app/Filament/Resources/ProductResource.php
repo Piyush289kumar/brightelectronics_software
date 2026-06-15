@@ -173,6 +173,10 @@ class ProductResource extends Resource
                     ->schema([
                         Forms\Components\Toggle::make('is_active')->default(true),
                         Forms\Components\FileUpload::make('image_path')->label('Product Image')
+                            ->imageEditor()
+                            ->openable()
+                            ->downloadable()
+                            ->previewable(true)
                             ->disk('public')
                             ->directory('products')
                             ->image()
