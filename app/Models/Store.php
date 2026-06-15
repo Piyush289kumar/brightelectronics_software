@@ -19,6 +19,7 @@ class Store extends Model
         'state',
         'pincode',
         'country',
+        'opening_date',
         'account_holder_name',
         'bank_name',
         'account_number',
@@ -49,6 +50,7 @@ class Store extends Model
     protected $casts = [
         'default_tax_rate' => 'decimal:2',
         'settings' => 'array',
+        'opening_date' => 'date',
         'dvr_nvr_password' => 'encrypted',
         'router_password' => 'encrypted',
     ];
@@ -62,6 +64,26 @@ class Store extends Model
     {
         return $this->hasMany(User::class)->whereHas('roles', function ($q) {
             $q->where('name', 'manager');
+        });
+    }
+
+    protected static function booted(): void
+    {
+        static::creating(function ($store) {
+
+            if (!empty($store->code)) {
+                return;
+            }
+
+            $date = $store->opening_date
+                ? \Carbon\Carbon::parse($store->opening_date)
+                : now();
+
+            $prefix = 'BRT-' . $date->format('dmY');
+
+            $count = self::where('code', 'like', $prefix . '%')->count() + 1;
+
+            $store->code = $prefix . '-' . str_pad($count, 3, '0', STR_PAD_LEFT);
         });
     }
 

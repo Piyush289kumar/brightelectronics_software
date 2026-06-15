@@ -20,6 +20,7 @@ return new class extends Migration {
             $table->string('state')->nullable(); // State (important for GST)
             $table->string('pincode', 6)->nullable(); // Indian PIN code
             $table->string('country')->default('India');
+            $table->date('opening_date')->nullable();
 
             // Accounting Details
 

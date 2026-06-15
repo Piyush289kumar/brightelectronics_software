@@ -32,9 +32,57 @@ class StoreResource extends Resource
                 Forms\Components\Section::make('Basic Information')
                     ->schema([
                         Forms\Components\TextInput::make('name')->required()->maxLength(255),
-                        Forms\Components\TextInput::make('code')->required()->maxLength(50),
-                        Forms\Components\TextInput::make('location')->maxLength(255),
-                    ])->columns(3),
+                        Forms\Components\DatePicker::make('opening_date')
+                            ->required()
+                            ->live()
+                            ->afterStateUpdated(function ($state, callable $set, callable $get) {
+
+                                $location = $get('location');
+
+                                if (!$location || !$state) {
+                                    return;
+                                }
+
+                                $date = \Carbon\Carbon::parse($state);
+
+                                $location = preg_replace('/[^A-Za-z0-9]/', '', $location);
+
+                                $set(
+                                    'code',
+                                    $location . 'BRT' .
+                                    $date->format('j') .
+                                    $date->format('n') .
+                                    $date->format('y')
+                                );
+                            }),
+                        Forms\Components\TextInput::make('code')
+                            ->required()
+                            ->readOnly()
+                            ->dehydrated(),
+                        Forms\Components\TextInput::make('location')
+                            ->required()
+                            ->live(debounce: 1000)
+                            ->afterStateUpdated(function ($state, callable $set, callable $get) {
+
+                                $date = $get('opening_date');
+
+                                if (!$state || !$date) {
+                                    return;
+                                }
+
+                                $date = \Carbon\Carbon::parse($date);
+
+                                $location = preg_replace('/[^A-Za-z0-9]/', '', $state);
+
+                                $set(
+                                    'code',
+                                    $location . 'BRT' .
+                                    $date->format('j') .
+                                    $date->format('n') .
+                                    $date->format('y')
+                                );
+                            }),
+                    ])->columns(4),
 
                 Forms\Components\Section::make('Address Details')
                     ->schema([
