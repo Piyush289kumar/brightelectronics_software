@@ -13,6 +13,7 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 
 class AttendanceReportResource extends Resource
 {
@@ -188,10 +189,17 @@ class AttendanceReportResource extends Resource
                     ->label('OT Hrs')
                     ->toggleable(),
 
-                Tables\Columns\IconColumn::make('pdf_file')
+                Tables\Columns\TextColumn::make('pdf_file')
                     ->label('PDF')
-                    ->boolean()
-                    ->getStateUsing(fn($record) => filled($record->pdf_file)),
+                    ->icon(fn($state) => $state ? 'heroicon-o-document-arrow-down' : 'heroicon-o-x-mark')
+                    ->formatStateUsing(fn($state) => $state ? 'Download PDF' : '-')
+                    ->url(
+                        fn($record) => $record->pdf_file
+                        ? Storage::disk('public')->url($record->pdf_file)
+                        : null,
+                        shouldOpenInNewTab: true
+                    )
+                    ->color('primary'),
 
                 Tables\Columns\BadgeColumn::make('status')
                     ->colors([
