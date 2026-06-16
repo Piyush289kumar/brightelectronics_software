@@ -172,6 +172,7 @@ class ProductResource extends Resource
                 Forms\Components\Section::make('Metadata')
                     ->schema([
                         Forms\Components\Toggle::make('is_active')->default(true),
+
                         Forms\Components\FileUpload::make('image_path')->label('Product Image')
                             ->imageEditor()
                             ->openable()
@@ -181,6 +182,8 @@ class ProductResource extends Resource
                             ->directory('products')
                             ->image()
                             ->nullable(),
+
+
                         Forms\Components\KeyValue::make('meta')
                             ->label('Custom Metadata')
                             ->nullable(),
@@ -208,6 +211,18 @@ class ProductResource extends Resource
     {
         return $table
             ->columns([
+                Tables\Columns\ImageColumn::make('image_path')
+                    ->disk('public')
+                    ->square()
+                    ->action(
+                        Tables\Actions\Action::make('viewImage')
+                            ->modalHeading('Product Image')
+                            ->modalContent(fn($record) => view(
+                                'filament.components.modals.product-image',
+                                ['image' => $record->image_path]
+                            ))
+                            ->modalWidth('7xl')
+                    ),
                 Tables\Columns\TextColumn::make('barcode')->label('Part No.')->searchable()->sortable()->toggleable(),
                 Tables\Columns\TextColumn::make('hsn_code')->label('Model No.')->searchable()->sortable()->toggleable(),
                 Tables\Columns\TextColumn::make('name')->searchable()->sortable()->toggleable(),
