@@ -251,7 +251,6 @@ class ProductResource extends Resource
                     ->label('Category')
                     ->relationship('category', 'name')
                     ->searchable(),
-
                 // Filter by Brand
                 Tables\Filters\SelectFilter::make('brand_id')
                     ->label('Brand')
