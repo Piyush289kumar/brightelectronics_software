@@ -7,6 +7,7 @@ use App\Models\SiteInventoryIssue;
 use Auth;
 use Filament\Forms;
 use Filament\Forms\Components\Grid;
+use Filament\Forms\Components\ToggleButtons;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
@@ -42,6 +43,25 @@ class SiteInventoryIssueResource extends Resource
                         ->disabled(fn() => Auth::user()?->isStoreManager())
                         ->dehydrated(), // <-- ensures value is saved even when disabled
 
+                    ToggleButtons::make('issue_source')
+                        ->label('Issue For')
+                        ->options([
+                            'job_card' => 'Job Card',
+                            'transfer_order' => 'Branch Transfer',
+                        ])
+                        ->icons([
+                            'job_card' => 'heroicon-o-wrench-screwdriver',
+                            'transfer_order' => 'heroicon-o-arrow-right-circle',
+                        ])
+                        ->colors([
+                            'job_card' => 'primary',
+                            'transfer_order' => 'success',
+                        ])
+                        ->default('job_card')
+                        ->inline()
+                        ->live()
+                        ->required(),
+
                     Select::make('job_card_id')
                         ->label('Job Card')
                         ->relationship(
@@ -49,10 +69,78 @@ class SiteInventoryIssueResource extends Resource
                             titleAttribute: 'job_id',
                             modifyQueryUsing: fn($query) => $query->orderBy('id', 'desc')
                         )
-                        ->required()
+                        ->required(fn($get) => $get('issue_source') === 'job_card')
+                        ->visible(fn($get) => $get('issue_source') === 'job_card')
+                        ->searchable()
+                        ->preload(),
+
+                    Select::make('transfer_order_id')
+                        ->label('Transfer Order')
+                        ->options(function (callable $get) {
+
+                            $storeId = $get('store_id');
+
+                            return \App\Models\Invoice::query()
+                                ->where('document_type', 'transfer_order')
+                                ->where('status', 'pending')
+                                ->when(
+                                    $storeId,
+                                    fn($q) => $q->where('billable_id', $storeId)
+                                )
+                                ->pluck('number', 'id');
+                        })
                         ->searchable()
                         ->preload()
-                        ->reactive(),
+                        ->visible(fn($get) => $get('issue_source') === 'transfer_order')
+                        ->live()
+                        ->afterStateUpdated(function ($state, callable $set) {
+
+                            if (!$state) {
+                                return;
+                            }
+
+                            $transfer = \App\Models\Invoice::with('items')
+                                ->find($state);
+
+                            if (!$transfer) {
+                                return;
+                            }
+                            $set(
+                                'items',
+                                $transfer->items->map(function ($item) use ($transfer) {
+                                    return [
+                                        'product_id' => $item->product_id,
+                                        'quantity' => $item->quantity,
+                                        'return_qty' => 0,
+                                        'notes' => sprintf(
+                                            'Transfer Order %s | Source: %s',
+                                            $transfer->number,
+                                            $transfer->billable?->code ?? ''
+                                        ),
+                                    ];
+                                })->toArray()
+                            );
+                            $set(
+                                'notes',
+                                sprintf(
+                                    'Generated from Transfer Order %s | Source Branch: %s',
+                                    $transfer->number,
+                                    $transfer->billable?->code ?? ''
+                                )
+                            );
+                        }),
+
+                    // Select::make('job_card_id')
+                    //     ->label('Job Card')
+                    //     ->relationship(
+                    //         name: 'jobCard',
+                    //         titleAttribute: 'job_id',
+                    //         modifyQueryUsing: fn($query) => $query->orderBy('id', 'desc')
+                    //     )
+                    //     ->required()
+                    //     ->searchable()
+                    //     ->preload()
+                    //     ->reactive(),
 
                     Select::make('issued_by')
                         ->label('Issued By')
@@ -61,6 +149,11 @@ class SiteInventoryIssueResource extends Resource
                         ->default(fn() => Auth::id()) // always default to current logged in user
                         ->disabled(fn() => !Auth::user()?->isAdmin())// disable if not admin
                         ->dehydrated(),
+
+                    Textarea::make('notes')
+                        ->label('Notes')
+                        ->rows(2)
+                        ->columnSpanFull(),
 
                 ]),
 
@@ -165,7 +258,7 @@ class SiteInventoryIssueResource extends Resource
                                     "Issued: " . ($get('quantity') ?? 0)
                                 ),
 
-                            Textarea::make('notes')->rows(1),
+                            Textarea::make('notes')->rows(1)->columnSpanFull(),
                         ])
                         ->columns(3)
                         ->required()
@@ -182,7 +275,7 @@ class SiteInventoryIssueResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('store.name')->label('Branch')->sortable()->searchable(),                
+                Tables\Columns\TextColumn::make('store.name')->label('Branch')->sortable()->searchable(),
                 Tables\Columns\TextColumn::make('job_card_id')->label('Job Card')->sortable()->searchable(),
                 Tables\Columns\TextColumn::make('site.name')->label('Site')->sortable()->searchable(),
                 Tables\Columns\TextColumn::make('issuer.name')->label('Issued By')->sortable(),
@@ -199,7 +292,9 @@ class SiteInventoryIssueResource extends Resource
                     ->limit(50),
 
                 Tables\Columns\TextColumn::make('status')->sortable(),
+                Tables\Columns\TextColumn::make('notes')->label('Note')->sortable()->searchable(),
                 Tables\Columns\TextColumn::make('created_at')->label('Issued On')->dateTime(),
+
             ])->defaultSort('created_at', 'desc')
             ->filters([
                 Tables\Filters\SelectFilter::make('status')->options([
