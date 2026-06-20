@@ -164,40 +164,131 @@ class StoreInventoryInResource extends Resource
                 // ----------------------------
                 // Inventory Items
                 // ----------------------------
-                Select::make('purchase_order_id')
-                    ->label('Load from Purchase Order')
-                    ->options(
-                        Invoice::where('document_type', 'purchase_order')
-                            ->whereNotIn(
-                                'id',
-                                StoreInventoryIn::whereNotNull('purchase_order_id')
-                                    ->pluck('purchase_order_id')
-                            )
-                            ->latest('id')
-                            ->pluck('number', 'id')
-                    )
-                    ->searchable()
-                    ->reactive()
-                    ->afterStateUpdated(function ($state, callable $set) {
-                        if (!$state) {
-                            return;
-                        }
+                // Select::make('purchase_order_id')
+                //     ->label('Load from Purchase Order')
+                //     ->options(
+                //         Invoice::where('document_type', 'purchase_order')
+                //             ->whereNotIn(
+                //                 'id',
+                //                 StoreInventoryIn::whereNotNull('purchase_order_id')
+                //                     ->pluck('purchase_order_id')
+                //             )
+                //             ->latest('id')
+                //             ->pluck('number', 'id')
+                //     )
+                //     ->searchable()
+                //     ->reactive()
+                //     ->afterStateUpdated(function ($state, callable $set) {
+                //         if (!$state) {
+                //             return;
+                //         }
 
-                        $po = Invoice::with('items')->find($state);
+                //         $po = Invoice::with('items')->find($state);
 
-                        if (!$po) {
-                            return;
-                        }
+                //         if (!$po) {
+                //             return;
+                //         }
 
-                        $items = $po->items->map(fn($item) => [
-                            'product_id' => $item->product_id,
-                            'quantity' => $item->quantity,
-                            'note' => 'Imported from PO',
-                        ])->toArray();
+                //         $items = $po->items->map(fn($item) => [
+                //             'product_id' => $item->product_id,
+                //             'quantity' => $item->quantity,
+                //             'note' => 'Imported from PO',
+                //         ])->toArray();
 
-                        $set('items', $items);
-                    })
-                    ->columns(1),
+                //         $set('items', $items);
+                //     })
+                //     ->columns(1),
+
+
+                Forms\Components\Tabs::make('Load Source')
+                    ->tabs([
+
+                        Forms\Components\Tabs\Tab::make('Purchase Order')
+                            ->schema([
+
+                                Select::make('purchase_order_id')
+                                    ->label('Load from Purchase Order')
+                                    ->options(
+                                        Invoice::where('document_type', 'purchase_order')
+                                            ->whereNotIn(
+                                                'id',
+                                                StoreInventoryIn::whereNotNull('purchase_order_id')
+                                                    ->pluck('purchase_order_id')
+                                            )
+                                            ->latest('id')
+                                            ->pluck('number', 'id')
+                                    )
+                                    ->searchable()
+                                    ->live()
+                                    ->afterStateUpdated(function ($state, callable $set) {
+
+                                        if (!$state) {
+                                            return;
+                                        }
+
+                                        $po = Invoice::with('items')->find($state);
+
+                                        if (!$po) {
+                                            return;
+                                        }
+
+                                        $set(
+                                            'items',
+                                            $po->items->map(fn($item) => [
+                                                'product_id' => $item->product_id,
+                                                'quantity' => $item->quantity,
+                                                'note' => 'Imported from PO ' . $po->number,
+                                            ])->toArray()
+                                        );
+                                    }),
+                            ]),
+
+                        Forms\Components\Tabs\Tab::make('Transfer Order')
+                            ->schema([
+
+                                Select::make('transfer_order_id')
+                                    ->label('Load from Transfer Order')
+                                    ->options(
+                                        Invoice::where('document_type', 'transfer_order')
+                                            ->where('status', 'pending')
+                                            ->latest('id')
+                                            ->pluck('number', 'id')
+                                    )
+                                    ->searchable()
+                                    ->live()
+                                    ->afterStateUpdated(function ($state, callable $set) {
+
+                                        if (!$state) {
+                                            return;
+                                        }
+
+                                        $transfer = Invoice::with('items')
+                                            ->find($state);
+
+                                        if (!$transfer) {
+                                            return;
+                                        }
+
+                                        $set(
+                                            'notes',
+                                            'Stock received from Transfer Order: ' . $transfer->number
+                                        );
+
+                                        $set(
+                                            'items',
+                                            $transfer->items->map(fn($item) => [
+                                                'product_id' => $item->product_id,
+                                                'quantity' => $item->quantity,
+                                                'note' => 'Imported from Transfer Order ' . $transfer->number,
+                                            ])->toArray()
+                                        );
+                                    }),
+                            ]),
+                    ])
+                    ->columnSpanFull(),
+
+
+
                 Section::make('Stock Items')
                     ->schema([
                         Repeater::make('items')
