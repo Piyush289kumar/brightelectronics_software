@@ -49,10 +49,7 @@ class StoreResource extends Resource
 
                                 $set(
                                     'code',
-                                    $location . 'BRT' .
-                                    $date->format('j') .
-                                    $date->format('n') .
-                                    $date->format('y')
+                                    $location . 'BRT' . $date->format('my')
                                 );
                             }),
                         Forms\Components\TextInput::make('code')
@@ -76,10 +73,7 @@ class StoreResource extends Resource
 
                                 $set(
                                     'code',
-                                    $location . 'BRT' .
-                                    $date->format('j') .
-                                    $date->format('n') .
-                                    $date->format('y')
+                                    $location . 'BRT' . $date->format('my')
                                 );
                             }),
                     ])->columns(4),
