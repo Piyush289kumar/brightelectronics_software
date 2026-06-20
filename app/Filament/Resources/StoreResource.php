@@ -47,11 +47,12 @@ class StoreResource extends Resource
 
                                 $location = preg_replace('/[^A-Za-z0-9]/', '', $location);
 
-                                $count = Store::count() + 1;
+                                $id = $get('id')
+                                    ?? (\App\Models\Store::max('id') + 1);
 
                                 $set(
                                     'code',
-                                    $location . 'BRT' . $count . $date->format('my')
+                                    $location . 'BRT' . $id . $date->format('my')
                                 );
                             }),
                         Forms\Components\TextInput::make('code')
