@@ -208,6 +208,19 @@ class JobCardResourceRelationManager extends RelationManager
             ])
             ->actions([
                 Tables\Actions\ActionGroup::make([
+                    // ✅ Open Google Map Button
+                    Tables\Actions\Action::make('open_map')
+                        ->label('Open Map')
+                        ->icon('heroicon-o-map')
+                        ->color('success')
+                        ->visible(fn($record) => filled($record->google_map_location))
+                        ->url(
+                            fn($record) =>
+                            str_starts_with($record->google_map_location, 'http')
+                            ? $record->google_map_location
+                            : 'https://' . $record->google_map_location
+                        )
+                        ->openUrlInNewTab(),
                     Tables\Actions\ViewAction::make()
                         ->visible(fn() => Auth::user()?->isAdmin()), // Only visible to admin
                     Tables\Actions\EditAction::make()
