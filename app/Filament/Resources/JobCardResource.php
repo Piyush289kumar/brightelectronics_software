@@ -345,7 +345,6 @@ class JobCardResource extends Resource
                         Forms\Components\FileUpload::make('payment_reference_image_path')
                             ->label('Payment Reference Image')
                             ->image()
-                            ->sssss()
                             ->previewable(true)
                             ->nullable()
                             ->directory('payment-references')
