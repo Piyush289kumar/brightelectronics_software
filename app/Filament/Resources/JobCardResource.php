@@ -55,6 +55,7 @@ class JobCardResource extends Resource
                                     'Pending' => 'Pending',
                                     'Complete' => 'Complete',
                                     'Return' => 'Return',
+                                    'Out_for_delivery' => 'Out for Delivery',
                                     'Cancelled' => 'Cancelled',
                                 ];
                                 if ($user && $user->hasAnyRole(['Administrator', 'admin', 'Manager', 'Team Lead'])) {
