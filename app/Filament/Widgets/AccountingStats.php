@@ -170,10 +170,10 @@ class AccountingStats extends BaseWidget
                 ->color('danger')
                 ->description('Cancelled jobs'),
 
-            Stat::make('Completed Job Cards', $jobCardCompleted)
+            Stat::make('Completed & Tested Job Cards', $jobCardCompleted)
                 ->icon('heroicon-o-check-circle')
                 ->color('success')
-                ->description('Successfully completed jobs'),
+                ->description('Ready for delivery'),
 
 
             // ---------------- Purchases ----------------
