@@ -13,6 +13,7 @@ class Complain extends Model
     use HasFactory, SoftDeletes, HasRoles;
 
     protected $fillable = [
+        'store_id',
         'name',
         'mobile',
         'customer_email',
@@ -51,6 +52,12 @@ class Complain extends Model
     | Relationships
     |--------------------------------------------------------------------------
     */
+
+    public function store()
+    {
+        return $this->belongsTo(Store::class);
+    }
+
     public function leadSource()
     {
         return $this->belongsTo(LeadSource::class, 'lead_source_id');

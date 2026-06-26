@@ -27,7 +27,14 @@ class ComplainResource extends Resource
         return $form->schema([
             Forms\Components\Section::make('General Information')
                 ->schema([
-                    Grid::make(3)->schema([
+                    Grid::make(4)->schema([
+                        Forms\Components\Select::make('store_id')
+                            ->relationship('store', 'code') // ✅ Fix here
+                            // ->searchable()
+                            ->preload()
+                            ->required()
+                            ->label('Branch'),
+
                         Forms\Components\TextInput::make('complain_id')
                             ->label('Complain ID')
                             ->disabled() // Prevent editing
@@ -35,6 +42,7 @@ class ComplainResource extends Resource
                             ->hint('Auto-generated.') // Optional visual hint under label
                             ->hintColor('info')
                             ->dehydrated(true),
+
                         Forms\Components\TextInput::make('name')
                             ->label('Customer Name')
                             ->required()
@@ -256,14 +264,11 @@ class ComplainResource extends Resource
         ]);
     }
 
-
-
-
-
     public static function table(Table $table): Table
     {
         return $table
             ->columns([
+                Tables\Columns\TextColumn::make('store.code')->label('Branch')->searchable()->sortable()->toggleable(),
                 Tables\Columns\TextColumn::make('complain_id')->label('Complain ID')->sortable()->toggleable(),
                 Tables\Columns\TextColumn::make('name')->label('Customer Name')->sortable()->toggleable(),
                 Tables\Columns\TextColumn::make('mobile')->label('Phone')->sortable()->toggleable(),
