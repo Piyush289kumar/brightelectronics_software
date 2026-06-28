@@ -34,6 +34,7 @@ return new class extends Migration {
             ]);
 
             $table->decimal('amount', 15, 2);
+            $table->string('payment_mode')->nullable();
             $table->decimal('balance', 15, 2)->default(0);
 
             // 🔗 Reference to journal entry
@@ -55,6 +56,7 @@ return new class extends Migration {
             $table->foreignId('created_by')->constrained('users');
             $table->json('meta')->nullable(); // For storing extra dynamic data (tags, source, import_id, etc.)
             $table->enum('status', ['draft', 'posted', 'void'])->default('posted');
+            $table->string('payment_reference_image_path')->nullable();
 
 
             $table->softDeletes();

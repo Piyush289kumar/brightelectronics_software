@@ -58,7 +58,7 @@ class LedgerResource extends Resource
             ]),
 
 
-            Grid::make(2)->schema([
+            Grid::make(3)->schema([
 
                 Forms\Components\TextInput::make('amount')
                     ->numeric()
@@ -66,15 +66,54 @@ class LedgerResource extends Resource
                     ->prefix('₹')
                     ->label('Amount'),
 
-                Forms\Components\TextInput::make('balance')
-                    ->numeric()
-                    ->disabled()
-                    ->label('Running Balance'),
+
+                Forms\Components\Select::make('payment_mode')
+                    ->label('Payment Mode')
+                    ->options([
+                        'Cash' => 'Cash',
+                        'UPI' => 'UPI',
+                        'Cheque' => 'Cheque',
+                        'Card' => 'Card',
+                        'NEFT' => 'NEFT',
+                        'RTGS' => 'RTGS',
+                        'IMPS' => 'IMPS',
+                        'Bank Transfer' => 'Bank Transfer',
+                        'Wallet' => 'Wallet',
+                    ])
+                    ->searchable(),
+
+                Forms\Components\TextInput::make('reference')
+                    ->label('Reference Number')
+                    ->placeholder('UTR / UPI / Cheque No.')
+                    ->visible(fn(Forms\Get $get) => $get('payment_mode') !== 'Cash'),
             ]),
 
-             Forms\Components\TextInput::make('narration')                    
-                    ->label('Narration')
-                    ->columnSpanFull(),
+            Forms\Components\TextInput::make('narration')
+                ->label('Narration')
+                ->columnSpanFull(),
+
+            Forms\Components\FileUpload::make('payment_reference_image_path')
+                ->label('Payment Reference Image')
+                ->image()
+                ->previewable(true)
+                ->nullable()
+                ->directory('payment-references')
+                ->disk('public')
+                ->visibility('public')
+                ->imagePreviewHeight('150')
+                ->downloadable()
+                ->openable()
+                ->acceptedFileTypes([
+                    'image/jpeg',
+                    'image/png',
+                    'image/webp',
+                ])
+                ->maxSize(2048)
+                ->required(fn(Forms\Get $get) => filled($get('payment_reference_number')))
+                ->validationMessages([
+                    'required' => 'Payment reference image is required when a reference number is entered.',
+                ])
+                ->columnSpanFull(),
 
         ]);
     }

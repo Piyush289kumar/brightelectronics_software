@@ -16,11 +16,14 @@ class Ledger extends Model
         'store_id',
         'date',
         'transaction_type', // debit / credit
+        'payment_mode',
         'amount',
         'balance',
         'journal_entry_id',
         'job_card_id',
+        'reference',
         'narration',
+        'payment_reference_image_path'
     ];
 
     public function account()
@@ -35,7 +38,7 @@ class Ledger extends Model
     public function journalEntry()
     {
         return $this->belongsTo(JournalEntry::class);
-    }    
+    }
 
     protected static function booted()
     {
