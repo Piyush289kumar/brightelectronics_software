@@ -16,6 +16,7 @@ class JobCard extends Model
         'job_id',
         'status',
         'visit_charge_amount',
+        'on_delivery_amount',
         'amount',
         'gst_amount',
         'expense',

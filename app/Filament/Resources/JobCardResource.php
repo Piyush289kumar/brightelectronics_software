@@ -88,17 +88,42 @@ class JobCardResource extends Resource
             Forms\Components\Section::make('Financials & GST')
                 ->schema([
 
-                    Forms\Components\TextInput::make('amount')
-                        ->numeric()
-                        ->dehydrated(true)
-                        ->label('Job Amount (₹)')
-                        ->reactive()
-                        ->live(onBlur: true)
-                        ->afterStateUpdated(
-                            fn($state, callable $set, callable $get) =>
-                            \App\Filament\Resources\JobCardResource::recalculateAll($set, $get)
-                        )
-                        ->columnSpanFull(),
+                    Grid::make(3)->schema([
+
+                        Forms\Components\TextInput::make('visit_charge_amount')
+                            ->numeric()
+                            ->dehydrated(true)
+                            ->label('Visit Charge Amount (₹)')
+                            ->reactive()
+                            ->live(onBlur: true)
+                            ->afterStateUpdated(
+                                fn($state, callable $set, callable $get) =>
+                                \App\Filament\Resources\JobCardResource::recalculateAll($set, $get)
+                            ),
+
+                        Forms\Components\TextInput::make('on_delivery_amount')
+                            ->numeric()
+                            ->default(0)
+                            ->dehydrated(true)
+                            ->label('On Delivery Amount (₹)')
+                            ->reactive()
+                            ->live(onBlur: true)
+                            ->afterStateUpdated(
+                                fn($state, callable $set, callable $get) =>
+                                \App\Filament\Resources\JobCardResource::recalculateAll($set, $get)
+                            ),
+
+                        Forms\Components\TextInput::make('amount')
+                            ->numeric()
+                            ->dehydrated(true)
+                            ->label('Job Amount (₹)')
+                            ->reactive()
+                            ->live(onBlur: true)
+                            ->afterStateUpdated(
+                                fn($state, callable $set, callable $get) =>
+                                \App\Filament\Resources\JobCardResource::recalculateAll($set, $get)
+                            ),
+                    ]),
 
                     Forms\Components\Section::make('Lead Information')
                         ->icon('heroicon-o-user-group')
@@ -417,7 +442,17 @@ class JobCardResource extends Resource
 
     protected static function recalculateAll($set, $get): void
     {
-        $amount = round((float) ($get('amount') ?? 0), 2);
+
+        $visitCharge = (float) ($get('visit_charge_amount') ?? 0);
+        $onDeliveryAmount = (float) ($get('on_delivery_amount') ?? 0);
+
+        // Job Amount = On Delivery Amount - Visit Charge
+        $amount = max(0, round($onDeliveryAmount - $visitCharge, 2));
+
+        // Update the amount field automatically
+        $set('amount', $amount);
+
+        // $amount = round((float) ($get('amount') ?? 0), 2);
 
         // =============================
         // ✅ EXPENSE CALCULATION

@@ -18,6 +18,7 @@ return new class extends Migration {
             $table->json('product_id')->nullable(); // Multi-select devices (Products)
             $table->json('check_list')->nullable(); // Multi-select Check List
             $table->decimal('visit_charge_amount', 10, 2)->nullable();
+            $table->decimal('on_delivery_amount', 10, 2)->nullable();
             $table->decimal('amount', 10, 2)->nullable();
             $table->decimal('gst_amount', 10, 2)->nullable();
             $table->decimal('expense', 10, 2)->nullable();

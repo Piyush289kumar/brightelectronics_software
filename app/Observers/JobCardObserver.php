@@ -8,14 +8,47 @@ use App\Models\Ledger;
 
 class JobCardObserver
 {
-    /**
-     * Handle the JobCard "created" event.
-     */
+
     public function created(JobCard $jobCard): void
     {
-        //
+        $this->syncLedger($jobCard);
     }
 
+    public function updated(JobCard $jobCard): void
+    {
+        $this->syncLedger($jobCard);
+    }
+
+    protected function syncLedger(JobCard $jobCard): void
+    {
+        // Create ledger only after delivery
+        if (
+            $jobCard->status !== 'Delivered' ||
+            empty($jobCard->on_delivery_amount)
+        ) {
+            return;
+        }
+
+        $account = Account::first();
+
+        if (!$account) {
+            return;
+        }
+
+        Ledger::updateOrCreate(
+            [
+                'job_card_id' => $jobCard->id,
+            ],
+            [
+                'account_id' => $account->id,
+                'store_id' => $jobCard->complain->store_id, // use complaint store
+                'date' => now(),
+                'transaction_type' => 'credit',
+                'amount' => $jobCard->on_delivery_amount,
+                'narration' => 'Job Card #' . $jobCard->job_id,
+            ]
+        );
+    }
 
     /**
      * Handle the JobCard "deleted" event.
@@ -41,42 +74,4 @@ class JobCardObserver
         //
     }
 
-    /**
-     * Handle the JobCard "updated" event.
-     */
-    public function updated(JobCard $jobCard): void
-    {
-
-        if (
-            $jobCard->status !== 'Delivered' ||
-            empty($jobCard->amount)
-        ) {
-            return;
-        }
-
-        $account = Account::first();
-
-        if (!$account) {
-            logger('No account found');
-            return;
-        }
-
-        Ledger::updateOrCreate(
-            [
-                'job_card_id' => $jobCard->id,
-            ],
-            [
-                'account_id' => $account->id,
-                'store_id' => 1,
-                'date' => now(),
-                'transaction_type' => 'credit',
-                'amount' => $jobCard->amount,
-                'narration' => 'Job Card #' . $jobCard->job_id,
-            ]
-        );
-
-        logger('Ledger created', [
-            'job_card_id' => $jobCard->id,
-        ]);
-    }
 }
