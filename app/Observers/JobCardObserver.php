@@ -16,6 +16,7 @@ class JobCardObserver
 
     public function updated(JobCard $jobCard): void
     {
+        // dd('Observer Updated', $jobCard->status, $jobCard->on_delivery_amount);
         $this->syncLedger($jobCard);
     }
 
