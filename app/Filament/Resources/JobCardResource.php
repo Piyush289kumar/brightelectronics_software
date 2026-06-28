@@ -88,13 +88,27 @@ class JobCardResource extends Resource
             Forms\Components\Section::make('Financials & GST')
                 ->schema([
 
-                    Grid::make(3)->schema([
+                    Grid::make(4)->schema([
 
                         Forms\Components\TextInput::make('visit_charge_amount')
                             ->numeric()
                             ->dehydrated(true)
                             ->label('Visit Charge Amount (₹)')
                             ->reactive()
+                            ->default(0)
+                            ->readOnly()
+                            ->live(onBlur: true)
+                            ->afterStateUpdated(
+                                fn($state, callable $set, callable $get) =>
+                                \App\Filament\Resources\JobCardResource::recalculateAll($set, $get)
+                            ),
+
+                        Forms\Components\TextInput::make('advance_amount')
+                            ->numeric()
+                            ->dehydrated(true)
+                            ->label('Advance Amount (₹)')
+                            ->reactive()                            
+                            ->default(0)
                             ->live(onBlur: true)
                             ->afterStateUpdated(
                                 fn($state, callable $set, callable $get) =>
@@ -444,10 +458,11 @@ class JobCardResource extends Resource
     {
 
         $visitCharge = (float) ($get('visit_charge_amount') ?? 0);
+        $advanceAmount = (float) ($get('advance_amount') ?? 0);
         $onDeliveryAmount = (float) ($get('on_delivery_amount') ?? 0);
 
         // Job Amount = On Delivery Amount - Visit Charge
-        $amount = max(0, round($onDeliveryAmount - $visitCharge, 2));
+        $amount = max(0, round($onDeliveryAmount + $visitCharge + $advanceAmount, 2));
 
         // Update the amount field automatically
         $set('amount', $amount);
@@ -651,6 +666,12 @@ class JobCardResource extends Resource
 
                 Tables\Columns\TextColumn::make('visit_charge_amount')
                     ->label('Visit Charge (₹)')
+                    ->money('INR')
+                    ->sortable()
+                    ->toggleable(),
+
+                Tables\Columns\TextColumn::make('advance_amount')
+                    ->label('Advance Amount (₹)')
                     ->money('INR')
                     ->sortable()
                     ->toggleable(),
