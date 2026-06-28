@@ -614,6 +614,12 @@ class JobCardResource extends Resource
                     ->label('Payment Ref No.')
                     ->toggleable(),
 
+                Tables\Columns\TextColumn::make('visit_charge_amount')
+                    ->label('Visit Charge (₹)')
+                    ->money('INR')
+                    ->sortable()
+                    ->toggleable(),
+
                 Tables\Columns\TextColumn::make('amount')
                     ->label('Job Amount (₹)')
                     ->money('INR')
@@ -766,7 +772,7 @@ class JobCardResource extends Resource
             ])
             ->filtersLayout(Tables\Enums\FiltersLayout::AboveContentCollapsible)
             ->toggleColumnsTriggerAction(fn($action) => $action->label('Toggle Columns'))
-            ->defaultSort('job_id', 'desc')
+            ->defaultSort('created_at', 'desc')
             ->striped()
             ->actions([
                 Tables\Actions\ActionGroup::make([

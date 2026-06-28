@@ -15,6 +15,7 @@ class JobCard extends Model
         'complain_id',
         'job_id',
         'status',
+        'visit_charge_amount',
         'amount',
         'gst_amount',
         'expense',
