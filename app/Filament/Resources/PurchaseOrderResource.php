@@ -562,7 +562,7 @@ class PurchaseOrderResource extends Resource
                 <td style='padding:2px; text-align:center;'>₹ " . number_format($item->total_amount, 2) . "</td>
             </tr>";
                             })->implode('');
-                            $map = [                                
+                            $map = [
                                 '$PURCHAS_REQ_NUMBER' => (string) ($record->purchase_req_to_purchase_order_no ?? "--"),
                                 '$NUMBER' => (string) $record->number,
                                 '$DOCUMENT_DATE' => Carbon::parse($record->document_date)->format('d-m-Y'),
@@ -605,6 +605,32 @@ class PurchaseOrderResource extends Resource
                             return view('filament-docs::print', ['record' => $document]);
                         })
                         ->tooltip('Preview'),
+
+
+                    Tables\Actions\Action::make('printPurchaseOrder')
+                        ->label('One Pager Order PDF')
+                        ->color('success')
+                        ->icon('heroicon-s-arrow-down-tray')
+                        ->tooltip('Preview then download 2-copy PDF')
+                        ->modalHeading('Purchase Order Preview (Office + Vendor Copy)')
+                        ->modalWidth('4xl')
+                        ->modalContent(fn($record) => view(
+                            'filament.components.purchase-order',
+                            ['record' => $record]
+                        ))
+                        ->modalSubmitActionLabel('Download PDF')
+                        ->modalCancelActionLabel('Close')
+                        ->action(function ($record) {
+                            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView(
+                                'filament.components.purchase-order',
+                                ['record' => $record]
+                            )->setPaper('a4', 'portrait');
+
+                            return response()->streamDownload(
+                                fn() => print ($pdf->output()),
+                                "purchase-order-{$record->number}.pdf"
+                            );
+                        }),
 
                     // ✅ Generate and then Print (with print preview)
                     Tables\Actions\Action::make('generateAndPrintDocument')
