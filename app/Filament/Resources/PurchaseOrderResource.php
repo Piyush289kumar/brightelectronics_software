@@ -516,6 +516,31 @@ class PurchaseOrderResource extends Resource
             ->actions([
                 Tables\Actions\ActionGroup::make([
 
+                    Tables\Actions\Action::make('printPurchaseOrder')
+                        ->label('One Pager Order PDF')
+                        ->color('success')
+                        ->icon('heroicon-s-arrow-down-tray')
+                        ->tooltip('Preview then download 2-copy PDF')
+                        ->modalHeading('Purchase Order Preview (Office + Vendor Copy)')
+                        ->modalWidth('4xl')
+                        ->modalContent(fn($record) => view(
+                            'filament.components.purchase-order',
+                            ['record' => $record]
+                        ))
+                        ->modalSubmitActionLabel('Download PDF')
+                        ->modalCancelActionLabel('Close')
+                        ->action(function ($record) {
+                            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView(
+                                'filament.components.purchase-order',
+                                ['record' => $record]
+                            )->setPaper('a4', 'portrait');
+
+                            return response()->streamDownload(
+                                fn() => print ($pdf->output()),
+                                "purchase-order-{$record->number}.pdf"
+                            );
+                        }),
+
                     // 👇 Generate (or regenerate) and then View
                     Action::make('generateAndViewDocument')
                         ->label('Preview')
@@ -605,32 +630,6 @@ class PurchaseOrderResource extends Resource
                             return view('filament-docs::print', ['record' => $document]);
                         })
                         ->tooltip('Preview'),
-
-
-                    Tables\Actions\Action::make('printPurchaseOrder')
-                        ->label('One Pager Order PDF')
-                        ->color('success')
-                        ->icon('heroicon-s-arrow-down-tray')
-                        ->tooltip('Preview then download 2-copy PDF')
-                        ->modalHeading('Purchase Order Preview (Office + Vendor Copy)')
-                        ->modalWidth('4xl')
-                        ->modalContent(fn($record) => view(
-                            'filament.components.purchase-order',
-                            ['record' => $record]
-                        ))
-                        ->modalSubmitActionLabel('Download PDF')
-                        ->modalCancelActionLabel('Close')
-                        ->action(function ($record) {
-                            $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView(
-                                'filament.components.purchase-order',
-                                ['record' => $record]
-                            )->setPaper('a4', 'portrait');
-
-                            return response()->streamDownload(
-                                fn() => print ($pdf->output()),
-                                "purchase-order-{$record->number}.pdf"
-                            );
-                        }),
 
                     // ✅ Generate and then Print (with print preview)
                     Tables\Actions\Action::make('generateAndPrintDocument')
