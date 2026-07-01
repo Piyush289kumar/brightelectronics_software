@@ -22,33 +22,54 @@ class JobCardObserver
 
     protected function syncLedger(JobCard $jobCard): void
     {
-        // Create ledger only after delivery
-        if (
-            $jobCard->status !== 'Delivered' ||
-            empty($jobCard->on_delivery_amount)
-        ) {
-            return;
-        }
-
         $account = Account::first();
 
         if (!$account) {
             return;
         }
 
-        Ledger::updateOrCreate(
-            [
-                'job_card_id' => $jobCard->id,
-            ],
-            [
-                'account_id' => $account->id,
-                'store_id' => $jobCard->complain->store_id, // use complaint store
-                'date' => now(),
-                'transaction_type' => 'credit',
-                'amount' => $jobCard->on_delivery_amount,
-                'narration' => 'Job Card #' . $jobCard->job_id,
-            ]
-        );
+        // ===============================
+        // Advance Entry
+        // ===============================
+        if ($jobCard->advance_amount > 0) {
+
+            Ledger::updateOrCreate(
+                [
+                    'job_card_id' => $jobCard->id,
+                    'narration' => 'Advance - Job Card #' . $jobCard->job_id,
+                ],
+                [
+                    'account_id' => $account->id,
+                    'store_id' => $jobCard->complain->store_id,
+                    'date' => now(),
+                    'transaction_type' => 'credit',
+                    'amount' => $jobCard->advance_amount,
+                ]
+            );
+        }
+
+        // ===============================
+        // Delivery Entry
+        // ===============================
+        if (
+            $jobCard->status === 'Delivered' &&
+            $jobCard->on_delivery_amount > 0
+        ) {
+
+            Ledger::updateOrCreate(
+                [
+                    'job_card_id' => $jobCard->id,
+                    'narration' => 'Delivery - Job Card #' . $jobCard->job_id,
+                ],
+                [
+                    'account_id' => $account->id,
+                    'store_id' => $jobCard->complain->store_id,
+                    'date' => now(),
+                    'transaction_type' => 'credit',
+                    'amount' => $jobCard->on_delivery_amount,
+                ]
+            );
+        }
     }
 
     /**

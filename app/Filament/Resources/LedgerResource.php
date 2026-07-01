@@ -122,25 +122,76 @@ class LedgerResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('date')->date()->sortable(),
-                Tables\Columns\TextColumn::make('narration')->limit(50)->toggleable(),
-                Tables\Columns\TextColumn::make('store.name')->label('Branch')->searchable()->sortable()->toggleable(),
-                // Tables\Columns\TextColumn::make('account.account_name')->label('Account')->searchable(),
+                Tables\Columns\TextColumn::make('date')
+                    ->date('d M Y')
+                    ->sortable(),
+
+                Tables\Columns\ImageColumn::make('payment_reference_image_path')
+                    ->label('Receipt')
+                    ->disk('public')
+                    ->square()
+                    ->size(50)
+                    ->action(
+                        Tables\Actions\Action::make('viewImage')
+                            ->modalHeading('Receipt')
+                            ->modalContent(fn($record) => view(
+                                'filament.components.modals.product-image',
+                                ['image' => $record->payment_reference_image_path]
+                            ))
+                            ->modalWidth('xl')
+                    )
+                    ->toggleable(),
+
+                Tables\Columns\TextColumn::make('store.name')
+                    ->label('Branch')
+                    ->searchable()
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make('account.account_name')
+                    ->label('Account')
+                    ->searchable()
+                    ->toggleable(),
+
+                Tables\Columns\TextColumn::make('narration')
+                    ->limit(40)
+                    ->searchable()
+                    ->wrap(),
+
                 Tables\Columns\BadgeColumn::make('transaction_type')
+                    ->label('Type')
                     ->colors([
                         'success' => 'credit',
                         'danger' => 'debit',
+                    ]),
+
+                Tables\Columns\TextColumn::make('payment_mode')
+                    ->label('Mode')
+                    ->badge()
+                    ->colors([
+                        'success' => 'Cash',
+                        'info' => 'UPI',
+                        'warning' => 'Cheque',
+                        'primary' => 'Card',
+                        'gray' => 'NEFT',
                     ])
-                    ->label('Type'),
+                    ->toggleable(),
 
-                Tables\Columns\TextColumn::make('amount')->money('inr')->sortable()->toggleable(),
+                Tables\Columns\TextColumn::make('reference')
+                    ->label('Reference')
+                    ->copyable()
+                    ->searchable()
+                    ->toggleable(),
 
-                // Tables\Columns\TextColumn::make('balance')->money('inr')->sortable(),
+                Tables\Columns\TextColumn::make('amount')
+                    ->money('INR')
+                    ->sortable()
+                    ->alignEnd(),
 
-                // Tables\Columns\TextColumn::make('journalEntry.reference')
-                //     ->label('Reference')
-                //     ->toggleable(),
-            ])->defaultSort('created_at', 'desc')
+                Tables\Columns\TextColumn::make('created_at')
+                    ->dateTime('d M Y h:i A')
+                    ->toggleable(isToggledHiddenByDefault: true),
+            ])
+            ->defaultSort('created_at', 'desc')
             ->filters([
                 Tables\Filters\SelectFilter::make('store_id')
                     ->relationship('store', 'name')->label('Branch'),
