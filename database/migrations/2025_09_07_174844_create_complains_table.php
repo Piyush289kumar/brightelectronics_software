@@ -16,7 +16,9 @@ return new class extends Migration {
             $table->string('mobile')->nullable();
             $table->string('customer_email')->nullable();
             $table->text('address')->nullable();
-            $table->string('google_map_location')->nullable(); // Default can be set via frontend JS
+            $table->string('latitude')->nullable(); 
+            $table->string('longitude')->nullable(); 
+            $table->string('google_map_location')->nullable(); 
             $table->foreignId('lead_source_id')->constrained('lead_sources')->onDelete('cascade');
             $table->foreignId('vendor_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('staff_id')->nullable()->constrained('users')->nullOnDelete();

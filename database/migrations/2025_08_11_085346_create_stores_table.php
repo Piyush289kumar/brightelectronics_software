@@ -15,6 +15,9 @@ return new class extends Migration {
             $table->string('name'); // Store name
             $table->string('code')->unique(); // Short code for store
             $table->string('location')->nullable(); // General location
+            $table->string('latitude')->nullable(); 
+            $table->string('longitude')->nullable(); 
+            $table->string('google_map_location')->nullable(); 
             $table->string('address')->nullable(); // Full address
             $table->string('city')->nullable();
             $table->string('state')->nullable(); // State (important for GST)

@@ -31,36 +31,9 @@ class StoreResource extends Resource
             ->schema([
                 Forms\Components\Section::make('Basic Information')
                     ->schema([
-                        Forms\Components\TextInput::make('name')->required()->maxLength(255),
-                        Forms\Components\DatePicker::make('opening_date')
+                        Forms\Components\TextInput::make('name')
                             ->required()
-                            ->live()
-                            ->afterStateUpdated(function ($state, callable $set, callable $get) {
-
-                                $location = $get('location');
-
-                                if (!$location || !$state) {
-                                    return;
-                                }
-
-                                $date = \Carbon\Carbon::parse($state);
-
-                                $location = preg_replace('/[^A-Za-z0-9]/', '', $location);
-
-                                $id = $get('id')
-                                    ?? (\App\Models\Store::max('id') + 1);
-
-                                $set(
-                                    'code',
-                                    $location . $id . $date->format('my')
-                                );
-                            }),
-                        Forms\Components\TextInput::make('code')
-                            ->required()
-                            ->readOnly()
-                            ->dehydrated(),
-                        Forms\Components\TextInput::make('location')
-                            ->required()
+                            ->maxLength(255)
                             ->live(debounce: 1000)
                             ->afterStateUpdated(function ($state, callable $set, callable $get) {
 
@@ -72,15 +45,89 @@ class StoreResource extends Resource
 
                                 $date = \Carbon\Carbon::parse($date);
 
-                                $location = preg_replace('/[^A-Za-z0-9]/', '', $state);
+                                $name = preg_replace('/[^A-Za-z0-9]/', '', $state);
 
-                                $count = Store::count() + 1;
+                                $id = $get('id') ?? (\App\Models\Store::max('id') + 1);
 
                                 $set(
                                     'code',
-                                    $location . $count . $date->format('my')
+                                    $name . $id . $date->format('my')
                                 );
                             }),
+                        Forms\Components\DatePicker::make('opening_date')
+                            ->required()
+                            ->live()
+                            ->afterStateUpdated(function ($state, callable $set, callable $get) {
+
+                                $name = $get('name');
+
+                                if (!$name || !$state) {
+                                    return;
+                                }
+
+                                $date = \Carbon\Carbon::parse($state);
+
+                                $name = preg_replace('/[^A-Za-z0-9]/', '', $name);
+
+                                $id = $get('id') ?? (\App\Models\Store::max('id') + 1);
+
+                                $set(
+                                    'code',
+                                    $name . $id . $date->format('my')
+                                );
+                            }),
+                        Forms\Components\TextInput::make('code')
+                            ->required()
+                            ->readOnly()
+                            ->dehydrated(),
+                        Forms\Components\TextInput::make('location')
+                            ->required()
+                            ->maxLength(255),
+
+                        Forms\Components\TextInput::make('latitude'),
+                        Forms\Components\TextInput::make('longitude'),
+
+                        Forms\Components\TextInput::make('google_map_location')
+                            ->label('Google Map Location')
+                            ->readOnly()
+                            ->live()
+                            ->required(
+                                fn(callable $get) =>
+                                in_array($get('first_action_code'), ['PKD', 'Visit'])
+                            )
+                            ->suffixAction(
+                                Forms\Components\Actions\Action::make('fetchLocation')
+                                    ->icon('heroicon-o-map-pin')
+                                    ->alpineClickHandler(<<<'JS'
+                                    navigator.geolocation.getCurrentPosition(
+                                        (position) => {
+                                            const lat = position.coords.latitude;
+                                            const lng = position.coords.longitude;
+                                            const url = `https://www.google.com/maps?q=${lat},${lng}`;
+
+                                            $wire.set('data.latitude', lat);
+                                            $wire.set('data.longitude', lng);
+                                            $wire.set('data.google_map_location', url);
+
+                                            window.dispatchEvent(new CustomEvent('complain-map-updated', {
+                                                detail: { lat, lng }
+                                            }));
+                                        },
+                                        (error) => {
+                                            alert(error.message);
+                                        },
+                                        {
+                                            enableHighAccuracy: true,
+                                            timeout: 15000,
+                                            maximumAge: 0
+                                        }
+                                    );
+                                    JS)
+                            ),
+
+                        Forms\Components\ViewField::make('map_picker')
+                            ->view('filament.components.map-picker')
+                            ->columnSpanFull(),
                     ])->columns(4),
 
                 Forms\Components\Section::make('Address Details')
@@ -275,7 +322,7 @@ class StoreResource extends Resource
                         'inactive' => 'Inactive',
                         default => $state,
                     }),
-                Tables\Columns\TextColumn::make('created_at')->dateTime()->sortable(),
+                Tables\Columns\TextColumn::make('created_at')->dateTime()->sortable()->toggleable(),
             ])->defaultSort('name')
             ->filters([
                 Tables\Filters\Filter::make('status')
@@ -283,9 +330,23 @@ class StoreResource extends Resource
                     ->label('Active Stores'),
             ])
             ->actions([
-                Tables\Actions\ViewAction::make(),
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                Tables\Actions\ActionGroup::make([
+                    Tables\Actions\Action::make('open_map')
+                        ->label('Open Map')
+                        ->icon('heroicon-o-map')
+                        ->color('success')
+                        ->visible(fn($record) => filled($record->google_map_location))
+                        ->url(
+                            fn($record) =>
+                            str_starts_with($record->google_map_location, 'http')
+                            ? $record->google_map_location
+                            : 'https://' . $record->google_map_location
+                        )
+                        ->openUrlInNewTab(),
+                    Tables\Actions\ViewAction::make(),
+                    Tables\Actions\EditAction::make(),
+                    Tables\Actions\DeleteAction::make(),
+                ])->dropdown()->tooltip('Actions')
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
