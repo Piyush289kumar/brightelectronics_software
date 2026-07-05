@@ -12,6 +12,7 @@ return new class extends Migration {
     {
         Schema::create('vendors', function (Blueprint $table) {
             $table->id();
+            $table->string('code')->unique();
             $table->string('name');
             $table->string('contact_person')->nullable();
             $table->string('phone')->nullable();
@@ -26,6 +27,9 @@ return new class extends Migration {
 
             $table->string('gst_number', 15)->nullable();
             $table->string('pan_number', 10)->nullable();
+            $table->string('latitude')->nullable(); 
+            $table->string('longitude')->nullable(); 
+            $table->string('google_map_location')->nullable(); 
             $table->string('address')->nullable();
             $table->string('city')->nullable();
             $table->string('state')->nullable();

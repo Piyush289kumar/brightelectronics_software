@@ -11,6 +11,7 @@ class Vendor extends Model
 {
     use HasFactory, HasRoles;
     protected $fillable = [
+        'code',
         'name',
         'contact_person',
         'phone',
@@ -23,6 +24,9 @@ class Vendor extends Model
         'branch_name',
         'gst_number',
         'pan_number',
+        'latitude',
+        'longitude',
+        'google_map_location',
         'address',
         'city',
         'state',

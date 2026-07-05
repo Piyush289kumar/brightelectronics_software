@@ -32,11 +32,34 @@ class VendorResource extends Resource
             ->schema([
                 Forms\Components\Section::make('Vendor Information')
                     ->schema([
+                        Forms\Components\TextInput::make('code')
+                            ->label('Branch Code')
+                            ->readOnly()
+                            ->required()
+                            ->dehydrated()
+                            ->afterStateHydrated(function (callable $set, $state) {
+
+                                // Don't regenerate while editing
+                                if ($state) {
+                                    return;
+                                }
+
+                                do {
+                                    $nextId = \App\Models\Store::max('id') + 1;
+
+                                    $random = random_int(50000, 99999);
+
+                                    $code = $nextId . $random;
+
+                                } while (\App\Models\Store::where('code', $code)->exists());
+
+                                $set('code', $code);
+                            }),
                         Forms\Components\TextInput::make('name')->required()->maxLength(255),
                         Forms\Components\TextInput::make('contact_person')->maxLength(255),
                         Forms\Components\TextInput::make('phone')->tel()->maxLength(20),
                         Forms\Components\TextInput::make('email')->email()->maxLength(255),
-                    ])->columns(2),
+                    ])->columns(5),
 
 
                 Forms\Components\Section::make('Account Details')
@@ -64,7 +87,7 @@ class VendorResource extends Resource
                             ->label('Branch Name')
                             ->maxLength(255),
                     ])
-                    ->columns(2)
+                    ->columns(3)
                     ->collapsible(),
 
                 Forms\Components\Section::make('Tax Details')
@@ -79,7 +102,53 @@ class VendorResource extends Resource
                         Forms\Components\TextInput::make('city')->maxLength(100),
                         Forms\Components\TextInput::make('state')->maxLength(100),
                         Forms\Components\TextInput::make('pincode')->maxLength(6),
-                    ])->columns(2),
+
+                        Forms\Components\TextInput::make('latitude'),
+                        Forms\Components\TextInput::make('longitude'),
+
+                        Forms\Components\TextInput::make('google_map_location')
+                            ->label('Google Map Location')
+                            ->readOnly()
+                            ->live()
+                            ->required(
+                                fn(callable $get) =>
+                                in_array($get('first_action_code'), ['PKD', 'Visit'])
+                            )
+                            ->columnSpan(2)
+                            ->suffixAction(
+                                Forms\Components\Actions\Action::make('fetchLocation')
+                                    ->icon('heroicon-o-map-pin')
+                                    ->alpineClickHandler(<<<'JS'
+                                    navigator.geolocation.getCurrentPosition(
+                                        (position) => {
+                                            const lat = position.coords.latitude;
+                                            const lng = position.coords.longitude;
+                                            const url = `https://www.google.com/maps?q=${lat},${lng}`;
+
+                                            $wire.set('data.latitude', lat);
+                                            $wire.set('data.longitude', lng);
+                                            $wire.set('data.google_map_location', url);
+
+                                            window.dispatchEvent(new CustomEvent('complain-map-updated', {
+                                                detail: { lat, lng }
+                                            }));
+                                        },
+                                        (error) => {
+                                            alert(error.message);
+                                        },
+                                        {
+                                            enableHighAccuracy: true,
+                                            timeout: 15000,
+                                            maximumAge: 0
+                                        }
+                                    );
+                                    JS)
+                            ),
+
+                        Forms\Components\ViewField::make('map_picker')
+                            ->view('filament.components.map-picker')
+                            ->columnSpanFull(),
+                    ])->columns(4),
 
                 Forms\Components\Toggle::make('is_active')->default(true),
             ]);
@@ -89,7 +158,7 @@ class VendorResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('id')->label('ID')->formatStateUsing(callback: fn($state) => 'VEN-' . str_pad($state, 4, '0', STR_PAD_LEFT))->searchable()->sortable(),
+                Tables\Columns\TextColumn::make('code')->searchable()->toggleable(),
                 Tables\Columns\TextColumn::make('name')->searchable(),
                 Tables\Columns\TextColumn::make('contact_person'),
                 Tables\Columns\TextColumn::make('phone'),
@@ -141,7 +210,23 @@ class VendorResource extends Resource
                     }),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
+                Tables\Actions\ActionGroup::make([
+                    Tables\Actions\Action::make('open_map')
+                        ->label('Open Map')
+                        ->icon('heroicon-o-map')
+                        ->color('success')
+                        ->visible(fn($record) => filled($record->google_map_location))
+                        ->url(
+                            fn($record) =>
+                            str_starts_with($record->google_map_location, 'http')
+                            ? $record->google_map_location
+                            : 'https://' . $record->google_map_location
+                        )
+                        ->openUrlInNewTab(),
+                    Tables\Actions\ViewAction::make(),
+                    Tables\Actions\EditAction::make(),
+                    Tables\Actions\DeleteAction::make(),
+                ])->dropdown()->tooltip('Actions')
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
