@@ -84,14 +84,18 @@ class PurchaseRequisitionResource extends Resource
 
                             Select::make('product_id')
                                 ->label('Spare Parts')
-                                ->options(
-                                    Product::all()->mapWithKeys(
-                                        fn($p) => [$p->id => $p->name . ' (' . $p->barcode . ')']
-                                    )
+                                ->relationship(
+                                    name: 'product',
+                                    titleAttribute: 'name',
+                                    modifyQueryUsing: fn($query) => $query->where('is_active', true)
                                 )
-                                ->searchable()
-                                ->reactive()
+                                ->getOptionLabelFromRecordUsing(
+                                    fn(Product $record) => "{$record->name} ({$record->barcode})"
+                                )
+                                ->searchable(['name', 'barcode']) // Search by Name + Part Number
+                                ->preload()
                                 ->required()
+                                ->reactive()
 
 
                                 ->createOptionForm([
@@ -436,6 +440,21 @@ class PurchaseRequisitionResource extends Resource
                         ])
                         ->action(function (PurchaseRequisition $record, array $data) {
                             $globalVendor = $data['vendor_id'] ?? null;
+
+                            // Check inactive products
+                            $inactiveProducts = $record->items
+                                ->filter(fn($item) => !$item->product || !$item->product->is_active);
+
+                            if ($inactiveProducts->isNotEmpty()) {
+
+                                $productNames = $inactiveProducts
+                                    ->map(fn($item) => $item->product?->name)
+                                    ->implode(', ');
+
+                                throw \Illuminate\Validation\ValidationException::withMessages([
+                                    'method' => "Approval failed. Please activate these product(s) first: {$productNames}",
+                                ]);
+                            }
 
                             // 1. Save approved quantities + vendor
                             foreach ($record->items as $index => $item) {
