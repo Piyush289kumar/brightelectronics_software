@@ -17,9 +17,12 @@ class PurchaseRequisitionItem extends Model
         'approved_quantity',
         'purchase_price',
         'approved_price',
-        'total_price',
-        'uom',
+        'total_price',        
         'note',
+    ];
+
+    protected $casts = [
+        'uom' => 'array',
     ];
 
     public function requisition()

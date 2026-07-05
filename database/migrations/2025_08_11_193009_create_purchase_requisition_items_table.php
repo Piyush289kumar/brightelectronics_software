@@ -20,7 +20,7 @@ return new class extends Migration {
             $table->integer('approved_quantity')->nullable();
             $table->decimal('approved_price', 12, 2)->nullable();            
             $table->decimal('total_price', 12, 2)->nullable();
-            $table->string('uom')->nullable();
+            $table->json('uom')->nullable();
             $table->text('note')->nullable();
             $table->timestamps();
         });

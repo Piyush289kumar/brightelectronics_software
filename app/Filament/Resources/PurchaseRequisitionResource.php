@@ -197,14 +197,20 @@ class PurchaseRequisitionResource extends Resource
                             Textarea::make('note')->label('Note')->rows(1)->columnSpanFull(),
 
                             Forms\Components\FileUpload::make('uom')
-                                ->label('Product Picture')
+                                ->label('Product Pictures')
                                 ->disk('public')
                                 ->directory('request_products')
                                 ->image()
                                 ->imageEditor()
+                                ->multiple()
+                                ->maxFiles(3)
+                                ->reorderable()
+                                ->appendFiles()
                                 ->openable()
                                 ->downloadable()
-                                ->previewable(true)
+                                ->previewable()
+                                ->panelLayout('grid')
+                                ->imagePreviewHeight('180')
                                 ->nullable()
                                 ->columnSpanFull(),
 

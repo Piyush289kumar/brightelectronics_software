@@ -24,7 +24,7 @@ class PurchaseRequisition extends Model
         'meta',        
     ];
 
-    protected $casts = [
+    protected $casts = [        
         'meta' => 'array',
         'approved_at' => 'datetime',
     ];
