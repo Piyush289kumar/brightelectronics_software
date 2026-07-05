@@ -52,10 +52,18 @@ class PurchaseRequisitionResource extends Resource
                 Grid::make(3)->schema([
                     Select::make('store_id')
                         ->label('Branch (Requesting)')
-                        ->options(Store::pluck('name', 'id'))
-                        ->default(fn() => Auth::user()->store_id ?? null)
+                        ->options(
+                            Store::orderBy('name')
+                                ->get()
+                                ->mapWithKeys(fn($store) => [
+                                    $store->id => "{$store->name} ({$store->code})",
+                                ])
+                        )
+                        ->searchable()
+                        ->preload()
+                        ->default(fn() => Auth::user()->store_id)
                         ->required()
-                        ->disabled(fn() => Auth::user()?->isStoreManager() ?? false)
+                        ->disabled(fn() => Auth::user()?->isStoreManager())
                         ->dehydrated(true),
                     TextInput::make('reference')->label('Reference'),
                     Select::make('priority')
@@ -187,7 +195,7 @@ class PurchaseRequisitionResource extends Resource
                                 ->dehydrated(true) // 👈 important: store in DB
                                 ->required(),
                             Textarea::make('note')->label('Note')->rows(1)->columnSpanFull(),
-    
+
                             Forms\Components\FileUpload::make('uom')
                                 ->label('Product Picture')
                                 ->disk('public')
@@ -458,6 +466,7 @@ class PurchaseRequisitionResource extends Resource
                                 foreach ($byVendor as $vendorId => $vendorItems) {
                                     $invoice = Invoice::create([
                                         'document_type' => 'purchase_order',
+                                        'store_id' => $record->store_id,
                                         'billable_id' => $vendorId,
                                         'billable_type' => Vendor::class,
                                         'document_date' => now(),
@@ -491,6 +500,7 @@ class PurchaseRequisitionResource extends Resource
 
                                 $invoice = Invoice::create([
                                     'document_type' => 'transfer_order',
+                                    'store_id' => $record->store_id,
                                     'billable_id' => $fromStoreId,
                                     'billable_type' => Store::class,
                                     'destination_store_id' => $toStoreId,
@@ -600,6 +610,7 @@ class PurchaseRequisitionResource extends Resource
                                 foreach ($grouped as $vendorId => $vendorItems) {
                                     $invoice = Invoice::create([
                                         'document_type' => 'purchase_order',
+                                        'store_id' => $firstReq->store_id,
                                         'billable_id' => $vendorId,
                                         'billable_type' => Vendor::class,
                                         'document_date' => now(),
@@ -627,6 +638,8 @@ class PurchaseRequisitionResource extends Resource
                                 $invoice = Invoice::create([
                                     'document_type' => 'transfer_order',
                                     'billable_id' => $data['source_store_id'],
+                                    // Source branch
+                                    'store_id' => $data['source_store_id'],
                                     'billable_type' => Store::class,
                                     'destination_store_id' => $firstReq?->store_id,
                                     'document_date' => now(),

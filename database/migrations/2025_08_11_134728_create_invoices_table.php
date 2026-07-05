@@ -41,6 +41,11 @@ return new class extends Migration {
                 ->constrained('stores')
                 ->nullOnDelete();
 
+            $table->foreignId('store_id')
+                ->nullable()
+                ->constrained('stores')
+                ->nullOnDelete();
+
             // Dates
             $table->date('document_date'); // works for invoice_date, po_date, etc.
             $table->date('due_date')->nullable();
@@ -103,7 +108,7 @@ return new class extends Migration {
 
 
             $table->softDeletes();
-            $table->timestamps();            
+            $table->timestamps();
 
             // 🔑 Composite index for performance
             $table->index(['document_type', 'number']);

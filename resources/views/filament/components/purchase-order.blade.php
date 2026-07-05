@@ -235,7 +235,12 @@
                 </tr>
                 <tr>
                     <td colspan="2">
-                        Vendor: <b>{{ strtoupper($record->billable->name ?? '') }}</b><br>
+                        Vendor: <b>
+                            {{ strtoupper($record->billable->name ?? '') }}
+                            @if (!empty($record->billable->code))
+                                ({{ $record->billable->code }})
+                            @endif
+                        </b><br>
                         <span class="muted">{{ $record->billable->address ?? '' }}</span><br>
                         <span class="muted">
                             @if (!empty($record->billable->phone))
@@ -253,8 +258,8 @@
                 </tr>
                 <tr>
                     <td colspan="3">
-                        Order From : <b>{{ $record->branch->code ?? 'BRT01' }} -
-                            {{ $record->branch->name ?? 'Main Branch' }}</b>
+                        Order From : <b>{{ $record->store->code ?? 'BRT01' }} -
+                            {{ $record->store->name ?? 'Main Branch' }}</b>
                     </td>
                 </tr>
             </table>
@@ -282,7 +287,7 @@
                             <td class="text-center">{{ $index + 1 }}</td>
                             <td>{{ $item->product->name . ' - ' . ($item->product->barcode ?? '') ?? '' }}</td>
                             <td class="text-center">{{ $item->quantity }}</td>
-                            <td class="text-right">Rs.{{ number_format($item->unit_price, 2) }}</td>                          
+                            <td class="text-right">Rs.{{ number_format($item->unit_price, 2) }}</td>
                             <td class="text-right"><b>Rs.{{ number_format($item->total_amount ?? 0, 2) }}</b></td>
                         </tr>
                     @endforeach
