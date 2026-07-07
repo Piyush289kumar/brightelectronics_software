@@ -106,7 +106,16 @@ class InventoryResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('product.name')->sortable()->searchable(),
+                Tables\Columns\TextColumn::make('product.name')
+                    ->label('Product')
+                    ->formatStateUsing(
+                        fn($state, $record) =>
+                        $record->product
+                        ? "{$record->product->id} ({$record->product->barcode})"
+                        : '-'
+                    )
+                    ->searchable(['name', 'barcode'])
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('total_quantity')->sortable(),
                 Tables\Columns\TextColumn::make('min_stock'),
                 Tables\Columns\TextColumn::make('max_stock'),

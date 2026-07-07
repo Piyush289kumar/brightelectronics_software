@@ -302,7 +302,7 @@ class PurchaseRequisitionResource extends Resource
                                     $set('items', $items);
                                 }),
                             Select::make('destination_store_id')
-                                ->label('Destination Branch')
+                                ->label('Source Branch')
                                 ->options(function (callable $get, $record) {
                                     // fall back to requisition's store_id if not inside the modal
                                     $storeId = $get('store_id') ?? $record?->store_id;
@@ -331,7 +331,7 @@ class PurchaseRequisitionResource extends Resource
                                             ->label('Spare Parts')
                                             ->disabled()
                                             ->dehydrated(false)
-
+                                            ->columnSpanFull()
                                             ->afterStateHydrated(function ($component, $state, $record) {
 
                                                 if (!$record?->product_id) {
