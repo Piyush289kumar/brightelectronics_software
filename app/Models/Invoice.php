@@ -19,6 +19,7 @@ class Invoice extends Model
         'document_date',
         'due_date',
         'place_of_supply',
+        'gst_type',
         'taxable_value',
         'cgst_amount',
         'sgst_amount',

@@ -52,6 +52,7 @@ return new class extends Migration {
 
             // Tax related
             $table->string('place_of_supply')->nullable();
+            $table->enum('gst_type', ['exclusive', 'inclusive'])->default('exclusive');
             $table->decimal('taxable_value', 15, 2)->default(0);
             $table->decimal('cgst_amount', 15, 2)->default(0);
             $table->decimal('sgst_amount', 15, 2)->default(0);

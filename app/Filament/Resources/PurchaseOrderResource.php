@@ -6,6 +6,8 @@ use App\Filament\Resources\PurchaseOrderResource\Pages;
 use App\Filament\Resources\EstimateResource\RelationManagers;
 use App\Models\Estimate;
 use Filament\Forms;
+use Filament\Forms\Components\Toggle;
+use Filament\Forms\Components\ToggleButtons;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
@@ -150,6 +152,19 @@ class PurchaseOrderResource extends Resource
                     ]),
                 Grid::make('1')
                     ->schema([
+
+                        ToggleButtons::make('gst_type')
+                            ->label('GST Type')
+                            ->options([
+                                'exclusive' => 'Exclude GST',
+                                'inclusive' => 'Include GST',
+                            ])
+                            ->inline()
+                            ->default('exclusive')
+                            ->live()
+                            ->afterStateUpdated(function ($set, $get) {
+                                PurchaseOrderResource::recalculateInvoiceTotals($set, $get);
+                            }),
                         Repeater::make('items')
                             ->relationship('items')
                             ->label('Items')
@@ -157,7 +172,7 @@ class PurchaseOrderResource extends Resource
                             ->reactive()
                             // Recalculate invoice totals only once when entire items array updates
                             ->afterStateUpdated(function (callable $set, callable $get, $state) {
-                                InvoiceResource::recalculateInvoiceTotals($set, $get);
+                                PurchaseOrderResource::recalculateInvoiceTotals($set, $get);
                             })
                             ->addActionLabel('Add Item')
                             ->addAction(fn($action) => $action->color('primary'))
@@ -238,10 +253,9 @@ class PurchaseOrderResource extends Resource
                                                         $set('cgst_rate', 0);
                                                         $set('sgst_rate', 0);
                                                         $set('igst_rate', 0);
-                                                        InvoiceResource::recalculateItem($set, $get);
+                                                        PurchaseOrderResource::recalculateItem($set, $get);
                                                     })
                                                     ->columnSpan(5),
-
 
                                                 TextInput::make('quantity')
                                                     ->label('Quantity')
@@ -256,7 +270,7 @@ class PurchaseOrderResource extends Resource
                                                         if ($state < 0) {
                                                             $set('quantity', 0);
                                                         }
-                                                        InvoiceResource::recalculateItem($set, $get);
+                                                        PurchaseOrderResource::recalculateItem($set, $get);
                                                     })
                                                     ->columnSpan(2),
                                                 TextInput::make('unit_price')
@@ -266,7 +280,7 @@ class PurchaseOrderResource extends Resource
                                                     ->lazy() // <-- update only on blur
                                                     // ->reactive()
                                                     ->afterStateUpdated(function (callable $set, callable $get, $state) {
-                                                        InvoiceResource::recalculateItem($set, $get);
+                                                        PurchaseOrderResource::recalculateItem($set, $get);
                                                     })
                                                     ->columnSpan(3),
                                                 // ✅ Discount percentage input (user editable)
@@ -283,7 +297,7 @@ class PurchaseOrderResource extends Resource
                                                             $set('discount', 0);
                                                         if ($state > 100)
                                                             $set('discount', 100);
-                                                        InvoiceResource::recalculateItem($set, $get);
+                                                        PurchaseOrderResource::recalculateItem($set, $get);
                                                     })
                                                     ->columnSpan(2),
                                                 // ✅ Discount amount (auto-calculated)
@@ -300,7 +314,7 @@ class PurchaseOrderResource extends Resource
                                                     ->numeric()
                                                     ->default(0)
                                                     ->lazy()
-                                                    ->afterStateUpdated(fn($set, $get) => InvoiceResource::recalculateItem($set, $get))
+                                                    ->afterStateUpdated(fn($set, $get) => PurchaseOrderResource::recalculateItem($set, $get))
                                                     ->columnSpan(2),
                                                 // ✅ Auto calculated fields
                                                 TextInput::make('gst_amount')
@@ -349,15 +363,30 @@ class PurchaseOrderResource extends Resource
             // After discount
             $amountAfterDiscount = $subtotal - $discountAmount;
             // GST amount per item
-            $gstAmount = ($amountAfterDiscount * $gstRate) / 100;
-            // Final total per item
-            $itemTotal = $amountAfterDiscount + $gstAmount;
+            $isInclusive = $get('gst_type') === 'inclusive';
+
+            if ($isInclusive) {
+
+                $taxable = $amountAfterDiscount / (1 + ($gstRate / 100));
+
+                $gstAmount = $amountAfterDiscount - $taxable;
+
+                $itemTotal = $amountAfterDiscount;
+
+            } else {
+
+                $taxable = $amountAfterDiscount;
+
+                $gstAmount = ($taxable * $gstRate) / 100;
+
+                $itemTotal = $taxable + $gstAmount;
+            }
             // Save calculated values into item array
             $items[$index]['discount_amount_per_item'] = round($discountAmount, 2);
             $items[$index]['gst_amount'] = round($gstAmount, 2);
             $items[$index]['total_amount'] = round($itemTotal, 2);
             // Sum totals
-            $taxableValue += $amountAfterDiscount;
+            $taxableValue += $taxable;
             $totalGstAmount += $gstAmount;
             $totalDiscount += $discountAmount;
             $totalAmount += $itemTotal;
@@ -375,19 +404,34 @@ class PurchaseOrderResource extends Resource
         $unitPrice = (float) ($get('unit_price') ?? 0);
         $discountPercent = (float) ($get('discount') ?? 0); // <- renamed
         $gstRate = (float) ($get('gst_rate') ?? 0);
-        // Subtotal before discount
         $subtotal = $quantity * $unitPrice;
-        // Discount amount per item
+
         $discountAmount = ($subtotal * $discountPercent) / 100;
-        $set('discount_amount_per_item', round($discountAmount, 2));
-        // Amount after discount
+
         $amountAfterDiscount = $subtotal - $discountAmount;
-        // GST amount
-        $gstAmount = ($amountAfterDiscount * $gstRate) / 100;
+
+        $isInclusive = $get('../../gst_type') === 'inclusive';
+
+        if ($isInclusive) {
+
+            $taxable = $amountAfterDiscount / (1 + ($gstRate / 100));
+
+            $gstAmount = $amountAfterDiscount - $taxable;
+
+            $total = $amountAfterDiscount;
+
+        } else {
+
+            $taxable = $amountAfterDiscount;
+
+            $gstAmount = ($taxable * $gstRate) / 100;
+
+            $total = $taxable + $gstAmount;
+        }
+
         $set('gst_amount', round($gstAmount, 2));
-        // Final total
-        $total = $amountAfterDiscount + $gstAmount;
         $set('total_amount', round($total, 2));
+        $set('discount_amount_per_item', round($discountAmount, 2));
     }
     public static function mutateFormDataBeforeSave(array $data): array
     {
