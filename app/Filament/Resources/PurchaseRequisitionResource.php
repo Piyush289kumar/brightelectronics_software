@@ -133,12 +133,13 @@ class PurchaseRequisitionResource extends Resource
                                             ->visible(fn(callable $get) => $get('category_id'))
                                             ->searchable(),
 
-                                        // // ✅ Image Upload
-                                        // FileUpload::make('image_path')
-                                        //     ->label('Product Image')
-                                        //     ->image()
-                                        //     ->directory('products')
-                                        //     ->imagePreviewHeight('100'),
+                                        // ✅ Image Upload
+                                        FileUpload::make('image_path')
+                                            ->label('Product Image')
+                                            ->image()
+                                            ->directory('products')
+                                            ->imagePreviewHeight('100')
+                                            ->columnSpanFull(),
 
                                     ])
                                 ])
@@ -167,7 +168,15 @@ class PurchaseRequisitionResource extends Resource
                                             $set('purchase_price', $product->purchase_price);
                                         }
                                     }
-                                })->columnSpanFull(),
+                                })
+                                ->getOptionLabelUsing(function ($value): ?string {
+                                    $product = Product::find($value);
+
+                                    return $product
+                                        ? "{$product->name} ({$product->barcode})"
+                                        : null;
+                                })
+                                ->columnSpanFull(),
 
                             TextInput::make('quantity')
                                 ->label('Quantity')
