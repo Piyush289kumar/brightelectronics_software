@@ -253,6 +253,10 @@ class PurchaseOrderResource extends Resource
                                                         $set('cgst_rate', 0);
                                                         $set('sgst_rate', 0);
                                                         $set('igst_rate', 0);
+
+                                                        // Auto fill GST from Product table
+                                                        $set('gst_rate', (float) $product->gst_rate);
+
                                                         PurchaseOrderResource::recalculateItem($set, $get);
                                                     })
                                                     ->columnSpan(5),
