@@ -51,7 +51,7 @@ class UserTargetResource extends Resource
                     ->label('Remaining Target (₹)')
                     ->numeric()
                     ->suffix('INR')
-                    ->disabled()
+                    // ->disabled()
                     ->dehydrated(true), // store value in DB
             ]);
     }

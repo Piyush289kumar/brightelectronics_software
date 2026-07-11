@@ -12,12 +12,13 @@ class JobCardObserver
     public function created(JobCard $jobCard): void
     {
         $this->syncLedger($jobCard);
+        $this->updateUserTarget($jobCard);
     }
 
     public function updated(JobCard $jobCard): void
     {
-        // dd('Observer Updated', $jobCard->status, $jobCard->on_delivery_amount);
         $this->syncLedger($jobCard);
+        $this->updateUserTarget($jobCard);
     }
 
     protected function syncLedger(JobCard $jobCard): void
@@ -69,6 +70,42 @@ class JobCardObserver
                     'amount' => $jobCard->on_delivery_amount,
                 ]
             );
+        }
+    }
+
+
+    protected function updateUserTarget(JobCard $jobCard): void
+    {
+        $engineers = $jobCard->complain?->assigned_engineers ?? [];
+
+        if (empty($engineers)) {
+            return;
+        }
+
+        foreach ($engineers as $engineerId) {
+
+            $target = \App\Models\UserTarget::where('user_id', $engineerId)
+                ->whereHas('storeTarget', function ($q) use ($jobCard) {
+                    $q->where('month', now()->month)
+                        ->where('year', now()->year)
+                        ->where('store_id', $jobCard->complain->store_id);
+                })
+                ->first();
+
+            if (!$target) {
+                continue;
+            }
+
+            $collection = (float) $jobCard->amount;
+
+            $target->achieved_amount += $collection;
+
+            $target->remaining_amount = max(
+                $target->assigned_amount - $target->achieved_amount,
+                0
+            );
+
+            $target->save();
         }
     }
 

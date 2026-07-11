@@ -140,7 +140,7 @@ class SalaryReportResource extends Resource
                         $count = 0;
 
                         $jobCards = JobCard::query()
-                            ->where('status', 'Complete')
+                            // ->where('status', 'Complete')
                             ->whereMonth('created_at', $month)
                             ->get(['incentive_percentages']);
 
@@ -235,7 +235,7 @@ class SalaryReportResource extends Resource
         $total = 0;
 
         $jobCards = JobCard::query()
-            ->where('status', 'Complete')
+            // ->where('status', 'Complete')
             ->whereMonth('created_at', $month)
             ->get(['incentive_percentages']);
 
