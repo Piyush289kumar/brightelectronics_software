@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\SalaryReportResource\Pages;
 use App\Filament\Resources\SalaryReportResource\RelationManagers;
+use App\Models\Complain;
 use App\Models\JobCard;
 use App\Models\SalaryReport;
 use App\Models\User;
@@ -56,10 +57,6 @@ class SalaryReportResource extends Resource
                 Tables\Columns\TextColumn::make('email')
                     ->searchable(),
 
-                Tables\Columns\TextColumn::make('basic_salary')
-                    ->label('Basic Salary')
-                    ->money('INR'),
-
                 Tables\Columns\TextColumn::make('assigned_target')
                     ->label('Assigned Target')
                     ->money('INR')
@@ -71,16 +68,11 @@ class SalaryReportResource extends Resource
                             now()->month
                         );
 
-                        return UserTarget::query()
-                            ->where('user_id', $record->id)
-                            ->whereHas('storeTarget', fn($q) => $q
-                                ->where('month', $month)
-                                ->where('year', now()->year))
-                            ->value('assigned_amount') ?? 0;
+                        return static::getUserTarget($record->id, $month)?->assigned_amount ?? 0;
                     }),
 
-                Tables\Columns\TextColumn::make('achieved_target')
-                    ->label('Achieved')
+                Tables\Columns\TextColumn::make('total_collection')
+                    ->label('Total Collection')
                     ->money('INR')
                     ->color('success')
                     ->state(function ($record, $livewire) {
@@ -91,10 +83,7 @@ class SalaryReportResource extends Resource
                             now()->month
                         );
 
-                        return static::getUserIncentive(
-                            $record->id,
-                            $month
-                        );
+                        return static::getUserTarget($record->id, $month)?->achieved_amount ?? 0;
                     }),
 
                 Tables\Columns\TextColumn::make('remaining_target')
@@ -109,23 +98,12 @@ class SalaryReportResource extends Resource
                             now()->month
                         );
 
-                        $assigned = UserTarget::query()
-                            ->where('user_id', $record->id)
-                            ->whereHas('storeTarget', fn($q) => $q
-                                ->where('month', $month)
-                                ->where('year', now()->year))
-                            ->value('assigned_amount') ?? 0;
-
-                        $achieved = static::getUserIncentive(
-                            $record->id,
-                            $month
-                        );
-
-                        return max(
-                            0,
-                            $assigned - $achieved
-                        );
+                        return static::getUserTarget($record->id, $month)?->remaining_amount ?? 0;
                     }),
+
+                Tables\Columns\TextColumn::make('basic_salary')
+                    ->label('Basic Salary')
+                    ->money('INR'),
 
                 Tables\Columns\TextColumn::make('job_count')
                     ->label('Jobs')
@@ -175,6 +153,7 @@ class SalaryReportResource extends Resource
                             $month
                         );
                     }),
+
 
                 Tables\Columns\TextColumn::make('total_salary')
                     ->label('Total Salary')
@@ -278,5 +257,15 @@ class SalaryReportResource extends Resource
         return [
             'index' => Pages\ManageSalaryReports::route('/'),
         ];
+    }
+
+    protected static function getUserTarget(int $userId, int $month): ?UserTarget
+    {
+        return UserTarget::query()
+            ->where('user_id', $userId)
+            ->whereHas('storeTarget', fn($q) => $q
+                ->where('month', $month)
+                ->where('year', now()->year))
+            ->first();
     }
 }

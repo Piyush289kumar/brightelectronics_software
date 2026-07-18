@@ -62,7 +62,7 @@ class JobCardResource extends Resource
                                     $options['Delivered'] = 'Delivered';
                                 }
                                 return $options;
-                            })
+                            })                            
                             ->default('Pending')
                             ->required(),
 
@@ -78,7 +78,7 @@ class JobCardResource extends Resource
                                 'Box' => 'Box',
                             ])
                             ->columns(7) // ✅ 1 row (7 items = 1 line)
-                            ->columnSpanFull()
+                            ->columnSpanFull()                            
                             ->dehydrated(true)
                     ]),
                 ])
@@ -101,13 +101,14 @@ class JobCardResource extends Resource
                             ->afterStateUpdated(
                                 fn($state, callable $set, callable $get) =>
                                 \App\Filament\Resources\JobCardResource::recalculateAll($set, $get)
-                            ),
+                            )
+                            ->disabled(fn () => ! static::canEditFinancials()),
 
                         Forms\Components\TextInput::make('advance_amount')
                             ->numeric()
                             ->dehydrated(true)
                             ->label('Advance Amount (₹)')
-                            ->reactive()                            
+                            ->reactive()
                             ->default(0)
                             ->live(onBlur: true)
                             ->afterStateUpdated(
@@ -136,7 +137,7 @@ class JobCardResource extends Resource
                             ->afterStateUpdated(
                                 fn($state, callable $set, callable $get) =>
                                 \App\Filament\Resources\JobCardResource::recalculateAll($set, $get)
-                            ),
+                            )->disabled(fn () => ! static::canEditFinancials()),
                     ]),
 
                     Forms\Components\Section::make('Lead Information')
@@ -247,6 +248,7 @@ class JobCardResource extends Resource
                                         ),
 
                                 ])
+                                ->disabled(fn () => ! static::canEditFinancials())
                                 ->columnSpanFull(),
 
                         ])
@@ -254,161 +256,171 @@ class JobCardResource extends Resource
                         ->collapsed(false)
                         ->columnSpanFull(),
 
-                    // ✅ KEY FIX: Repeater uses ->relationship-style static options
-                    // NO getSearchResultsUsing inside live() repeater — that causes closure serialization
-                    Forms\Components\Repeater::make('spare_parts')
-                        ->label('Spare Parts')
-                        ->addable(false)
-                        ->dehydrated(true)
-                        ->afterStateHydrated(function ($state, $set, $get) {
-
-                            if (request()->has('components')) {
-                                return;
-                            }
-
-                            \App\Filament\Resources\JobCardResource::recalculateAll(
-                                $set,
-                                $get
-                            );
-
-                        })
-                        ->addActionLabel('Add Spare Part')
+                    Forms\Components\Section::make('Spare Parts Information')
+                        ->icon('heroicon-o-user-group')
                         ->schema([
 
-                            Forms\Components\Select::make('product_id')
-                                ->label('Product')
-                                ->options(
-                                    Product::with('category.parent')
-                                        ->get()
-                                        ->mapWithKeys(fn($product) => [
-                                            $product->id => static::getProductLabel($product->id)
-                                        ])
-                                        ->toArray()
-                                )
-                                ->searchable()
-                                ->required()
-                                ->reactive()
-                                ->afterStateUpdated(
-                                    fn($state, $set, $get) =>
-                                    \App\Filament\Resources\JobCardResource::recalculateAll($set, $get)
-                                ),
-
-                            Forms\Components\TextInput::make('unit_rate')
-                                ->label('Unit Rate')
-                                ->prefix('₹')
-                                ->disabled()
-                                ->dehydrated(false)
-                                ->reactive()
-                                ->afterStateHydrated(function ($set, $get) {
-
-                                    $productId = $get('product_id');
-
-                                    if (!$productId) {
-                                        $set('unit_rate', 0);
+                            // ✅ KEY FIX: Repeater uses ->relationship-style static options
+                            // NO getSearchResultsUsing inside live() repeater — that causes closure serialization
+                            Forms\Components\Repeater::make('spare_parts')
+                                ->label('Spare Parts')
+                                ->addable(false)
+                                ->dehydrated(true)
+                                ->afterStateHydrated(function ($state, $set, $get) {
+                                    if (request()->has('components')) {
                                         return;
                                     }
+                                    \App\Filament\Resources\JobCardResource::recalculateAll(
+                                        $set,
+                                        $get
+                                    );
+                                })
+                                ->addActionLabel('Add Spare Part')
+                                ->schema([
 
-                                    $product = Product::find($productId);
+                                    Forms\Components\Select::make('product_id')
+                                        ->label('Product')
+                                        ->options(
+                                            Product::with('category.parent')
+                                                ->get()
+                                                ->mapWithKeys(fn($product) => [
+                                                    $product->id => static::getProductLabel($product->id)
+                                                ])
+                                                ->toArray()
+                                        )
+                                        ->searchable()
+                                        ->required()
+                                        ->reactive()
+                                        ->afterStateUpdated(
+                                            fn($state, $set, $get) =>
+                                            \App\Filament\Resources\JobCardResource::recalculateAll($set, $get)
+                                        ),
 
-                                    $set('unit_rate', $product?->selling_price ?? 0);
-                                }),
+                                    Forms\Components\TextInput::make('unit_rate')
+                                        ->label('Unit Rate')
+                                        ->prefix('₹')
+                                        ->disabled()
+                                        ->dehydrated(false)
+                                        ->reactive()
+                                        ->afterStateHydrated(function ($set, $get) {
 
-                            Forms\Components\TextInput::make('qty')
-                                ->numeric()
-                                ->default(1)
-                                ->minValue(1)
+                                            $productId = $get('product_id');
+
+                                            if (!$productId) {
+                                                $set('unit_rate', 0);
+                                                return;
+                                            }
+
+                                            $product = Product::find($productId);
+
+                                            $set('unit_rate', $product?->selling_price ?? 0);
+                                        }),
+
+                                    Forms\Components\TextInput::make('qty')
+                                        ->numeric()
+                                        ->default(1)
+                                        ->minValue(1)
+                                        ->reactive()
+                                        ->afterStateUpdated(fn($set, $get) => \App\Filament\Resources\JobCardResource::recalculateAll($set, $get)),
+
+
+                                    Forms\Components\TextInput::make('part_total')
+                                        ->label('Total')
+                                        ->disabled()
+                                        ->dehydrated(true)
+                                        ->reactive()
+                                        ->afterStateHydrated(function ($set, $get) {
+                                            $qty = (int) ($get('qty') ?? 0);
+                                            $product = Product::find($get('product_id'));
+                                            $rate = $product?->selling_price ?? 0;
+                                            $set('part_total', '₹' . number_format($qty * $rate, 2));
+                                        }),
+
+                                ])
+                                ->defaultItems(0)
+                                ->collapsed()
+                                ->reorderable(false)
+                                ->columnSpanFull()
                                 ->reactive()
-                                ->afterStateUpdated(fn($set, $get) => \App\Filament\Resources\JobCardResource::recalculateAll($set, $get)),
+                                ->afterStateUpdated(fn($set, $get) => self::recalculateAll($set, $get)),
+
+                            Grid::make([
+                                'default' => 1, // Mobile
+                                'sm' => 2,      // Small screens
+                                'md' => 3,      // Tablet
+                                'xl' => 5,      // Desktop
+                            ])->schema([
+                                        Forms\Components\TextInput::make('expense')
+                                            ->label('Product Expense (₹)')
+                                            ->disabled()
+                                            ->dehydrated(true)
+                                            ->reactive(),
+
+                                        Forms\Components\TextInput::make('gst_amount')
+                                            ->label('GST Amount (18%)')
+                                            ->disabled()
+                                            ->dehydrated(true)
+                                            ->reactive(),
+
+                                        Forms\Components\TextInput::make('gross_amount')
+                                            ->label('Gross After Expense (₹)')
+                                            ->disabled()
+                                            ->dehydrated(true)
+                                            ->reactive(),
+
+                                        Forms\Components\TextInput::make('incentive_amount')
+                                            ->label('Engineer Total Cut (₹)')
+                                            ->disabled()
+                                            ->dehydrated(true)
+                                            ->prefix('₹')
+                                            ->extraAttributes([
+                                                'class' => 'font-bold text-warning-600'
+                                            ]),
+
+                                        Forms\Components\TextInput::make('bright_electronics_profit')
+                                            ->label('Profit (₹)')
+                                            ->disabled()
+                                            ->dehydrated(true)
+                                            ->reactive(),
 
 
-                            Forms\Components\TextInput::make('part_total')
-                                ->label('Total')
-                                ->disabled()
-                                ->dehydrated(true)
-                                ->reactive()
-                                ->afterStateHydrated(function ($set, $get) {
-                                    $qty = (int) ($get('qty') ?? 0);
-                                    $product = Product::find($get('product_id'));
-                                    $rate = $product?->selling_price ?? 0;
-                                    $set('part_total', '₹' . number_format($qty * $rate, 2));
-                                }),
+                                        Grid::make()->schema([
+
+                                            Forms\Components\TextInput::make('payment_reference_number')
+                                                ->label('Payment Reference Number')
+                                                ->placeholder('Enter UPI / Transaction Ref No.')
+                                                ->maxLength(255),
+
+                                            Forms\Components\FileUpload::make('payment_reference_image_path')
+                                                ->label('Payment Reference Image')
+                                                ->image()
+                                                ->previewable(true)
+                                                ->nullable()
+                                                ->directory('payment-references')
+                                                ->disk('public')
+                                                ->visibility('public')
+                                                ->imagePreviewHeight('150')
+                                                ->downloadable()
+                                                ->openable()
+                                                ->acceptedFileTypes([
+                                                    'image/jpeg',
+                                                    'image/png',
+                                                    'image/webp',
+                                                ])
+                                                ->maxSize(2048)
+                                                ->required(fn(Forms\Get $get) => filled($get('payment_reference_number')))
+                                                ->validationMessages([
+                                                    'required' => 'Payment reference image is required when a reference number is entered.',
+                                                ])
+                                        ])
+                                    ]),
 
                         ])
-                        ->defaultItems(0)
-                        ->collapsed()
-                        ->columns(4)
-                        ->reorderable(false)
-                        ->columnSpanFull()
-                        ->reactive()
-                        ->afterStateUpdated(fn($set, $get) => self::recalculateAll($set, $get)),
-
-                    Grid::make(5)->schema([
-                        Forms\Components\TextInput::make('expense')
-                            ->label('Product Expense (₹)')
-                            ->disabled()
-                            ->dehydrated(true)
-                            ->reactive(),
-
-                        Forms\Components\TextInput::make('gst_amount')
-                            ->label('GST Amount (18%)')
-                            ->disabled()
-                            ->dehydrated(true)
-                            ->reactive(),
-
-                        Forms\Components\TextInput::make('gross_amount')
-                            ->label('Gross After Expense (₹)')
-                            ->disabled()
-                            ->dehydrated(true)
-                            ->reactive(),
-
-                        Forms\Components\TextInput::make('incentive_amount')
-                            ->label('Engineer Total Cut (₹)')
-                            ->disabled()
-                            ->dehydrated(true)
-                            ->prefix('₹')
-                            ->extraAttributes([
-                                'class' => 'font-bold text-warning-600'
-                            ]),
-
-                        Forms\Components\TextInput::make('bright_electronics_profit')
-                            ->label('Profit (₹)')
-                            ->disabled()
-                            ->dehydrated(true)
-                            ->reactive(),
-
-                        Forms\Components\TextInput::make('payment_reference_number')
-                            ->label('Payment Reference Number')
-                            ->placeholder('Enter UPI / Transaction Ref No.')
-                            ->maxLength(255)
-                            ->columnSpan(2),
-
-                        Forms\Components\FileUpload::make('payment_reference_image_path')
-                            ->label('Payment Reference Image')
-                            ->image()
-                            ->previewable(true)
-                            ->nullable()
-                            ->directory('payment-references')
-                            ->disk('public')
-                            ->visibility('public')
-                            ->imagePreviewHeight('150')
-                            ->downloadable()
-                            ->openable()
-                            ->acceptedFileTypes([
-                                'image/jpeg',
-                                'image/png',
-                                'image/webp',
-                            ])
-                            ->maxSize(2048)
-                            ->required(fn(Forms\Get $get) => filled($get('payment_reference_number')))
-                            ->validationMessages([
-                                'required' => 'Payment reference image is required when a reference number is entered.',
-                            ])
-                            ->columnSpan(3),
-
-                    ]),
+                        ->collapsible()
+                        ->columnSpanFull(),
                 ])
                 ->collapsible(),
-        ])->disabled(fn() => !auth()->user()->hasAnyRole(['Administrator', 'Team Lead']));
+        ]);
     }
 
     protected static function calculateExpense($get)
@@ -1182,17 +1194,14 @@ HTML;
             'edit' => Pages\EditJobCard::route('/{record}/edit'),
         ];
     }
-
-    public static function getEloquentQuery(): Builder
+    
+    protected static function canEditFinancials(): bool
     {
-        $user = Auth::user();
-        return parent::getEloquentQuery()
-            ->with(['complain.leadSource'])
-            ->when(
-                $user &&
-                !$user->hasRole(['Administrator', 'Developer', 'admin']) &&
-                $user->email !== 'vipprow@gmail.com',
-                fn($query) => $query->whereHas('complain', fn($q) => $q->whereJsonContains('assigned_engineers', $user->id))
-            );
+        return auth()->user()?->hasAnyRole([
+            'Administrator',
+            'Developer',
+            'Team Leader',
+            'Store Manager',
+        ]);
     }
 }
