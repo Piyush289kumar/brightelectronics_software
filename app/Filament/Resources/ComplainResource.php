@@ -5,6 +5,7 @@ use App\Models\Complain;
 use App\Models\Device;
 use App\Models\LeadSource;
 use App\Models\Service;
+use App\Models\Store;
 use App\Models\User;
 use Filament\Forms;
 use Filament\Forms\Components\Grid;
@@ -28,12 +29,15 @@ class ComplainResource extends Resource
             Forms\Components\Section::make('General Information')
                 ->schema([
                     Grid::make(4)->schema([
+
                         Forms\Components\Select::make('store_id')
-                            ->relationship('store', 'code') // ✅ Fix here
-                            // ->searchable()
+                            ->relationship('store', 'code')
                             ->preload()
                             ->required()
-                            ->label('Branch'),
+                            ->label('Branch')
+                            ->default(fn() => Auth::user()?->store_id)
+                            ->disabled(fn() => !Auth::user()?->hasRole(['Administrator', 'Developer', 'Team Leader', 'Store Manager']))
+                            ->dehydrated(),
 
                         Forms\Components\TextInput::make('complain_id')
                             ->label('Complain ID')

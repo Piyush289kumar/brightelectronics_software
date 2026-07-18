@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\Auth;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 
 class StoreResource extends Resource
-{
+{    
     protected static ?string $model = Store::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-home';

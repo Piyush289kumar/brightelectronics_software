@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\StoreTargetResource\Pages;
+use App\Filament\Traits\HasRoleBasedAccess;
 use App\Models\Store;
 use App\Models\StoreTarget;
 use App\Services\TargetDistributor;
@@ -22,6 +23,18 @@ use Filament\Forms\Get;
 
 class StoreTargetResource extends Resource
 {
+    use HasRoleBasedAccess;
+
+    protected static function allowedRoles(): array
+    {
+        return [
+            'Administrator',
+            'Developer',
+            'Manager',
+            'Team Leader',
+            'Store Manager',
+        ];
+    }
     protected static ?string $model = StoreTarget::class;
     protected static ?string $navigationIcon = 'heroicon-o-flag';
     protected static ?string $label = 'Branch Targets';
