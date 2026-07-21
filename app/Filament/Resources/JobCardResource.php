@@ -383,7 +383,6 @@ class JobCardResource extends Resource
                                             ->dehydrated(true)
                                             ->reactive(),
 
-
                                         Grid::make()->schema([
 
                                             Forms\Components\TextInput::make('payment_reference_number')
@@ -465,7 +464,6 @@ class JobCardResource extends Resource
     /**
      * Centralized recalculation — reads from 'spare_parts', sets all totals
      */
-
     protected static function recalculateAll($set, $get): void
     {
 
