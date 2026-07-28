@@ -370,7 +370,7 @@ class ComplainResource extends Resource
         // Restrict for non-admin users
         if (
             $user &&
-            !$user->hasRole(['Administrator', 'Developer', 'admin']) &&
+            !$user->hasRole(['Administrator', 'Developer', 'admin', 'Team Leader', 'Team Lead']) &&
             $user->email !== 'vipprow@gmail.com'
         ) {
             $query->whereJsonContains('assigned_engineers', $user->id);
