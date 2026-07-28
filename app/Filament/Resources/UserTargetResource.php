@@ -144,6 +144,8 @@ class UserTargetResource extends Resource
                         'Administrator',
                         'Developer',
                         'admin',
+                        'Team Leader',
+                        'Team Lead'
                     ]) || auth()->user()->email === 'vipprow@gmail.com'),
             ])
             ->bulkActions([
@@ -172,7 +174,7 @@ class UserTargetResource extends Resource
 
         // 🔹 Admin / Developer / Super access → see ALL
         if (
-            $user->hasRole(['Administrator', 'Developer', 'admin']) ||
+            $user->hasRole(['Administrator', 'Developer', 'admin', 'Team Leader', 'Team Lead']) ||
             $user->email === 'vipprow@gmail.com'
         ) {
             return $query;

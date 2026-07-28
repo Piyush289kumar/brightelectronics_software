@@ -218,6 +218,7 @@ class StoreTargetResource extends Resource
                             'Developer',
                             'admin',
                             'Store Manager',
+                            'Team Leader', 'Team Lead'
                         ])
                     ),
                 Tables\Actions\DeleteAction::make(),
