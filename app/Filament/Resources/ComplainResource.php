@@ -255,7 +255,7 @@ class ComplainResource extends Resource
                         ->label('Assigned Engineers')
                         ->options(User::role(['Engineer', 'Machine Men'])->pluck('name', 'id')->toArray())
                         ->default(fn() => [Auth::id()])
-                        ->disabled(fn() => !auth()->user()->hasAnyRole(['Administrator', 'Store Manager', 'Team Lead']))
+                        ->disabled(fn() => !auth()->user()->hasAnyRole(['Administrator', 'Store Manager', 'Team Leader', 'Team Lead']))
                         ->dehydrated(true)
                         ->dehydrateStateUsing(
                             fn($state) =>
