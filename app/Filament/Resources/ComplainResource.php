@@ -83,7 +83,7 @@ class ComplainResource extends Resource
 
                         Forms\Components\TextInput::make('google_map_location')
                             ->label('Google Map Location')
-                            ->readOnly()
+//                            ->readOnly()
                             ->live()
                             ->required(
                                 fn(callable $get) =>
