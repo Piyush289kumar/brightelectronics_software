@@ -264,7 +264,7 @@ class SiteInventoryIssueResource extends Resource
                         ->required()
                         ->visible(
                             fn() =>
-                            auth()->user()->hasAnyRole(['Administrator', 'Store Manager', 'Team Lead'])
+                            auth()->user()->hasAnyRole(['Administrator', 'Store Manager', 'Team Leader', 'Team Lead'])
                         )
 
                 ]),
@@ -342,6 +342,15 @@ class SiteInventoryIssueResource extends Resource
             $query->where('store_id', $user->store_id);
         }
 
+           // Restrict for non-admin users
+        if (
+            $user &&
+            !$user->hasRole(['Administrator', 'Developer', 'admin', 'Team Leader', 'Team Lead']) &&
+            $user->email !== 'vipprow@gmail.com'
+        ) {
+            $query->whereJsonContains('assigned_engineers', $user->id);
+        }
+        
         return $query;
     }
 }
