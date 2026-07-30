@@ -486,7 +486,7 @@ class StoreInventoryInResource extends Resource
             $query->where('store_id', $user->store_id);
         }
 
-           // Restrict for non-admin users
+        // Restrict for non-admin users
         if (
             $user &&
             !$user->hasRole(['Administrator', 'Developer', 'admin', 'Team Leader', 'Team Lead']) &&
