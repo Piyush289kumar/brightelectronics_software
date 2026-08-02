@@ -13,6 +13,7 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
+use Filament\Tables\Columns\Summarizers\Sum;
 
 class LedgerResource extends Resource
 {
@@ -67,7 +68,6 @@ class LedgerResource extends Resource
                     ->required()
                     ->prefix('₹')
                     ->label('Amount'),
-
 
                 Forms\Components\Select::make('payment_mode')
                     ->label('Payment Mode')
@@ -183,11 +183,16 @@ class LedgerResource extends Resource
                     ->copyable()
                     ->searchable()
                     ->toggleable(),
-
                 Tables\Columns\TextColumn::make('amount')
+                    ->label('Amount')
                     ->money('INR')
                     ->sortable()
-                    ->alignEnd(),
+                    ->alignEnd()
+                    ->summarize(
+                        Sum::make()
+                            ->label('Total')
+                            ->money('INR')
+                    ),
 
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime('d M Y h:i A')
