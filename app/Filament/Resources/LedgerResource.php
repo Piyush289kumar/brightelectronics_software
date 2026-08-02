@@ -110,9 +110,10 @@ class LedgerResource extends Resource
                     'image/png',
                     'image/webp',
                 ])
-                ->maxSize(2048)
+                ->maxSize(10240) // 10 MB
                 ->required(fn(Forms\Get $get) => filled($get('payment_reference_number')))
                 ->validationMessages([
+                    'max' => 'Image size must not exceed 10 MB.',
                     'required' => 'Payment reference image is required when a reference number is entered.',
                 ])
                 ->columnSpanFull(),
