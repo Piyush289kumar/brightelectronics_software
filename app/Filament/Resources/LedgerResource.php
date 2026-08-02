@@ -11,6 +11,8 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Auth;
 
 class LedgerResource extends Resource
 {
@@ -193,6 +195,42 @@ class LedgerResource extends Resource
             ])
             ->defaultSort('created_at', 'desc')
             ->filters([
+                Tables\Filters\Filter::make('job_or_complain')
+                    ->label('Complaint / Job Card')
+                    ->form([
+                        Forms\Components\TextInput::make('search')
+                            ->label('Complaint ID or Job Card ID')
+                            ->placeholder('Enter Complaint ID or Job Card ID'),
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+
+                        if (blank($data['search'])) {
+                            return $query;
+                        }
+
+                        $search = trim($data['search']);
+
+                        return $query->where(function (Builder $query) use ($search) {
+
+                            // Search by Job Card ID
+                            $query->whereHas('jobCard', function (Builder $q) use ($search) {
+                                $q->where('job_id', 'like', "%{$search}%");
+                            });
+
+                            // OR Search by Complaint ID
+                            $query->orWhere(function (Builder $q) use ($search) {
+
+                                // Complaint may not have Job Card yet (Visit Charge)
+                                $q->where('narration', 'like', "%{$search}%");
+
+                                // Complaint already has Job Card
+                                $q->orWhereHas('jobCard.complain', function (Builder $cq) use ($search) {
+                                    $cq->where('complain_id', 'like', "%{$search}%");
+                                });
+                            });
+
+                        });
+                    }),
                 Tables\Filters\SelectFilter::make('store_id')
                     ->relationship('store', 'name')->label('Branch'),
                 Tables\Filters\SelectFilter::make('account_id')
@@ -211,6 +249,37 @@ class LedgerResource extends Resource
     public static function getRelations(): array
     {
         return [];
+    }
+
+    /**
+     * Restrict floors listing to manager's store.
+     */
+    public static function getEloquentQuery(): Builder
+    {
+        $query = parent::getEloquentQuery();
+        $user = Auth::user();
+
+        if ($user && $user->isStoreManager()) {
+            $query->where('store_id', $user->store_id);
+        }
+
+        if (
+            $user &&
+            !$user->hasAnyRole([
+                'Administrator',
+                'Developer',
+                'admin',
+                'Team Leader',
+                'Team Lead',
+            ]) &&
+            $user->email !== 'vipprow@gmail.com'
+        ) {
+            $query->whereHas('jobCard.complain', function ($q) use ($user) {
+                $q->whereJsonContains('assigned_engineers', $user->id);
+            });
+        }
+
+        return $query;
     }
 
     public static function getPages(): array

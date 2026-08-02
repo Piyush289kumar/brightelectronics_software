@@ -40,6 +40,16 @@ class Ledger extends Model
         return $this->belongsTo(JournalEntry::class);
     }
 
+    public function jobCard()
+    {
+        return $this->belongsTo(JobCard::class);
+    }
+
+    public function complain()
+    {
+        return $this->belongsTo(Complain::class);
+    }
+
     protected static function booted()
     {
         static::creating(function ($ledger) {
