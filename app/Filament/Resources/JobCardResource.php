@@ -58,11 +58,11 @@ class JobCardResource extends Resource
                                     'Out_for_delivery' => 'Out for Delivery',
                                     'Cancelled' => 'Cancelled',
                                 ];
-                                if ($user && $user->hasAnyRole(['Administrator', 'admin', 'Manager',  'Team Leader', 'Team Lead'])) {
+                                if ($user && $user->hasAnyRole(['Administrator', 'admin', 'Manager', 'Team Leader', 'Team Lead'])) {
                                     $options['Delivered'] = 'Delivered';
                                 }
                                 return $options;
-                            })                            
+                            })
                             ->default('Pending')
                             ->required(),
 
@@ -78,7 +78,7 @@ class JobCardResource extends Resource
                                 'Box' => 'Box',
                             ])
                             ->columns(7) // ✅ 1 row (7 items = 1 line)
-                            ->columnSpanFull()                            
+                            ->columnSpanFull()
                             ->dehydrated(true)
                     ]),
                 ])
@@ -102,7 +102,7 @@ class JobCardResource extends Resource
                                 fn($state, callable $set, callable $get) =>
                                 \App\Filament\Resources\JobCardResource::recalculateAll($set, $get)
                             )
-                            ->disabled(fn () => ! static::canEditFinancials()),
+                            ->disabled(fn() => !static::canEditFinancials()),
 
                         Forms\Components\TextInput::make('advance_amount')
                             ->numeric()
@@ -137,7 +137,7 @@ class JobCardResource extends Resource
                             ->afterStateUpdated(
                                 fn($state, callable $set, callable $get) =>
                                 \App\Filament\Resources\JobCardResource::recalculateAll($set, $get)
-                            )->disabled(fn () => ! static::canEditFinancials()),
+                            )->disabled(fn() => !static::canEditFinancials()),
                     ]),
 
                     Forms\Components\Section::make('Lead Information')
@@ -248,7 +248,7 @@ class JobCardResource extends Resource
                                         ),
 
                                 ])
-                                ->disabled(fn () => ! static::canEditFinancials())
+                                ->disabled(fn() => !static::canEditFinancials())
                                 ->columnSpanFull(),
 
                         ])
@@ -1192,7 +1192,43 @@ HTML;
             'edit' => Pages\EditJobCard::route('/{record}/edit'),
         ];
     }
-    
+
+
+
+    public static function getEloquentQuery(): Builder
+    {
+        $query = parent::getEloquentQuery();
+        $user = Auth::user();
+
+        // Store Manager -> only own store
+        if ($user && $user->isStoreManager()) {
+            $query->whereHas('complain', function ($q) use ($user) {
+                $q->where('store_id', $user->store_id);
+            });
+        }
+
+        // Admin / Developer / Manager / Team Lead -> all records
+        if (
+            $user &&
+            $user->hasAnyRole([
+                'Administrator',
+                'Developer',
+                'admin',
+                'Manager',
+                'Team Leader',
+                'Team Lead',
+            ])
+        ) {
+            return $query;
+        }
+
+        // Engineer / Machine Men -> only their own Job Cards
+        return $query->whereJsonContains(
+            'incentive_percentages',
+            ['user_id' => $user->id]
+        );
+    }
+
     protected static function canEditFinancials(): bool
     {
         return auth()->user()?->hasAnyRole([
