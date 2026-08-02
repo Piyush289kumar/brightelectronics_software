@@ -24,7 +24,13 @@ class AccountingStats extends BaseWidget
 
         return $user
             && (
-                $user->hasRole(['Administrator', 'Developer', 'admin'])
+                $user->hasRole([
+                    'Administrator',
+                    'Developer',
+                    'admin',
+                    'Team Leader',
+                    'Team Lead',
+                ])
             );
     }
 
