@@ -276,7 +276,12 @@ class SiteInventoryIssueResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('store.name')->label('Branch')->sortable()->searchable(),
-                Tables\Columns\TextColumn::make('job_card_id')->label('Job Card')->sortable()->searchable(),
+                Tables\Columns\TextColumn::make('jobCard.job_id')
+                    ->label('Job Card')
+                    ->description(fn($record) => $record->jobCard?->complain?->complain_id)
+                    ->sortable()
+                    ->searchable()
+                    ->placeholder('-'),
                 Tables\Columns\TextColumn::make('site.name')->label('Site')->sortable()->searchable(),
                 Tables\Columns\TextColumn::make('issuer.name')->label('Issued By')->sortable(),
 
@@ -342,7 +347,7 @@ class SiteInventoryIssueResource extends Resource
             $query->where('store_id', $user->store_id);
         }
 
-           // Restrict for non-admin users
+        // Restrict for non-admin users
         if (
             $user &&
             !$user->hasRole(['Administrator', 'Developer', 'admin', 'Team Leader', 'Team Lead']) &&
@@ -350,7 +355,7 @@ class SiteInventoryIssueResource extends Resource
         ) {
             $query->whereJsonContains('assigned_engineers', $user->id);
         }
-        
+
         return $query;
     }
 }
