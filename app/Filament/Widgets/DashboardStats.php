@@ -17,55 +17,42 @@ use Filament\Widgets\StatsOverviewWidget\Stat;
 use Illuminate\Support\Facades\Auth;
 class DashboardStats extends BaseWidget
 {
-
     public static function canView(): bool
     {
         $user = Auth::user();
-
         return $user
             && (
                 $user->hasRole(['Administrator', 'Developer', 'admin', 'Team Leader', 'Team Lead'])
             );
     }
-
-
     protected function getStats(): array
     {
         // ---------------- Purchases ----------------
         $purchaseRequisitionCount = PurchaseRequisition::where('status', 'pending')->count();
-
         $pendingPurchaseAmount = Invoice::where('document_type', 'purchase')
             ->whereIn('status', ['pending', 'draft'])
             ->sum('total_amount');
-
         // ---------------- Store Target (This Month) ----------------
         $year = now()->year;
         $month = now()->month;
-
         // If user belongs to a store
         $storeId = Auth::user()?->store_id;
-
         $storeTarget = StoreTarget::query()
             ->when($storeId, fn($q) => $q->where('store_id', $storeId))
             ->where('year', $year)
             ->where('month', $month)
             ->first();
-
         $targetAmount = $storeTarget?->amount ?? 0;
         $collectedAmount = $storeTarget?->collected_amount ?? 0;
-
         $percentage = $targetAmount > 0
             ? round(($collectedAmount / $targetAmount) * 100, 2)
             : 0;
-
         return [
-
             // // ---------------- Purchases ----------------
             // Stat::make('Purchase Requisitions', $purchaseRequisitionCount)
             //     ->icon('heroicon-o-clipboard-document')
             //     ->color('warning')
             //     ->description('Total pending purchase requests'),
-
             // // ---------------- Branch Target ----------------
             // Stat::make(
             //     'Branch Target (This Month)',
@@ -84,7 +71,6 @@ class DashboardStats extends BaseWidget
             //         ? "Achieved {$percentage}%"
             //         : 'No target set for this month'
             //     ),
-
             // // ---------------- Pending Purchase Amount ----------------
             // Stat::make(
             //     'Pending Purchase Amount',
@@ -94,6 +80,5 @@ class DashboardStats extends BaseWidget
             //     ->color('danger')
             //     ->description('Outstanding payable amount'),
         ];
-
     }
 }
