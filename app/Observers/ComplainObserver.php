@@ -110,7 +110,7 @@ class ComplainObserver
 
             $newNumber = str_pad($lastNumber + 1, 5, '0', STR_PAD_LEFT);
 
-            $jobId = $storeCode . $newNumber;            
+            $jobId = $storeCode . $newNumber;
 
             JobCard::create([
                 'complain_id' => $complain->id,
@@ -171,6 +171,7 @@ class ComplainObserver
             'transaction_type' => 'credit',
             'amount' => 200,
             'narration' => 'Visit Charge - ' . $complain->complain_id,
+            'complain_id' => $complain->id,
         ]);
     }
 }

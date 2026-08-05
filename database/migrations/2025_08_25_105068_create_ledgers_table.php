@@ -39,6 +39,8 @@ return new class extends Migration {
 
             // 🔗 Reference to journal entry
             $table->foreignId('journal_entry_id')->nullable()->constrained();
+            $table->foreignId('complain_id')->nullable()->constrained();
+            $table->foreignId('job_card_id')->nullable()->constrained();
 
             // 🔗 Polymorphic reference (invoice, payment, voucher, transfer, etc.)
             $table->nullableMorphs('ledgerable'); // allows NULL

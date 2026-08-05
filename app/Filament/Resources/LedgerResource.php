@@ -125,6 +125,16 @@ class LedgerResource extends Resource
     {
         return $table
             ->columns([
+
+                Tables\Columns\IconColumn::make('is_reconciled')
+                    ->label('Reconciled')
+                    ->boolean()
+                    ->trueIcon('heroicon-o-check-circle')
+                    ->falseIcon('heroicon-o-x-circle')
+                    ->trueColor('success')
+                    ->falseColor('danger')
+                    ->sortable(),
+
                 Tables\Columns\TextColumn::make('date')
                     ->date('d M Y')
                     ->sortable(),
@@ -237,6 +247,11 @@ class LedgerResource extends Resource
 
                         });
                     }),
+
+                Tables\Filters\TernaryFilter::make('is_reconciled')
+                    ->label('Reconciled')
+                    ->boolean()
+                    ->default(true),
                 Tables\Filters\SelectFilter::make('store_id')
                     ->relationship('store', 'name')->label('Branch'),
                 Tables\Filters\SelectFilter::make('account_id')
@@ -263,6 +278,7 @@ class LedgerResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         $query = parent::getEloquentQuery();
+
         $user = Auth::user();
 
         if ($user && $user->isStoreManager()) {
@@ -280,8 +296,17 @@ class LedgerResource extends Resource
             ]) &&
             $user->email !== 'vipprow@gmail.com'
         ) {
-            $query->whereHas('jobCard.complain', function ($q) use ($user) {
-                $q->whereJsonContains('assigned_engineers', $user->id);
+            $query->where(function ($q) use ($user) {
+
+                // Ledger linked directly to Complaint (Visit Charge)
+                $q->whereHas('complain', function ($complain) use ($user) {
+                    $complain->whereJsonContains('assigned_engineers', $user->id);
+                });
+
+                // Ledger linked to Job Card
+                $q->orWhereHas('jobCard.complain', function ($complain) use ($user) {
+                    $complain->whereJsonContains('assigned_engineers', $user->id);
+                });
             });
         }
 
