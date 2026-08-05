@@ -20,18 +20,15 @@ class AccountingStats extends BaseWidget
 
     public static function canView(): bool
     {
-        $user = Auth::user();
-
-        return $user
-            && (
-                $user->hasRole([
-                    'Administrator',
-                    'Developer',
-                    'admin',
-                    'Team Leader',
-                    'Team Lead',
-                ])
-            );
+        return auth()->user()?->hasAnyRole([
+            'Administrator',
+            'Developer',
+            'admin',
+            'Team Leader',
+            'Team Lead',
+            'Engineer',
+            'Machine Men',
+        ]) ?? false;
     }
 
     protected function getColumns(): int
@@ -56,7 +53,8 @@ class AccountingStats extends BaseWidget
             $complainQuery->whereJsonContains('assigned_engineers', $user->id);
         }
 
-        $complainCount = (clone $complainQuery)->where('first_action_code', 'NEW')
+        $complainCount = (clone $complainQuery)
+            ->whereIn('first_action_code', ['NEW', 'Visit'])
             ->count();
 
         $cncComplaints = (clone $complainQuery)
@@ -135,7 +133,7 @@ class AccountingStats extends BaseWidget
         return [
 
             // ---------------- Complaints ----------------
-            Stat::make('Total Complaints (New)', $complainCount)
+            Stat::make('Total Complaints', $complainCount)
                 ->icon('heroicon-o-chat-bubble-left-right')
                 ->color('info')
                 ->description('Assigned complaints'),
@@ -216,5 +214,10 @@ class AccountingStats extends BaseWidget
                 ->color('danger')
                 ->description('Outstanding payable amount'),
         ];
+
+        // Engineer & Machine Men should only see Complaint + Job Card stats
+        if ($user->hasAnyRole(['Engineer', 'Machine Men'])) {
+            return $stats;
+        }
     }
 }
