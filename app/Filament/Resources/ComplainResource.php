@@ -83,7 +83,7 @@ class ComplainResource extends Resource
 
                         Forms\Components\TextInput::make('google_map_location')
                             ->label('Google Map Location')
-//                            ->readOnly()
+                            //                            ->readOnly()
                             ->live()
                             ->required(
                                 fn(callable $get) =>
@@ -331,6 +331,31 @@ class ComplainResource extends Resource
                             ? $record->google_map_location
                             : 'https://' . $record->google_map_location
                         )
+                        ->openUrlInNewTab(),
+
+                    Tables\Actions\Action::make('call')
+                        ->label('Call')
+                        ->icon('heroicon-o-phone')
+                        ->color('success')
+                        ->visible(fn($record) => filled($record->mobile))
+                        ->url(fn($record) => 'tel:' . preg_replace('/\D/', '', $record->mobile))
+                        ->openUrlInNewTab(false),
+
+                    Tables\Actions\Action::make('whatsapp')
+                        ->label('WhatsApp')
+                        ->icon('heroicon-o-chat-bubble-left-right')
+                        ->color('success')
+                        ->visible(fn($record) => filled($record->mobile))
+                        ->url(function ($record) {
+                            $mobile = preg_replace('/\D/', '', $record->mobile);
+
+                            // India
+                            if (strlen($mobile) === 10) {
+                                $mobile = '91' . $mobile;
+                            }
+
+                            return "https://wa.me/{$mobile}";
+                        })
                         ->openUrlInNewTab(),
                     Tables\Actions\EditAction::make(),
                     Tables\Actions\DeleteAction::make(),

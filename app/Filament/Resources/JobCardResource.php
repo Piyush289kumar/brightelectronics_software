@@ -842,6 +842,33 @@ class JobCardResource extends Resource
             ->striped()
             ->actions([
                 Tables\Actions\ActionGroup::make([
+                    Tables\Actions\Action::make('call')
+                        ->label('Call')
+                        ->icon('heroicon-o-phone')
+                        ->color('success')
+                        ->visible(fn($record) => filled($record->complain?->mobile))
+                        ->url(fn($record) => 'tel:' . preg_replace('/\D/', '', $record->complain->mobile))
+                        ->openUrlInNewTab(false),
+
+                    Tables\Actions\Action::make('whatsapp')
+                        ->label('WhatsApp')
+                        ->icon('heroicon-o-chat-bubble-left-right')
+                        ->color('success')
+                        ->visible(fn($record) => filled($record->complain?->mobile))
+                        ->url(function ($record) {
+                            $mobile = preg_replace('/\D/', '', $record->complain->mobile);
+
+                            if (strlen($mobile) === 10) {
+                                $mobile = '91' . $mobile;
+                            }
+
+                            $message = urlencode(
+                                "Hello {$record->complain->name}, regarding your Job Card {$record->job_id}."
+                            );
+
+                            return "https://wa.me/{$mobile}?text={$message}";
+                        })
+                        ->openUrlInNewTab(),
                     Tables\Actions\ViewAction::make(),
                     Tables\Actions\Action::make('toggleVerify')
                         ->label(fn($record) => $record->job_verified_by_admin ? 'Unverify' : 'Verify')
