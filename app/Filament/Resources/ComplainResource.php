@@ -83,8 +83,30 @@ class ComplainResource extends Resource
 
                         Forms\Components\TextInput::make('google_map_location')
                             ->label('Google Map Location')
-                            //                            ->readOnly()
                             ->live()
+                            ->afterStateUpdated(function ($state, callable $set, $livewire) {
+
+                                if (blank($state)) {
+                                    return;
+                                }
+
+                                $url = urldecode($state);
+
+                                if (
+                                    preg_match('/q=(-?\d+\.\d+),(-?\d+\.\d+)/', $url, $match)
+                                    || preg_match('/ll=(-?\d+\.\d+),(-?\d+\.\d+)/', $url, $match)
+                                    || preg_match('/@(-?\d+\.\d+),(-?\d+\.\d+)/', $url, $match)
+                                ) {
+
+                                    $lat = $match[1];
+                                    $lng = $match[2];
+
+                                    $set('latitude', $lat);
+                                    $set('longitude', $lng);
+
+                                    $livewire->dispatch('complain-map-updated', lat: $lat, lng: $lng);
+                                }
+                            })
                             ->required(
                                 fn(callable $get) =>
                                 in_array($get('first_action_code'), ['PKD', 'Visit'])
