@@ -297,8 +297,6 @@ class LedgerResource extends Resource
                     ->label('Reconciled')
                     ->boolean()
                     ->default(true),
-                Tables\Filters\SelectFilter::make('store_id')
-                    ->relationship('store', 'name')->label('Branch'),
                 Tables\Filters\SelectFilter::make('account_id')
                     ->relationship('account', 'account_name')->label('Account')
             ])
