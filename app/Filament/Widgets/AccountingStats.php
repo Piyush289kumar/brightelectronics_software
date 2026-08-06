@@ -10,6 +10,7 @@ use App\Models\Ledger;
 use App\Models\Product;
 use App\Models\PurchaseRequisition;
 use App\Models\StoreTarget;
+use App\Models\UserTarget;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 use Illuminate\Support\Facades\Auth;
@@ -115,16 +116,60 @@ class AccountingStats extends BaseWidget
         $month = now()->month;
 
         // If user belongs to a store
-        $storeId = Auth::user()?->store_id;
+        $isSuperAdmin = $user->hasAnyRole([
+            'Administrator',
+            'Developer',
+            'admin',
+            'Team Leader',
+            'Team Lead',
+        ]);
 
-        $storeTarget = StoreTarget::query()
-            ->when($storeId, fn($q) => $q->where('store_id', $storeId))
-            ->where('year', $year)
-            ->where('month', $month)
-            ->first();
+        $isStoreManager = $user->hasAnyRole([
+            'Manager',
+            'Store Manager',
+        ]);
 
-        $targetAmount = $storeTarget?->amount ?? 0;
-        $collectedAmount = $storeTarget?->collected_amount ?? 0;
+        if ($isSuperAdmin) {
+
+            // All stores total
+            $targetAmount = StoreTarget::where('year', $year)
+                ->where('month', $month)
+                ->sum('amount');
+
+            $collectedAmount = StoreTarget::where('year', $year)
+                ->where('month', $month)
+                ->sum('collected_amount');
+
+            $targetTitle = 'Company Target (This Month)';
+
+        } elseif ($isStoreManager) {
+
+            // Current store only
+            $storeTarget = StoreTarget::where('store_id', $user->store_id)
+                ->where('year', $year)
+                ->where('month', $month)
+                ->first();
+
+            $targetAmount = $storeTarget?->amount ?? 0;
+            $collectedAmount = $storeTarget?->collected_amount ?? 0;
+
+            $targetTitle = 'Branch Target (This Month)';
+
+        } else {
+
+            // Engineer / Machine Men
+            $userTarget = UserTarget::where('user_id', $user->id)
+                ->whereHas('storeTarget', function ($q) use ($year, $month) {
+                    $q->where('year', $year)
+                        ->where('month', $month);
+                })
+                ->first();
+
+            $targetAmount = $userTarget?->assigned_amount ?? 0;
+            $collectedAmount = $userTarget?->achieved_amount ?? 0;
+
+            $targetTitle = 'My Target (This Month)';
+        }
 
         $percentage = $targetAmount > 0
             ? round(($collectedAmount / $targetAmount) * 100, 2)
@@ -188,22 +233,13 @@ class AccountingStats extends BaseWidget
 
             // ---------------- Branch Target ----------------
             Stat::make(
-                'Branch Target (This Month)',
-                $storeTarget
-                ? '₹' . number_format($collectedAmount, 2) . ' / ₹' . number_format($targetAmount, 2)
-                : '-'
+                $targetTitle,
+                '₹' . number_format($collectedAmount, 2) .
+                ' / ₹' . number_format($targetAmount, 2)
             )
                 ->icon('heroicon-o-flag')
-                ->color(
-                    $storeTarget && $collectedAmount >= $targetAmount
-                    ? 'success'
-                    : 'warning'
-                )
-                ->description(
-                    $storeTarget
-                    ? "Achieved {$percentage}%"
-                    : 'No target set for this month'
-                ),
+                ->color($percentage >= 100 ? 'success' : 'warning')
+                ->description("Achieved {$percentage}%"),
 
             // ---------------- Pending Purchase Amount ----------------
             Stat::make(
