@@ -380,19 +380,24 @@ class SiteInventoryIssueResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         $query = parent::getEloquentQuery();
+
         $user = Auth::user();
 
-        if ($user && $user->isStoreManager()) {
-            $query->where('store_id', $user->store_id);
-        }
-
-        // Restrict for non-admin users
+        // Admins can see everything
         if (
             $user &&
-            !$user->hasRole(['Administrator', 'Developer', 'admin', 'Team Leader', 'Team Lead']) &&
-            $user->email !== 'vipprow@gmail.com'
+            $user->hasAnyRole([
+                'Administrator',
+                'Developer',
+                'admin',
+            ])
         ) {
-            $query->whereJsonContains('assigned_engineers', $user->id);
+            return $query;
+        }
+
+        // Everyone else sees only their own branch
+        if ($user && $user->store_id) {
+            $query->where('store_id', $user->store_id);
         }
 
         return $query;

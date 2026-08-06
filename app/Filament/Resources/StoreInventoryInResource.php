@@ -46,13 +46,40 @@ class StoreInventoryInResource extends Resource
                 Section::make('Important Information')
                     ->schema([
                         Grid::make(3)->schema([
+
+
                             Select::make('store_id')
                                 ->label('Branch')
-                                ->options(Store::pluck('name', 'id'))
-                                ->default(fn() => Auth::user()?->store_id ?? Store::first()?->id)
+                                ->relationship(
+                                    name: 'store',
+                                    titleAttribute: 'name',
+                                    modifyQueryUsing: function ($query) {
+
+                                        $user = Auth::user();
+
+                                        if (
+                                            !$user->hasAnyRole([
+                                                'Administrator',
+                                                'Developer',
+                                                'admin',
+                                            ])
+                                        ) {
+                                            $query->where('id', $user->store_id);
+                                        }
+
+                                        return $query;
+                                    }
+                                )
                                 ->required()
-                                ->disabled(fn() => Auth::user()?->isStoreManager() ?? false)
-                                ->dehydrated(fn($state, $context) => true), // ensure it’s sent even if disabled
+                                ->searchable()
+                                ->preload()
+                                ->default(fn() => Auth::user()?->store_id)
+                                ->disabled(fn() => !Auth::user()?->hasAnyRole([
+                                    'Administrator',
+                                    'Developer',
+                                    'admin',
+                                ]))
+                                ->dehydrated(),
 
                             Select::make('received_by')
                                 ->label('Received By')
@@ -208,16 +235,21 @@ class StoreInventoryInResource extends Resource
 
                                 Select::make('purchase_order_id')
                                     ->label('Load from Purchase Order')
-                                    ->options(
-                                        Invoice::where('document_type', 'purchase_order')
+                                    ->options(function (callable $get) {
+
+                                        $storeId = $get('store_id');
+
+                                        return Invoice::query()
+                                            ->where('document_type', 'purchase_order')
+                                            ->where('billable_id', $storeId)
                                             ->whereNotIn(
                                                 'id',
                                                 StoreInventoryIn::whereNotNull('purchase_order_id')
                                                     ->pluck('purchase_order_id')
                                             )
                                             ->latest('id')
-                                            ->pluck('number', 'id')
-                                    )
+                                            ->pluck('number', 'id');
+                                    })
                                     ->searchable()
                                     ->live()
                                     ->afterStateUpdated(function ($state, callable $set) {
@@ -248,12 +280,17 @@ class StoreInventoryInResource extends Resource
 
                                 Select::make('transfer_order_id')
                                     ->label('Load from Transfer Order')
-                                    ->options(
-                                        Invoice::where('document_type', 'transfer_order')
+                                    ->options(function (callable $get) {
+
+                                        $storeId = $get('store_id');
+
+                                        return Invoice::query()
+                                            ->where('document_type', 'transfer_order')
                                             ->where('status', 'pending')
+                                            ->where('billable_id', $storeId)
                                             ->latest('id')
-                                            ->pluck('number', 'id')
-                                    )
+                                            ->pluck('number', 'id');
+                                    })
                                     ->searchable()
                                     ->live()
                                     ->afterStateUpdated(function ($state, callable $set) {
@@ -424,7 +461,12 @@ class StoreInventoryInResource extends Resource
             ->filters([
                 Tables\Filters\SelectFilter::make('store_id')
                     ->label('Branch')
-                    ->relationship('store', 'name'),
+                    ->relationship('store', 'name')
+                    ->visible(fn() => Auth::user()?->hasAnyRole([
+                        'Administrator',
+                        'Developer',
+                        'admin',
+                    ])),
 
                 Tables\Filters\SelectFilter::make('payment_status')
                     ->label('Payment Status')
@@ -480,19 +522,24 @@ class StoreInventoryInResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         $query = parent::getEloquentQuery();
+
         $user = Auth::user();
 
-        if ($user && $user->isStoreManager()) {
-            $query->where('store_id', $user->store_id);
-        }
-
-        // Restrict for non-admin users
+        // Admins can see everything
         if (
             $user &&
-            !$user->hasRole(['Administrator', 'Developer', 'admin', 'Team Leader', 'Team Lead']) &&
-            $user->email !== 'vipprow@gmail.com'
+            $user->hasAnyRole([
+                'Administrator',
+                'Developer',
+                'admin',
+            ])
         ) {
-            $query->whereJsonContains('assigned_engineers', $user->id);
+            return $query;
+        }
+
+        // Everyone else sees only their own branch
+        if ($user && $user->store_id) {
+            $query->where('store_id', $user->store_id);
         }
 
         return $query;
