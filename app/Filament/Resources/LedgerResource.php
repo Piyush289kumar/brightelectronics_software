@@ -303,7 +303,41 @@ class LedgerResource extends Resource
                     ->relationship('account', 'account_name')->label('Account')
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
+                Tables\Actions\EditAction::make()
+                    ->hidden(function () {
+
+                        $user = Auth::user();
+
+                        // Engineers & Machine Men cannot see Edit button
+                        return !$user->hasAnyRole([
+                            'Administrator',
+                            'Developer',
+                            'admin',
+                            'Manager',
+                            'Store Manager',
+                            'Team Leader',
+                            'Team Lead',
+                        ]);
+                    })
+                    ->disabled(function ($record) {
+
+                        $user = Auth::user();
+
+                        // Admins can always edit
+                        if (
+                            $user->hasAnyRole([
+                                'Administrator',
+                                'Developer',
+                                'admin',
+                            ])
+                        ) {
+                            return false;
+                        }
+
+                        // Manager / Team Lead cannot edit after reconciliation
+                        return $record->is_reconciled;
+                    }),
+
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
