@@ -304,24 +304,9 @@ class LedgerResource extends Resource
             ])
             ->actions([
                 Tables\Actions\EditAction::make()
-                    ->hidden(function () {
-
-                        $user = Auth::user();
-
-                        // Engineers & Machine Men cannot see Edit button
-                        return !$user->hasAnyRole([
-                            'Administrator',
-                            'Developer',
-                            'admin',
-                            'Manager',
-                            'Store Manager',
-                            'Team Leader',
-                            'Team Lead',
-                        ]);
-                    })
                     ->disabled(function ($record) {
 
-                        $user = Auth::user();
+                        $user = auth()->user();
 
                         // Admins can always edit
                         if (
@@ -334,10 +319,9 @@ class LedgerResource extends Resource
                             return false;
                         }
 
-                        // Manager / Team Lead cannot edit after reconciliation
+                        // Others cannot edit after reconciliation
                         return $record->is_reconciled;
                     }),
-
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
