@@ -53,7 +53,6 @@ class JobCardObserver
         // Delivery Entry
         // ===============================
         if (
-            $jobCard->status === 'Delivered' &&
             $jobCard->on_delivery_amount > 0
         ) {
 
