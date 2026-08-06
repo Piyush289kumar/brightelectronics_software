@@ -402,28 +402,38 @@ class ComplainResource extends Resource
     }
     public static function getEloquentQuery(): Builder
     {
-        $query = parent::getEloquentQuery();
-
-        // Hide PKD records
-        $query->where('first_action_code', '!=', 'PKD');
+        $query = parent::getEloquentQuery()
+            ->where('first_action_code', '!=', 'PKD');
 
         $user = Auth::user();
 
-        // Store Manager restriction
-        if ($user && $user->hasRole('Store Manager')) {
-            $query->where('store_id', $user->store_id);
-        }
-
-        // Restrict for non-admin users
+        // Administrator / Developer -> All branches
         if (
             $user &&
-            !$user->hasRole(['Administrator', 'Developer', 'admin', 'Team Leader', 'Team Lead']) &&
-            $user->email !== 'vipprow@gmail.com'
+            $user->hasAnyRole([
+                'Administrator',
+                'Developer',
+                'admin',
+            ])
         ) {
-            $query->whereJsonContains('assigned_engineers', $user->id);
+            return $query;
         }
 
-        return $query;
+        // Manager / Store Manager / Team Leader -> Only own store
+        if (
+            $user &&
+            $user->hasAnyRole([
+                'Manager',
+                'Store Manager',
+                'Team Leader',
+                'Team Lead',
+            ])
+        ) {
+            return $query->where('store_id', $user->store_id);
+        }
+
+        // Engineer / Machine Men -> Only assigned complaints
+        return $query->whereJsonContains('assigned_engineers', $user->id);
     }
 
 }
