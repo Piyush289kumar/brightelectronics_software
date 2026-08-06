@@ -65,7 +65,7 @@ class SiteInventoryIssueResource extends Resource
                             'Developer',
                             'admin',
                         ]))
-                        ->dehydrated(),
+                        ->dehydrated(true),
 
 
                     ToggleButtons::make('issue_source')

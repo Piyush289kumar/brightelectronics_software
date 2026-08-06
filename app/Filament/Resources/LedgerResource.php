@@ -44,13 +44,38 @@ class LedgerResource extends Resource
                     ->default(now())
                     ->label('Transaction Date'),
 
+                Select::make('store_id')
+                    ->label('Branch')
+                    ->relationship(
+                        name: 'store',
+                        titleAttribute: 'name',
+                        modifyQueryUsing: function ($query) {
 
-                Forms\Components\Select::make('store_id')
-                    ->relationship('store', 'name') // ✅ Fix here
-                    // ->searchable()
-                    ->preload()
+                            $user = Auth::user();
+
+                            if (
+                                !$user->hasAnyRole([
+                                    'Administrator',
+                                    'Developer',
+                                    'admin',
+                                ])
+                            ) {
+                                $query->where('id', $user->store_id);
+                            }
+
+                            return $query;
+                        }
+                    )
                     ->required()
-                    ->label('Branch'),
+                    ->searchable()
+                    ->preload()
+                    ->default(fn() => Auth::user()?->store_id)
+                    ->disabled(fn() => !Auth::user()?->hasAnyRole([
+                        'Administrator',
+                        'Developer',
+                        'admin',
+                    ]))
+                    ->dehydrated(true),
 
                 Forms\Components\Select::make('account_id')
                     ->relationship('account', 'account_name') // ✅ Fix here
@@ -61,7 +86,7 @@ class LedgerResource extends Resource
             ]),
 
 
-            Grid::make(3)->schema([
+            Grid::make(4)->schema([
 
                 Forms\Components\TextInput::make('amount')
                     ->numeric()
@@ -88,6 +113,25 @@ class LedgerResource extends Resource
                     ->label('Reference Number')
                     ->placeholder('UTR / UPI / Cheque No.')
                     ->visible(fn(Forms\Get $get) => $get('payment_mode') !== 'Cash'),
+
+                Forms\Components\Toggle::make('is_reconciled')
+                    ->label('Payment Received')
+                    ->helperText('Turn ON after payment has been verified.')
+                    ->inline(false)
+                    ->default(false)
+                    ->onColor('success')
+                    ->offColor('danger')
+                    ->onIcon('heroicon-o-check-circle')
+                    ->offIcon('heroicon-o-x-circle')
+                    ->visible(fn() => auth()->user()->hasAnyRole([
+                        'Administrator',
+                        'Developer',
+                        'admin',
+                        'Manager',
+                        'Store Manager',
+                        'Team Leader',
+                        'Team Lead',
+                    ]))
             ]),
 
             Forms\Components\TextInput::make('narration')
