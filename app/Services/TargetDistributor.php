@@ -127,6 +127,36 @@ class TargetDistributor
             }
 
             // =============================
+            // Manager & Team Lead Target
+            // =============================
+            $leaders = $store->users()
+                ->whereHas('roles', function ($q) {
+                    $q->whereIn('name', [
+                        'Manager',
+                        'Store Manager',
+                        'Team Lead',
+                        'Team Leader',
+                    ]);
+                })
+                ->get();
+
+            foreach ($leaders as $leader) {
+
+                UserTarget::updateOrCreate(
+                    [
+                        'store_target_id' => $storeTarget->id,
+                        'user_id' => $leader->id,
+                    ],
+                    [
+                        // They can see the whole branch target
+                        'assigned_amount' => $totalAmount,
+                        'remaining_amount' => $totalAmount,
+                        'achieved_amount' => 0,
+                    ]
+                );
+            }
+
+            // =============================
             // ✅ MARK AS DISTRIBUTED
             // =============================
             $storeTarget->update(['distributed' => true]);
