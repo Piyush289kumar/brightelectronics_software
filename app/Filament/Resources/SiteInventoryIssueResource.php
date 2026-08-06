@@ -33,15 +33,40 @@ class SiteInventoryIssueResource extends Resource
             ->schema([
                 // Store + Site + Issued By + Notes
                 Grid::make(3)->schema([
+
                     Select::make('store_id')
                         ->label('Branch')
-                        ->relationship('store', 'name')
+                        ->relationship(
+                            name: 'store',
+                            titleAttribute: 'name',
+                            modifyQueryUsing: function ($query) {
+
+                                $user = Auth::user();
+
+                                if (
+                                    !$user->hasAnyRole([
+                                        'Administrator',
+                                        'Developer',
+                                        'admin',
+                                    ])
+                                ) {
+                                    $query->where('id', $user->store_id);
+                                }
+
+                                return $query;
+                            }
+                        )
                         ->required()
                         ->searchable()
                         ->preload()
-                        ->default(fn() => Auth::user()?->isStoreManager() ? Auth::user()->store_id : null)
-                        ->disabled(fn() => Auth::user()?->isStoreManager())
-                        ->dehydrated(), // <-- ensures value is saved even when disabled
+                        ->default(fn() => Auth::user()?->store_id)
+                        ->disabled(fn() => !Auth::user()?->hasAnyRole([
+                            'Administrator',
+                            'Developer',
+                            'admin',
+                        ]))
+                        ->dehydrated(),
+
 
                     ToggleButtons::make('issue_source')
                         ->label('Issue For')
@@ -67,12 +92,26 @@ class SiteInventoryIssueResource extends Resource
                         ->relationship(
                             name: 'jobCard',
                             titleAttribute: 'job_id',
-                            modifyQueryUsing: fn($query) => $query->orderBy('id', 'desc')
+                            modifyQueryUsing: function ($query, callable $get) {
+
+                                $storeId = $get('store_id');
+
+                                $query->orderByDesc('id');
+
+                                if ($storeId) {
+                                    $query->whereHas('complain', function ($q) use ($storeId) {
+                                        $q->where('store_id', $storeId);
+                                    });
+                                }
+
+                                return $query;
+                            }
                         )
                         ->required(fn($get) => $get('issue_source') === 'job_card')
                         ->visible(fn($get) => $get('issue_source') === 'job_card')
                         ->searchable()
-                        ->preload(),
+                        ->preload()
+                        ->live(),
 
                     Select::make('transfer_order_id')
                         ->label('Transfer Order')
