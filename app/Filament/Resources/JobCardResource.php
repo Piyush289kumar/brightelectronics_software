@@ -1234,19 +1234,31 @@ HTML;
             });
         }
 
-        // Admin / Developer / Manager / Team Lead -> all records
+        // Administrator & Developer -> All stores
         if (
             $user &&
             $user->hasAnyRole([
                 'Administrator',
                 'Developer',
                 'admin',
+            ])
+        ) {
+            return $query;
+        }
+
+        // Manager / Store Manager / Team Leader -> Only own store
+        if (
+            $user &&
+            $user->hasAnyRole([
                 'Manager',
+                'Store Manager',
                 'Team Leader',
                 'Team Lead',
             ])
         ) {
-            return $query;
+            return $query->whereHas('complain', function ($q) use ($user) {
+                $q->where('store_id', $user->store_id);
+            });
         }
 
         // Engineer / Machine Men -> only their own Job Cards
