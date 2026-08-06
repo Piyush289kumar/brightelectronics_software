@@ -1225,18 +1225,11 @@ HTML;
     public static function getEloquentQuery(): Builder
     {
         $query = parent::getEloquentQuery();
+
         $user = Auth::user();
 
-        // Store Manager -> only own store
-        if ($user && $user->isStoreManager()) {
-            $query->whereHas('complain', function ($q) use ($user) {
-                $q->where('store_id', $user->store_id);
-            });
-        }
-
-        // Administrator & Developer -> All stores
+        // Admin
         if (
-            $user &&
             $user->hasAnyRole([
                 'Administrator',
                 'Developer',
@@ -1246,9 +1239,8 @@ HTML;
             return $query;
         }
 
-        // Manager / Store Manager / Team Leader -> Only own store
+        // Manager / Store Manager / Team Leader
         if (
-            $user &&
             $user->hasAnyRole([
                 'Manager',
                 'Store Manager',
@@ -1261,11 +1253,19 @@ HTML;
             });
         }
 
-        // Engineer / Machine Men -> only their own Job Cards
-        return $query->whereJsonContains(
-            'incentive_percentages',
-            ['user_id' => $user->id]
-        );
+        // Engineer / Machine Men
+        if (
+            $user->hasAnyRole([
+                'Engineer',
+                'Machine Men',
+            ])
+        ) {
+            return $query->whereHas('complain', function ($q) use ($user) {
+                $q->whereJsonContains('assigned_engineers', $user->id);
+            });
+        }
+
+        return $query;
     }
 
     protected static function canEditFinancials(): bool
