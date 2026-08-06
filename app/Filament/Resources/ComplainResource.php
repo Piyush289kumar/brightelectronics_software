@@ -37,7 +37,7 @@ class ComplainResource extends Resource
                             ->label('Branch')
                             ->default(fn() => Auth::user()?->store_id)
                             ->disabled(fn() => !Auth::user()?->hasRole(['Administrator', 'Developer', 'Team Leader', 'Store Manager']))
-                            ->dehydrated(),
+                            ->dehydrated(true),
 
                         Forms\Components\TextInput::make('complain_id')
                             ->label('Complain ID')
