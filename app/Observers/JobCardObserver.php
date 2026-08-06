@@ -52,9 +52,7 @@ class JobCardObserver
         // ===============================
         // Delivery Entry
         // ===============================
-        if (
-            $jobCard->on_delivery_amount > 0
-        ) {
+        if ($jobCard->on_delivery_amount > 0) {
 
             Ledger::updateOrCreate(
                 [
