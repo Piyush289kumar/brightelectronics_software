@@ -44,7 +44,8 @@ class LedgerResource extends Resource
                     ->default(now())
                     ->label('Transaction Date'),
 
-                Select::make('store_id')
+
+                Forms\Components\Select::make('store_id')
                     ->label('Branch')
                     ->relationship(
                         name: 'store',
