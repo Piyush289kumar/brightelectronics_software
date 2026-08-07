@@ -297,7 +297,7 @@ class LedgerResource extends Resource
                     ->label('Reconciled')
                     ->boolean()
                     ->default(true),
-                    
+
                 Tables\Filters\SelectFilter::make('account_id')
                     ->relationship('account', 'account_name')->label('Account')
             ])
@@ -317,7 +317,6 @@ class LedgerResource extends Resource
                         ) {
                             return false;
                         }
-
                         // Others cannot edit after reconciliation
                         return $record->is_reconciled;
                     }),
@@ -355,8 +354,7 @@ class LedgerResource extends Resource
                 'admin',
                 'Team Leader',
                 'Team Lead',
-            ]) &&
-            $user->email !== 'vipprow@gmail.com'
+            ])
         ) {
             $query->where(function ($q) use ($user) {
 
