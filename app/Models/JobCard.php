@@ -162,5 +162,28 @@ class JobCard extends Model
         $this->lead_incentive_amount = $leadAmount;
         $this->incentive_amount = $totalEngineerAmount;
         $this->bright_electronics_profit = $companyProfit;
+    }    
+
+    // WHO CAN DELIVER JOB CARD
+    public function canBeDelivered(): bool
+    {
+        $complainId = $this->complain_id;
+
+        $ledgers = Ledger::query()
+            ->where(function ($query) use ($complainId) {
+                $query->where('job_card_id', $this->id)
+                    ->orWhere('complain_id', $complainId);
+            })
+            ->get();
+
+        // No ledger = cannot deliver
+        if ($ledgers->isEmpty()) {
+            return false;
+        }
+
+        // Every linked ledger must be reconciled
+        return $ledgers->every(
+            fn($ledger) => (bool) $ledger->is_reconciled === true
+        );
     }
 }

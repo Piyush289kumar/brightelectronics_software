@@ -19,13 +19,16 @@ class Ledger extends Model
         'payment_mode',
         'amount',
         'balance',
-        'journal_entry_id',        
+        'journal_entry_id',
         'complain_id',
         'job_card_id',
         'reference',
-        'narration',    
+        'narration',
         'payment_reference_image_path',
         'is_reconciled'
+    ];
+    protected $casts = [
+        'is_reconciled' => 'boolean',
     ];
 
     public function account()

@@ -49,8 +49,10 @@ class JobCardResource extends Resource
 
                         Forms\Components\Select::make('status')
                             ->label('Status')
-                            ->options(function () {
+                            ->options(function ($record) {
+
                                 $user = auth()->user();
+
                                 $options = [
                                     'Pending' => 'Pending',
                                     'Complete' => 'Complete',
@@ -58,13 +60,50 @@ class JobCardResource extends Resource
                                     'Out_for_delivery' => 'Out for Delivery',
                                     'Cancelled' => 'Cancelled',
                                 ];
-                                if ($user && $user->hasAnyRole(['Administrator', 'admin', 'Manager', 'Team Leader', 'Team Lead'])) {
+
+                                // Only management users can deliver
+                                $canDeliverRole = $user?->hasAnyRole([
+                                    'Administrator',
+                                    'Developer',
+                                    'admin',
+                                    'Manager',
+                                    'Store Manager',
+                                    'Team Leader',
+                                    'Team Lead',
+                                ]);
+
+                                if (!$canDeliverRole) {
+                                    return $options;
+                                }
+
+                                /*
+                                |--------------------------------------------------------------------------
+                                | Delivered is allowed only when:
+                                | 1. Job Card has linked ledger(s)
+                                | 2. Complain has linked ledger(s)
+                                | 3. ALL linked ledgers are reconciled
+                                |--------------------------------------------------------------------------
+                                */
+
+                                if ($record && $record->canBeDelivered()) {
                                     $options['Delivered'] = 'Delivered';
                                 }
+
+                                /*
+                                |--------------------------------------------------------------------------
+                                | Keep Delivered visible for an already delivered Job Card
+                                |--------------------------------------------------------------------------
+                                */
+
+                                if ($record?->status === 'Delivered') {
+                                    $options['Delivered'] = 'Delivered';
+                                }
+
                                 return $options;
                             })
                             ->default('Pending')
-                            ->required(),
+                            ->required()
+                            ->live(),
 
                         Forms\Components\CheckboxList::make('check_list')
                             ->label('Accessories Checklist')
