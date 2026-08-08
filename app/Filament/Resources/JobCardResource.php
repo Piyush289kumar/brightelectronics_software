@@ -410,7 +410,22 @@ class JobCardResource extends Resource
                                                 ->required(fn(Forms\Get $get) => filled($get('payment_reference_number')))
                                                 ->validationMessages([
                                                     'required' => 'Payment reference image is required when a reference number is entered.',
-                                                ])
+                                                ]),
+
+                                            Forms\Components\Toggle::make('job_verified_by_admin')
+                                                ->label('Verified by Admin')
+                                                ->helperText('Only Admins can verify the job card. This is a read-only field for other users.')
+                                                ->inline(false)
+                                                ->default(false)
+                                                ->onColor('success')
+                                                ->offColor('danger')
+                                                ->onIcon('heroicon-o-check-circle')
+                                                ->offIcon('heroicon-o-x-circle')
+                                                ->visible(fn() => auth()->user()->hasAnyRole([
+                                                    'Administrator',
+                                                    'Developer',
+                                                    'admin',
+                                                ]))
                                         ])
                                     ]),
 
@@ -1052,8 +1067,41 @@ HTML;
                                 } else { window.open("{$fullUrl}", "_blank"); }
                             JS);
                         }),
-                    Tables\Actions\EditAction::make(),
-                    Tables\Actions\DeleteAction::make(),
+
+
+                    Tables\Actions\EditAction::make()
+                        ->disabled(function ($record) {
+                            $user = auth()->user();
+                            // Admins can always edit
+                            if (
+                                $user->hasAnyRole([
+                                    'Administrator',
+                                    'Developer',
+                                    'admin',
+                                ])
+                            ) {
+                                return false;
+                            }
+                            // Others cannot edit after reconciliation
+                            return $record->job_verified_by_admin;
+                        }),
+
+                    Tables\Actions\DeleteAction::make()
+                        ->disabled(function ($record) {
+                            $user = auth()->user();
+                            // Admins can always edit
+                            if (
+                                $user->hasAnyRole([
+                                    'Administrator',
+                                    'Developer',
+                                    'admin',
+                                ])
+                            ) {
+                                return false;
+                            }
+                            // Others cannot edit after reconciliation
+                            return $record->job_verified_by_admin;
+                        }),
 
                     Tables\Actions\Action::make('details')
                         ->label('Details')
