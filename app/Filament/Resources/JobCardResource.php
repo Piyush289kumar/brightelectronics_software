@@ -46,6 +46,8 @@ class JobCardResource extends Resource
                             ->disabled()
                             ->required()
                             ->dehydrated(true),
+
+                            
                         Forms\Components\Select::make('status')
                             ->label('Status')
                             ->options(function ($record) {
