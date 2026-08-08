@@ -5,20 +5,71 @@ namespace App\Observers;
 use App\Models\Account;
 use App\Models\JobCard;
 use App\Models\Ledger;
+use App\Models\UserTarget;
+use Illuminate\Support\Facades\DB;
 
 class JobCardObserver
 {
-
     public function created(JobCard $jobCard): void
     {
         $this->syncLedger($jobCard);
-        $this->updateUserTarget($jobCard);
+
+        // Do NOT update target when creating.
+        // Target is updated only when status becomes Delivered.
     }
 
     public function updated(JobCard $jobCard): void
     {
         $this->syncLedger($jobCard);
-        $this->updateUserTarget($jobCard);
+
+        /*
+        |--------------------------------------------------------------------------
+        | 1. Job Card becomes Delivered
+        |--------------------------------------------------------------------------
+        */
+        if (
+            $jobCard->status === 'Delivered' &&
+            $jobCard->wasChanged('status')
+        ) {
+            $this->addAmountToUserTargets(
+                $jobCard,
+                (float) $jobCard->amount
+            );
+
+            return;
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | 2. Amount changed AFTER already Delivered
+        |--------------------------------------------------------------------------
+        */
+        if (
+            $jobCard->status === 'Delivered' &&
+            $jobCard->wasChanged('amount')
+        ) {
+            $oldAmount = (float) $jobCard->getOriginal('amount');
+            $newAmount = (float) $jobCard->amount;
+
+            $difference = $newAmount - $oldAmount;
+
+            /*
+             * Example:
+             *
+             * 10000 → 12000
+             * difference = +2000
+             *
+             * 10000 → 8000
+             * difference = -2000
+             */
+
+            if ($difference != 0) {
+                $this->addAmountToUserTargets(
+                    $jobCard,
+                    $difference
+                );
+            }
+        }
     }
 
     protected function syncLedger(JobCard $jobCard): void
@@ -41,7 +92,7 @@ class JobCardObserver
                 ],
                 [
                     'account_id' => $account->id,
-                    'store_id' => $jobCard->complain->store_id,
+                    'store_id' => $jobCard->complain?->store_id,
                     'date' => now(),
                     'transaction_type' => 'credit',
                     'amount' => $jobCard->advance_amount,
@@ -61,7 +112,7 @@ class JobCardObserver
                 ],
                 [
                     'account_id' => $account->id,
-                    'store_id' => $jobCard->complain->store_id,
+                    'store_id' => $jobCard->complain?->store_id,
                     'date' => now(),
                     'transaction_type' => 'credit',
                     'amount' => $jobCard->on_delivery_amount,
@@ -70,64 +121,86 @@ class JobCardObserver
         }
     }
 
+    /**
+     * Add/subtract amount from all assigned engineer targets.
+     *
+     * Positive amount = increase achieved
+     * Negative amount = decrease achieved
+     */
+    protected function addAmountToUserTargets(
+        JobCard $jobCard,
+        float $amount
+    ): void {
 
-    protected function updateUserTarget(JobCard $jobCard): void
-    {
-        $engineers = $jobCard->complain?->assigned_engineers ?? [];
+        $complain = $jobCard->complain;
+
+        if (!$complain) {
+            return;
+        }
+
+        $engineers = $complain->assigned_engineers ?? [];
 
         if (empty($engineers)) {
             return;
         }
 
-        foreach ($engineers as $engineerId) {
+        DB::transaction(function () use ($engineers, $complain, $amount) {
 
-            $target = \App\Models\UserTarget::where('user_id', $engineerId)
-                ->whereHas('storeTarget', function ($q) use ($jobCard) {
-                    $q->where('month', now()->month)
-                        ->where('year', now()->year)
-                        ->where('store_id', $jobCard->complain->store_id);
-                })
-                ->first();
+            foreach ($engineers as $engineerId) {
 
-            if (!$target) {
-                continue;
+                $target = UserTarget::where('user_id', $engineerId)
+                    ->whereHas('storeTarget', function ($q) use ($complain) {
+                        $q->where('month', now()->month)
+                            ->where('year', now()->year)
+                            ->where('store_id', $complain->store_id);
+                    })
+                    ->lockForUpdate()
+                    ->first();
+
+                if (!$target) {
+                    continue;
+                }
+
+                /*
+                |--------------------------------------------------------------------------
+                | Update Achieved
+                |--------------------------------------------------------------------------
+                */
+
+                $target->achieved_amount = max(
+                    0,
+                    (float) $target->achieved_amount + $amount
+                );
+
+                /*
+                |--------------------------------------------------------------------------
+                | Update Remaining
+                |--------------------------------------------------------------------------
+                */
+
+                $target->remaining_amount = max(
+                    0,
+                    (float) $target->assigned_amount
+                    - (float) $target->achieved_amount
+                );
+
+                $target->save();
             }
-
-            $collection = (float) $jobCard->amount;
-
-            $target->achieved_amount += $collection;
-
-            $target->remaining_amount = max(
-                $target->assigned_amount - $target->achieved_amount,
-                0
-            );
-
-            $target->save();
-        }
+        });
     }
 
-    /**
-     * Handle the JobCard "deleted" event.
-     */
     public function deleted(JobCard $jobCard): void
     {
         //
     }
 
-    /**
-     * Handle the JobCard "restored" event.
-     */
     public function restored(JobCard $jobCard): void
     {
         //
     }
 
-    /**
-     * Handle the JobCard "force deleted" event.
-     */
     public function forceDeleted(JobCard $jobCard): void
     {
         //
     }
-
 }
