@@ -302,24 +302,43 @@ class LedgerResource extends Resource
                     ->relationship('account', 'account_name')->label('Account')
             ])
             ->actions([
-                Tables\Actions\EditAction::make()
-                    ->disabled(function ($record) {
 
-                        $user = auth()->user();
+                Tables\Actions\ActionGroup::make([
+                    Tables\Actions\EditAction::make()
+                        ->disabled(function ($record) {
+                            $user = auth()->user();
+                            // Admins can always edit
+                            if (
+                                $user->hasAnyRole([
+                                    'Administrator',
+                                    'Developer',
+                                    'admin',
+                                ])
+                            ) {
+                                return false;
+                            }
+                            // Others cannot edit after reconciliation
+                            return $record->is_reconciled;
+                        }),
 
-                        // Admins can always edit
-                        if (
-                            $user->hasAnyRole([
-                                'Administrator',
-                                'Developer',
-                                'admin',
-                            ])
-                        ) {
-                            return false;
-                        }
-                        // Others cannot edit after reconciliation
-                        return $record->is_reconciled;
-                    }),
+                    Tables\Actions\DeleteAction::make()
+                        ->disabled(function ($record) {
+                            $user = auth()->user();
+                            // Admins can always edit
+                            if (
+                                $user->hasAnyRole([
+                                    'Administrator',
+                                    'Developer',
+                                    'admin',
+                                ])
+                            ) {
+                                return false;
+                            }
+                            // Others cannot edit after reconciliation
+                            return $record->is_reconciled;
+                        }),
+
+                ])->dropdown()->tooltip('Actions')
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
