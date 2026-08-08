@@ -47,7 +47,7 @@ class JobCardResource extends Resource
                             ->required()
                             ->dehydrated(true),
 
-                            
+
                         Forms\Components\Select::make('status')
                             ->label('Status')
                             ->options(function ($record) {
@@ -62,55 +62,40 @@ class JobCardResource extends Resource
                                     'Cancelled' => 'Cancelled',
                                 ];
 
-                                // Users allowed to see/use Delivered
-                                $canDeliverRole = $user?->hasAnyRole([
-                                    'Administrator',
-                                    'Developer',
-                                    'admin',
-                                    'Manager',
-                                    'Store Manager',
-                                    'Team Leader',
-                                    'Team Lead',
-                                    'Engineer',
-                                    'Machine Men',
-                                ]);
+                                // Engineer + Machine Men + Management can see Delivered
+                                if (
+                                    $user?->hasAnyRole([
+                                        'Administrator',
+                                        'Developer',
+                                        'admin',
+                                        'Manager',
+                                        'Store Manager',
+                                        'Team Leader',
+                                        'Team Lead',
+                                        'Engineer',
+                                        'Machine Men',
+                                    ])
+                                ) {
 
-                                if (!$canDeliverRole) {
-                                    return $options;
-                                }
+                                    // Allow Delivered only when payment reconciliation is complete
+                                    if ($record && $record->canBeDelivered()) {
+                                        $options['Delivered'] = 'Delivered';
+                                    }
 
-                                /*
-                                |--------------------------------------------------------------------------
-                                | Delivered available only when all linked ledgers are reconciled
-                                |--------------------------------------------------------------------------
-                                */
-
-                                if ($record && $record->canBeDelivered()) {
-                                    $options['Delivered'] = 'Delivered';
-                                }
-
-                                /*
-                                |--------------------------------------------------------------------------
-                                | Keep Delivered visible when already delivered
-                                |--------------------------------------------------------------------------
-                                */
-
-                                if ($record?->status === 'Delivered') {
-                                    $options['Delivered'] = 'Delivered';
+                                    // Keep Delivered visible if already delivered
+                                    if ($record?->status === 'Delivered') {
+                                        $options['Delivered'] = 'Delivered';
+                                    }
                                 }
 
                                 return $options;
                             })
-
                             ->default('Pending')
                             ->required()
-                            ->live()
 
-                            /*
-                            |--------------------------------------------------------------------------
-                            | Disable after Engineer / Machine Men deliver the job
-                            |--------------------------------------------------------------------------
-                            */
+                            // IMPORTANT: remove ->live()
+                            // ->live()
+
                             ->disabled(function ($record) {
 
                                 $user = auth()->user();
@@ -119,23 +104,23 @@ class JobCardResource extends Resource
                                     return true;
                                 }
 
-                                // Admin/Developer/Management can still edit Delivered records
-                                $managementRoles = [
-                                    'Administrator',
-                                    'Developer',
-                                    'admin',
-                                    'Manager',
-                                    'Store Manager',
-                                    'Team Leader',
-                                    'Team Lead',
-                                ];
-
-                                if ($user->hasAnyRole($managementRoles)) {
+                                // Admins / management can always edit
+                                if (
+                                    $user->hasAnyRole([
+                                        'Administrator',
+                                        'Developer',
+                                        'admin',
+                                        'Manager',
+                                        'Store Manager',
+                                        'Team Leader',
+                                        'Team Lead',
+                                    ])
+                                ) {
                                     return false;
                                 }
 
                                 // Engineer / Machine Men:
-                                // disable status once job is Delivered
+                                // once Delivered, status becomes locked
                                 if (
                                     $user->hasAnyRole([
                                         'Engineer',
