@@ -256,6 +256,56 @@ class LedgerResource extends Resource
             ])
             ->defaultSort('created_at', 'desc')
             ->filters([
+                // Debit / Credit
+                Tables\Filters\SelectFilter::make('transaction_type')
+                    ->label('Type')
+                    ->options([
+                        'debit' => 'Debit',
+                        'credit' => 'Credit',
+                    ]),
+
+                // Payment Mode
+                Tables\Filters\SelectFilter::make('payment_mode')
+                    ->label('Payment Mode')
+                    ->options([
+                        'Cash' => 'Cash',
+                        'UPI' => 'UPI',
+                        'Cheque' => 'Cheque',
+                        'Card' => 'Card',
+                        'NEFT' => 'NEFT',
+                        'RTGS' => 'RTGS',
+                        'IMPS' => 'IMPS',
+                        'Bank Transfer' => 'Bank Transfer',
+                        'Wallet' => 'Wallet',
+                    ])
+                    ->searchable(),
+
+                // Date Range
+                Tables\Filters\Filter::make('date_range')
+                    ->label('Date')
+                    ->form([
+                        Grid::make(2)->schema([
+                            Forms\Components\DatePicker::make('from')
+                                ->label('From Date'),
+
+                            Forms\Components\DatePicker::make('until')
+                                ->label('To Date'),
+                        ]),
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query
+                            ->when(
+                                $data['from'] ?? null,
+                                fn(Builder $query, $date) =>
+                                $query->whereDate('date', '>=', $date)
+                            )
+                            ->when(
+                                $data['until'] ?? null,
+                                fn(Builder $query, $date) =>
+                                $query->whereDate('date', '<=', $date)
+                            );
+                    }),
+
                 Tables\Filters\Filter::make('job_or_complain')
                     ->label('Complaint / Job Card')
                     ->form([
@@ -271,25 +321,70 @@ class LedgerResource extends Resource
 
                         $search = trim($data['search']);
 
-                        return $query->where(function (Builder $query) use ($search) {
+                        /*
+                        |--------------------------------------------------------------------------
+                        | First: Find matching Job Card IDs and Complaint IDs
+                        |--------------------------------------------------------------------------
+                        */
 
-                            // Search by Job Card ID
-                            $query->whereHas('jobCard', function (Builder $q) use ($search) {
-                                $q->where('job_id', 'like', "%{$search}%");
-                            });
+                        $jobCardIds = \App\Models\JobCard::query()
+                            ->where('job_id', 'like', "%{$search}%")
+                            ->pluck('id');
 
-                            // OR Search by Complaint ID
-                            $query->orWhere(function (Builder $q) use ($search) {
+                        $complainIdsFromJobCards = \App\Models\JobCard::query()
+                            ->where('job_id', 'like', "%{$search}%")
+                            ->pluck('complain_id');
 
-                                // Complaint may not have Job Card yet (Visit Charge)
-                                $q->where('narration', 'like', "%{$search}%");
+                        $complainIds = \App\Models\Complain::query()
+                            ->where('complain_id', 'like', "%{$search}%")
+                            ->pluck('id');
 
-                                // Complaint already has Job Card
-                                $q->orWhereHas('jobCard.complain', function (Builder $cq) use ($search) {
-                                    $cq->where('complain_id', 'like', "%{$search}%");
-                                });
-                            });
+                        /*
+                        |--------------------------------------------------------------------------
+                        | Return ALL linked ledgers
+                        |--------------------------------------------------------------------------
+                        |
+                        | If search is Complaint ID:
+                        |   Complaint ledger + Job Card ledger
+                        |
+                        | If search is Job Card ID:
+                        |   Job Card ledger + linked Complaint ledger
+                        |
+                        */
 
+                        return $query->where(function (Builder $query) use ($search, $jobCardIds, $complainIdsFromJobCards, $complainIds) {
+
+                            // Direct Job Card ledger
+                            if ($jobCardIds->isNotEmpty()) {
+                                $query->whereIn('job_card_id', $jobCardIds);
+                            }
+
+                            // Complaint ledger linked to searched Job Card
+                            if ($complainIdsFromJobCards->isNotEmpty()) {
+                                $query->orWhereIn('complain_id', $complainIdsFromJobCards);
+                            }
+
+                            // Direct Complaint search
+                            if ($complainIds->isNotEmpty()) {
+                                $query->orWhereIn('complain_id', $complainIds);
+
+                                // Job Cards belonging to searched Complaint
+                                $linkedJobCardIds = \App\Models\JobCard::query()
+                                    ->whereIn('complain_id', $complainIds)
+                                    ->pluck('id');
+
+                                if ($linkedJobCardIds->isNotEmpty()) {
+                                    $query->orWhereIn('job_card_id', $linkedJobCardIds);
+                                }
+                            }
+
+                            /*
+                            |--------------------------------------------------------------------------
+                            | Fallback for Visit Charge narration
+                            |--------------------------------------------------------------------------
+                            */
+
+                            $query->orWhere('narration', 'like', "%{$search}%");
                         });
                     }),
 
