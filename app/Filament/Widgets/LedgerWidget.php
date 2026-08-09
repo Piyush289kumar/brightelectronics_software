@@ -54,11 +54,6 @@ class LedgerWidget extends BaseWidget
                     ->label('Amount')
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('balance')
-                    ->money('INR', true)
-                    ->label('Balance')
-                    ->sortable(),
-
                 Tables\Columns\TextColumn::make('narration')
                     ->label('Narration')
                     ->limit(30),
