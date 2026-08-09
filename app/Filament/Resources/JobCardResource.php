@@ -493,6 +493,8 @@ class JobCardResource extends Resource
                                                     'Administrator',
                                                     'Developer',
                                                     'admin',
+                                                    'Team Leader',
+                                                    'Team Lead',
                                                 ]))
                                         ])
                                     ]),
