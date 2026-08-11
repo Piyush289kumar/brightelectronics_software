@@ -254,57 +254,9 @@ class LedgerResource extends Resource
                     ->dateTime('d M Y h:i A')
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
+            ->searchable(false)
             ->defaultSort('created_at', 'desc')
             ->filters([
-                // Debit / Credit
-                Tables\Filters\SelectFilter::make('transaction_type')
-                    ->label('Type')
-                    ->options([
-                        'debit' => 'Debit',
-                        'credit' => 'Credit',
-                    ]),
-
-                // Payment Mode
-                Tables\Filters\SelectFilter::make('payment_mode')
-                    ->label('Payment Mode')
-                    ->options([
-                        'Cash' => 'Cash',
-                        'UPI' => 'UPI',
-                        'Cheque' => 'Cheque',
-                        'Card' => 'Card',
-                        'NEFT' => 'NEFT',
-                        'RTGS' => 'RTGS',
-                        'IMPS' => 'IMPS',
-                        'Bank Transfer' => 'Bank Transfer',
-                        'Wallet' => 'Wallet',
-                    ])
-                    ->searchable(),
-
-                // Date Range
-                Tables\Filters\Filter::make('date_range')
-                    ->label('Date')
-                    ->form([
-                        Grid::make(2)->schema([
-                            Forms\Components\DatePicker::make('from')
-                                ->label('From Date'),
-
-                            Forms\Components\DatePicker::make('until')
-                                ->label('To Date'),
-                        ]),
-                    ])
-                    ->query(function (Builder $query, array $data): Builder {
-                        return $query
-                            ->when(
-                                $data['from'] ?? null,
-                                fn(Builder $query, $date) =>
-                                $query->whereDate('date', '>=', $date)
-                            )
-                            ->when(
-                                $data['until'] ?? null,
-                                fn(Builder $query, $date) =>
-                                $query->whereDate('date', '<=', $date)
-                            );
-                    }),
 
                 Tables\Filters\Filter::make('job_or_complain')
                     ->label('Complaint / Job Card')
@@ -386,6 +338,56 @@ class LedgerResource extends Resource
 
                             $query->orWhere('narration', 'like', "%{$search}%");
                         });
+                    }),
+
+                // Debit / Credit
+                Tables\Filters\SelectFilter::make('transaction_type')
+                    ->label('Type')
+                    ->options([
+                        'debit' => 'Debit',
+                        'credit' => 'Credit',
+                    ]),
+
+                // Payment Mode
+                Tables\Filters\SelectFilter::make('payment_mode')
+                    ->label('Payment Mode')
+                    ->options([
+                        'Cash' => 'Cash',
+                        'UPI' => 'UPI',
+                        'Cheque' => 'Cheque',
+                        'Card' => 'Card',
+                        'NEFT' => 'NEFT',
+                        'RTGS' => 'RTGS',
+                        'IMPS' => 'IMPS',
+                        'Bank Transfer' => 'Bank Transfer',
+                        'Wallet' => 'Wallet',
+                    ])
+                    ->searchable(),
+
+                // Date Range
+                Tables\Filters\Filter::make('date_range')
+                    ->label('Date')
+                    ->form([
+                        Grid::make(2)->schema([
+                            Forms\Components\DatePicker::make('from')
+                                ->label('From Date'),
+
+                            Forms\Components\DatePicker::make('until')
+                                ->label('To Date'),
+                        ]),
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query
+                            ->when(
+                                $data['from'] ?? null,
+                                fn(Builder $query, $date) =>
+                                $query->whereDate('date', '>=', $date)
+                            )
+                            ->when(
+                                $data['until'] ?? null,
+                                fn(Builder $query, $date) =>
+                                $query->whereDate('date', '<=', $date)
+                            );
                     }),
 
                 Tables\Filters\TernaryFilter::make('is_reconciled')
