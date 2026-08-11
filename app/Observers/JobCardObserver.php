@@ -14,8 +14,8 @@ class JobCardObserver
     {
         $this->syncLedger($jobCard);
 
-        // Do NOT update target when creating.
-        // Target is updated only when status becomes Delivered.
+        // Do not update target when Job Card is created.
+        // Target is counted only when it becomes Delivered.
     }
 
     public function updated(JobCard $jobCard): void
@@ -26,6 +26,10 @@ class JobCardObserver
         |--------------------------------------------------------------------------
         | 1. Job Card becomes Delivered
         |--------------------------------------------------------------------------
+        |
+        | This works regardless of who changes the status:
+        | Admin / Manager / Store Manager / Team Leader / Team Lead
+        |
         */
         if (
             $jobCard->status === 'Delivered' &&
@@ -41,8 +45,13 @@ class JobCardObserver
 
         /*
         |--------------------------------------------------------------------------
-        | 2. Amount changed AFTER already Delivered
+        | 2. Amount changed after already Delivered
         |--------------------------------------------------------------------------
+        |
+        | Example:
+        | ₹10,000 → ₹12,000 = +₹2,000
+        | ₹10,000 → ₹8,000  = -₹2,000
+        |
         */
         if (
             $jobCard->status === 'Delivered' &&
@@ -53,16 +62,6 @@ class JobCardObserver
 
             $difference = $newAmount - $oldAmount;
 
-            /*
-             * Example:
-             *
-             * 10000 → 12000
-             * difference = +2000
-             *
-             * 10000 → 8000
-             * difference = -2000
-             */
-
             if ($difference != 0) {
                 $this->addAmountToUserTargets(
                     $jobCard,
@@ -72,6 +71,12 @@ class JobCardObserver
         }
     }
 
+    /*
+    |--------------------------------------------------------------------------
+    | LEDGER SYNC
+    |--------------------------------------------------------------------------
+    */
+
     protected function syncLedger(JobCard $jobCard): void
     {
         $account = Account::first();
@@ -80,10 +85,19 @@ class JobCardObserver
             return;
         }
 
-        // ===============================
-        // Advance Entry
-        // ===============================
-        if ($jobCard->advance_amount > 0) {
+        $storeId = $jobCard->complain?->store_id;
+
+        if (!$storeId) {
+            return;
+        }
+
+        /*
+        |--------------------------------------------------------------------------
+        | Advance
+        |--------------------------------------------------------------------------
+        */
+
+        if ((float) $jobCard->advance_amount > 0) {
 
             Ledger::updateOrCreate(
                 [
@@ -92,18 +106,22 @@ class JobCardObserver
                 ],
                 [
                     'account_id' => $account->id,
-                    'store_id' => $jobCard->complain?->store_id,
+                    'store_id' => $storeId,
+                    'complain_id' => $jobCard->complain_id,
                     'date' => now(),
                     'transaction_type' => 'credit',
-                    'amount' => $jobCard->advance_amount,
+                    'amount' => (float) $jobCard->advance_amount,
                 ]
             );
         }
 
-        // ===============================
-        // Delivery Entry
-        // ===============================
-        if ($jobCard->on_delivery_amount > 0) {
+        /*
+        |--------------------------------------------------------------------------
+        | Delivery
+        |--------------------------------------------------------------------------
+        */
+
+        if ((float) $jobCard->on_delivery_amount > 0) {
 
             Ledger::updateOrCreate(
                 [
@@ -112,21 +130,22 @@ class JobCardObserver
                 ],
                 [
                     'account_id' => $account->id,
-                    'store_id' => $jobCard->complain?->store_id,
+                    'store_id' => $storeId,
+                    'complain_id' => $jobCard->complain_id,
                     'date' => now(),
                     'transaction_type' => 'credit',
-                    'amount' => $jobCard->on_delivery_amount,
+                    'amount' => (float) $jobCard->on_delivery_amount,
                 ]
             );
         }
     }
 
-    /**
-     * Add/subtract amount from all assigned engineer targets.
-     *
-     * Positive amount = increase achieved
-     * Negative amount = decrease achieved
-     */
+    /*
+    |--------------------------------------------------------------------------
+    | UPDATE ASSIGNED ENGINEER / MACHINE MEN TARGET
+    |--------------------------------------------------------------------------
+    */
+
     protected function addAmountToUserTargets(
         JobCard $jobCard,
         float $amount
@@ -144,15 +163,39 @@ class JobCardObserver
             return;
         }
 
+        /*
+        |--------------------------------------------------------------------------
+        | Make sure JSON values are IDs
+        |--------------------------------------------------------------------------
+        */
+
+        $engineers = collect($engineers)
+            ->map(fn($id) => (int) $id)
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($engineers->isEmpty()) {
+            return;
+        }
+
         DB::transaction(function () use ($engineers, $complain, $amount) {
 
             foreach ($engineers as $engineerId) {
 
-                $target = UserTarget::where('user_id', $engineerId)
+                /*
+                |--------------------------------------------------------------------------
+                | Find current month's target for this assigned engineer
+                |--------------------------------------------------------------------------
+                */
+
+                $target = UserTarget::query()
+                    ->where('user_id', $engineerId)
                     ->whereHas('storeTarget', function ($q) use ($complain) {
-                        $q->where('month', now()->month)
+
+                        $q->where('store_id', $complain->store_id)
                             ->where('year', now()->year)
-                            ->where('store_id', $complain->store_id);
+                            ->where('month', now()->month);
                     })
                     ->lockForUpdate()
                     ->first();
@@ -163,25 +206,30 @@ class JobCardObserver
 
                 /*
                 |--------------------------------------------------------------------------
-                | Update Achieved
+                | Increase / decrease achieved amount
                 |--------------------------------------------------------------------------
                 */
 
+                $newAchieved = (float) $target->achieved_amount + $amount;
+
                 $target->achieved_amount = max(
                     0,
-                    (float) $target->achieved_amount + $amount
+                    round($newAchieved, 2)
                 );
 
                 /*
                 |--------------------------------------------------------------------------
-                | Update Remaining
+                | Remaining target
                 |--------------------------------------------------------------------------
                 */
 
                 $target->remaining_amount = max(
                     0,
-                    (float) $target->assigned_amount
-                    - (float) $target->achieved_amount
+                    round(
+                        (float) $target->assigned_amount
+                        - (float) $target->achieved_amount,
+                        2
+                    )
                 );
 
                 $target->save();
