@@ -108,12 +108,24 @@ class LedgerResource extends Resource
                         'Bank Transfer' => 'Bank Transfer',
                         'Wallet' => 'Wallet',
                     ])
-                    ->searchable(),
+                    ->searchable()
+                    ->live()
+                    ->afterStateUpdated(function (Forms\Set $set, ?string $state) {
+                        // Cash does not require a reference number
+                        if ($state === 'Cash') {
+                            $set('reference', null);
+                        }
+                    }),
 
                 Forms\Components\TextInput::make('reference')
                     ->label('Reference Number')
                     ->placeholder('UTR / UPI / Cheque No.')
-                    ->visible(fn(Forms\Get $get) => $get('payment_mode') !== 'Cash'),
+                    ->visible(fn(Forms\Get $get) => $get('payment_mode') !== 'Cash')
+                    ->dehydrateStateUsing(function ($state) {
+                        // Empty string -> NULL
+                        return filled($state) ? trim($state) : null;
+                    })
+                    ->nullable(),
 
                 Forms\Components\Toggle::make('is_reconciled')
                     ->label('Payment Received')
