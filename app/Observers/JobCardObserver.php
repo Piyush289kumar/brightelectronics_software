@@ -10,13 +10,34 @@ use Illuminate\Support\Facades\DB;
 
 class JobCardObserver
 {
+    /*
+    |--------------------------------------------------------------------------
+    | CREATED
+    |--------------------------------------------------------------------------
+    */
+
     public function created(JobCard $jobCard): void
     {
         $this->syncLedger($jobCard);
 
-        // Do not update target when Job Card is created.
-        // Target is counted only when it becomes Delivered.
+        /*
+        |--------------------------------------------------------------------------
+        | If a Job Card is created directly as Delivered,
+        | include it in the target.
+        |--------------------------------------------------------------------------
+        */
+
+        if ($jobCard->status === 'Delivered') {
+            $this->syncUserTargets($jobCard);
+        }
     }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | UPDATED
+    |--------------------------------------------------------------------------
+    */
 
     public function updated(JobCard $jobCard): void
     {
@@ -24,52 +45,28 @@ class JobCardObserver
 
         /*
         |--------------------------------------------------------------------------
-        | 1. Job Card becomes Delivered
+        | IMPORTANT
         |--------------------------------------------------------------------------
         |
-        | This works regardless of who changes the status:
-        | Admin / Manager / Store Manager / Team Leader / Team Lead
+        | Recalculate target whenever:
+        |
+        | 1. Status changes
+        | 2. Amount changes
+        | 3. Complaint changes
+        |
+        | We do NOT add/subtract the difference anymore.
         |
         */
-        if (
-            $jobCard->status === 'Delivered' &&
-            $jobCard->wasChanged('status')
-        ) {
-            $this->addAmountToUserTargets(
-                $jobCard,
-                (float) $jobCard->amount
-            );
 
-            return;
-        }
-
-        /*
-        |--------------------------------------------------------------------------
-        | 2. Amount changed after already Delivered
-        |--------------------------------------------------------------------------
-        |
-        | Example:
-        | ₹10,000 → ₹12,000 = +₹2,000
-        | ₹10,000 → ₹8,000  = -₹2,000
-        |
-        */
-        if (
-            $jobCard->status === 'Delivered' &&
-            $jobCard->wasChanged('amount')
-        ) {
-            $oldAmount = (float) $jobCard->getOriginal('amount');
-            $newAmount = (float) $jobCard->amount;
-
-            $difference = $newAmount - $oldAmount;
-
-            if ($difference != 0) {
-                $this->addAmountToUserTargets(
-                    $jobCard,
-                    $difference
-                );
-            }
+        if ($jobCard->wasChanged([
+            'status',
+            'amount',
+            'complain_id',
+        ])) {
+            $this->syncUserTargets($jobCard);
         }
     }
+
 
     /*
     |--------------------------------------------------------------------------
@@ -91,9 +88,10 @@ class JobCardObserver
             return;
         }
 
+
         /*
         |--------------------------------------------------------------------------
-        | Advance
+        | ADVANCE
         |--------------------------------------------------------------------------
         */
 
@@ -115,9 +113,10 @@ class JobCardObserver
             );
         }
 
+
         /*
         |--------------------------------------------------------------------------
-        | Delivery
+        | DELIVERY
         |--------------------------------------------------------------------------
         */
 
@@ -140,16 +139,41 @@ class JobCardObserver
         }
     }
 
+
     /*
     |--------------------------------------------------------------------------
-    | UPDATE ASSIGNED ENGINEER / MACHINE MEN TARGET
+    | SYNC USER TARGETS
     |--------------------------------------------------------------------------
+    |
+    | IMPORTANT:
+    |
+    | achieved_amount is calculated from the actual Delivered Job Cards.
+    |
+    | Example:
+    |
+    | Job Card = ₹5,000
+    | ↓
+    | Target achieved = ₹5,000
+    |
+    | Edit Job Card:
+    | ₹5,000 → ₹4,500
+    | ↓
+    | Target achieved = ₹4,500
+    |
+    | Edit:
+    | ₹4,500 → ₹6,000
+    | ↓
+    | Target achieved = ₹6,000
+    |
     */
 
-    protected function addAmountToUserTargets(
-        JobCard $jobCard,
-        float $amount
-    ): void {
+    protected function syncUserTargets(JobCard $jobCard): void
+    {
+        /*
+        |--------------------------------------------------------------------------
+        | Get complaint
+        |--------------------------------------------------------------------------
+        */
 
         $complain = $jobCard->complain;
 
@@ -157,98 +181,250 @@ class JobCardObserver
             return;
         }
 
-        $engineers = $complain->assigned_engineers ?? [];
-
-        if (empty($engineers)) {
-            return;
-        }
 
         /*
         |--------------------------------------------------------------------------
-        | Make sure JSON values are IDs
+        | Get assigned engineers
         |--------------------------------------------------------------------------
         */
 
-        $engineers = collect($engineers)
-            ->map(fn($id) => (int) $id)
+        $engineers = collect($complain->assigned_engineers ?? [])
+            ->map(function ($engineer) {
+
+                /*
+                | Sometimes JSON can contain:
+                |
+                | 5
+                | "5"
+                | ["5"]
+                |
+                */
+
+                if (is_array($engineer)) {
+                    return (int) (
+                        $engineer['id']
+                        ?? $engineer['user_id']
+                        ?? 0
+                    );
+                }
+
+                return (int) $engineer;
+            })
             ->filter()
             ->unique()
             ->values();
+
 
         if ($engineers->isEmpty()) {
             return;
         }
 
-        DB::transaction(function () use ($engineers, $complain, $amount) {
+
+        /*
+        |--------------------------------------------------------------------------
+        | Store
+        |--------------------------------------------------------------------------
+        */
+
+        $storeId = $complain->store_id;
+
+        if (!$storeId) {
+            return;
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Current month/year
+        |--------------------------------------------------------------------------
+        */
+
+        $year = now()->year;
+        $month = now()->month;
+
+
+        DB::transaction(function () use (
+            $engineers,
+            $storeId,
+            $year,
+            $month
+        ) {
 
             foreach ($engineers as $engineerId) {
 
                 /*
                 |--------------------------------------------------------------------------
-                | Find current month's target for this assigned engineer
+                | Find user's target for current month
                 |--------------------------------------------------------------------------
                 */
 
                 $target = UserTarget::query()
                     ->where('user_id', $engineerId)
-                    ->whereHas('storeTarget', function ($q) use ($complain) {
+                    ->whereHas('storeTarget', function ($query) use (
+                        $storeId,
+                        $year,
+                        $month
+                    ) {
 
-                        $q->where('store_id', $complain->store_id)
-                            ->where('year', now()->year)
-                            ->where('month', now()->month);
+                        $query
+                            ->where('store_id', $storeId)
+                            ->where('year', $year)
+                            ->where('month', $month);
                     })
                     ->lockForUpdate()
                     ->first();
+
+
+                /*
+                |--------------------------------------------------------------------------
+                | No target
+                |--------------------------------------------------------------------------
+                */
 
                 if (!$target) {
                     continue;
                 }
 
+
                 /*
                 |--------------------------------------------------------------------------
-                | Increase / decrease achieved amount
+                | Calculate REAL achieved amount
+                |--------------------------------------------------------------------------
+                |
+                | Only Delivered Job Cards count.
+                |
+                | Do not use the existing achieved_amount.
+                |
+                */
+
+                $achievedAmount = JobCard::query()
+                    ->where('status', 'Delivered')
+                    ->whereHas('complain', function ($query) use (
+                        $storeId,
+                        $engineerId
+                    ) {
+
+                        $query
+                            ->where('store_id', $storeId)
+                            ->whereJsonContains(
+                                'assigned_engineers',
+                                $engineerId
+                            );
+                    })
+                    ->sum('amount');
+
+
+                /*
+                |--------------------------------------------------------------------------
+                | Convert to float and round
                 |--------------------------------------------------------------------------
                 */
 
-                $newAchieved = (float) $target->achieved_amount + $amount;
-
-                $target->achieved_amount = max(
-                    0,
-                    round($newAchieved, 2)
+                $achievedAmount = round(
+                    (float) $achievedAmount,
+                    2
                 );
 
+
                 /*
                 |--------------------------------------------------------------------------
-                | Remaining target
+                | Assigned Target
                 |--------------------------------------------------------------------------
                 */
 
-                $target->remaining_amount = max(
+                $assignedAmount = round(
+                    (float) $target->assigned_amount,
+                    2
+                );
+
+
+                /*
+                |--------------------------------------------------------------------------
+                | Remaining Target
+                |--------------------------------------------------------------------------
+                */
+
+                $remainingAmount = max(
                     0,
                     round(
-                        (float) $target->assigned_amount
-                        - (float) $target->achieved_amount,
+                        $assignedAmount - $achievedAmount,
                         2
                     )
                 );
+
+
+                /*
+                |--------------------------------------------------------------------------
+                | Save
+                |--------------------------------------------------------------------------
+                */
+
+                $target->achieved_amount = $achievedAmount;
+
+                $target->remaining_amount = $remainingAmount;
 
                 $target->save();
             }
         });
     }
 
+
+    /*
+    |--------------------------------------------------------------------------
+    | DELETED
+    |--------------------------------------------------------------------------
+    */
+
     public function deleted(JobCard $jobCard): void
     {
-        //
+        /*
+        |--------------------------------------------------------------------------
+        | If a Delivered Job Card is deleted,
+        | recalculate the target.
+        |--------------------------------------------------------------------------
+        */
+
+        if ($jobCard->status === 'Delivered') {
+            $this->syncUserTargets($jobCard);
+        }
     }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | RESTORED
+    |--------------------------------------------------------------------------
+    */
 
     public function restored(JobCard $jobCard): void
     {
-        //
+        /*
+        |--------------------------------------------------------------------------
+        | If a deleted Delivered Job Card is restored,
+        | recalculate target.
+        |--------------------------------------------------------------------------
+        */
+
+        if ($jobCard->status === 'Delivered') {
+            $this->syncUserTargets($jobCard);
+        }
     }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | FORCE DELETED
+    |--------------------------------------------------------------------------
+    */
 
     public function forceDeleted(JobCard $jobCard): void
     {
-        //
+        /*
+        |--------------------------------------------------------------------------
+        | Nothing required here.
+        |
+        | Soft-delete normally triggers deleted().
+        |--------------------------------------------------------------------------
+        */
     }
 }
