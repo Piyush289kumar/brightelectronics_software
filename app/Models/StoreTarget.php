@@ -1,15 +1,11 @@
 <?php
-
 namespace App\Models;
-
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Spatie\Permission\Traits\HasRoles;
-
 class StoreTarget extends Model
 {
     use HasFactory, HasRoles;
-
     protected $fillable = [
         'store_id',
         'year',
@@ -21,7 +17,6 @@ class StoreTarget extends Model
         'distributed',
         'created_by',
     ];
-
     protected $casts = [
         'amount' => 'decimal:2',
         'collected_amount' => 'decimal:2', // Add this line
@@ -29,27 +24,22 @@ class StoreTarget extends Model
         'include_previous' => 'boolean',
         'distributed' => 'boolean',
     ];
-
     public function store()
     {
         return $this->belongsTo(Store::class);
     }
-
     public function userTargets()
     {
         return $this->hasMany(UserTarget::class);
     }
-
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
     }
-
     public function getTeamLeadTargetAttribute()
     {
         return $this->amount;
     }
-
     public function getManagerTargetAttribute()
     {
         return $this->amount + 30000;
