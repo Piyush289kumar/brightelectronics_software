@@ -273,18 +273,40 @@ class ComplainResource extends Resource
                         ->default(fn() => Auth::id())
                         ->dehydrated()
                         ->disabled(fn() => !auth()->user()->hasAnyRole(['Administrator', 'Store Manager', 'Team Lead'])),
-                    Forms\Components\MultiSelect::make('assigned_engineers')
+
+                    Forms\Components\Select::make('assigned_engineers')
                         ->label('Assigned Engineers')
-                        ->options(User::role(['Engineer', 'Machine Men'])->pluck('name', 'id')->toArray())
-                        ->default(fn() => [Auth::id()])
-                        ->disabled(fn() => !auth()->user()->hasAnyRole(['Administrator', 'Store Manager', 'Team Leader', 'Team Lead']))
+                        ->options(
+                            User::role(['Engineer', 'Machine Men'])
+                                ->pluck('name', 'id')
+                                ->toArray()
+                        )
+                        ->multiple()
+
+                        // Auto-select ONLY Engineer / Machine Men
+                        ->default(function () {
+                            $user = Auth::user();
+
+                            return $user?->hasAnyRole(['Engineer', 'Machine Men'])
+                                ? [$user->id]
+                                : [];
+                        })
+
+                        // Engineer/Machine Men cannot change assignment.
+                        // Admin/Manager/Team Leader can select manually.
+                        ->disabled(function () {
+                            return Auth::user()?->hasAnyRole(['Engineer', 'Machine Men']);
+                        })
+
+                        // Important: disabled fields must still be saved
                         ->dehydrated(true)
-                        ->dehydrateStateUsing(
-                            fn($state) =>
-                            !empty($state)
-                            ? collect($state)->map(fn($id) => (int) $id)->values()->toArray()
-                            : [Auth::id()] // ✅ fallback when disabled
-                        ),
+
+                        ->dehydrateStateUsing(function ($state) {
+                            return collect($state ?? [])
+                                ->map(fn($id) => (int) $id)
+                                ->values()
+                                ->toArray();
+                        })
                 ])
                 ->columns(3),
         ]);
