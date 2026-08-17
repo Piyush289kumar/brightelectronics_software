@@ -1,7 +1,5 @@
 <?php
-
 namespace App\Filament\Resources;
-
 use App\Filament\Resources\CustomerResource\Pages;
 use App\Filament\Resources\CustomerResource\RelationManagers;
 use App\Models\Customer;
@@ -18,16 +16,13 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Toggle;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
-
 class CustomerResource extends Resource
 {
     protected static ?string $model = Customer::class;
     protected static ?string $navigationIcon = 'heroicon-o-users';
     protected static ?string $navigationGroup = 'Suppliers & Customers';
-
     // Optional: sort order inside group
     protected static ?int $navigationSort = 3;
-
     public static function form(Form $form): Form
     {
         return $form
@@ -43,37 +38,28 @@ class CustomerResource extends Resource
                     TextInput::make('billing_state')->maxLength(100),
                     TextInput::make('billing_postal_code')->maxLength(20),
                 ])->columns(4),
-
                 Forms\Components\Section::make('Shipping Address')->schema([
                     Textarea::make('shipping_address')->rows(2),
                     TextInput::make('shipping_city')->maxLength(100),
                     TextInput::make('shipping_state')->maxLength(100),
                     TextInput::make('shipping_postal_code')->maxLength(20),
                 ])->columns(4),
-
-
-
                 Forms\Components\Section::make('GST & PAN Details')->schema([
                     TextInput::make('gstin')->maxLength(15)->unique(ignoreRecord: true),
                     TextInput::make('pan')->maxLength(10)->unique(ignoreRecord: true),
-
                     TextInput::make('place_of_supply')->maxLength(3)->label('Place of Supply (State Code)'),
                 ])->columns(3),
-
                 Forms\Components\Section::make('Contact Person')->schema([
                     TextInput::make('contact_person_name')->maxLength(255),
                     TextInput::make('contact_person_phone')->maxLength(20),
                     TextInput::make('contact_person_email')->email()->maxLength(255),
                 ])->columns(3),
-
                 Forms\Components\Section::make('Bank Details')->schema([
                     TextInput::make('bank_account_name')->maxLength(255),
                     TextInput::make('bank_account_number')->maxLength(50),
                     TextInput::make('bank_ifsc')->maxLength(20),
                     TextInput::make('bank_name')->maxLength(255),
                 ])->columns(4),
-
-
                 Forms\Components\Section::make('Limits & Type Details')->schema([
                     Select::make('business_type')
                         ->options([
@@ -85,21 +71,17 @@ class CustomerResource extends Resource
                             'other' => 'Other',
                         ])
                         ->required(),
-
                     TextInput::make('credit_limit')
                         ->numeric()
                         ->default(0)
                         ->label('Credit Limit'),
-
                     Textarea::make('notes')->rows(3),
-
                     Toggle::make('is_active')
                         ->label('Active')
                         ->default(true),
                 ])->columns(3),
             ]);
     }
-
     public static function table(Table $table): Table
     {
         return $table
@@ -127,14 +109,12 @@ class CustomerResource extends Resource
                 ]),
             ]);
     }
-
     public static function getRelations(): array
     {
         return [
             //
         ];
     }
-
     public static function getPages(): array
     {
         return [
