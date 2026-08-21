@@ -86,11 +86,11 @@ class CustomerResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('name')->sortable()->searchable(),
-                TextColumn::make('email')->sortable()->searchable(),
-                TextColumn::make('phone')->label('Phone')->sortable(),
-                TextColumn::make('gstin')->label('GSTIN')->sortable(),
-                TextColumn::make('business_type')->sortable(),
+                TextColumn::make('name')->sortable()->searchable()->toggleable(),
+                TextColumn::make('email')->sortable()->searchable()->toggleable(),
+                TextColumn::make('phone')->label('Phone')->sortable()->toggleable(),
+                TextColumn::make('gstin')->label('GSTIN')->sortable()->toggleable(),
+                TextColumn::make('business_type')->sortable()->toggleable(),
                 Tables\Columns\IconColumn::make('is_active')
                     ->boolean()
                     ->label('Active'),
