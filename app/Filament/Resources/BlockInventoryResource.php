@@ -12,6 +12,7 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Support\Facades\Gate;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 
 class BlockInventoryResource extends Resource
@@ -21,7 +22,30 @@ class BlockInventoryResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
      protected static ?string $navigationGroup = 'Inventory Management';
     protected static ?int $navigationSort = 3;
-    protected static ?string $label = 'Block Inventory';    
+    protected static ?string $label = 'Block Inventory';   
+    
+    
+     // Permissions Start
+      public static function canViewAny(): bool
+    {
+        return Gate::allows('view_any_block_inventory');
+    }
+
+    public static function canCreate(): bool
+    {
+        return Gate::allows('create_block_inventory');
+    }
+
+    public static function canEdit($record): bool
+    {
+        return Gate::allows('update_block_inventory');
+    }
+
+    public static function canDelete($record): bool
+    {
+        return Gate::allows('delete_block_inventory');
+    }
+    // Permission End
 
 
     public static function form(Form $form): Form

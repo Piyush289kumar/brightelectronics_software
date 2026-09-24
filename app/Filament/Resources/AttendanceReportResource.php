@@ -13,6 +13,7 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 
 class AttendanceReportResource extends Resource
@@ -29,6 +30,29 @@ class AttendanceReportResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-o-document-text';
 
     protected static ?string $navigationGroup = 'HR & Payroll';
+
+
+     // Permissions Start
+      public static function canViewAny(): bool
+    {
+        return Gate::allows('view_any_attendance_report');
+    }
+
+    public static function canCreate(): bool
+    {
+        return Gate::allows('create_attendance_report');
+    }
+
+    public static function canEdit($record): bool
+    {
+        return Gate::allows('update_attendance_report');
+    }
+
+    public static function canDelete($record): bool
+    {
+        return Gate::allows('delete_attendance_report');
+    }
+    // Permission End
 
     public static function form(Form $form): Form
     {

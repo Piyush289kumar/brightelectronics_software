@@ -11,6 +11,7 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 
 class BlockResource extends Resource
@@ -22,6 +23,28 @@ class BlockResource extends Resource
     protected static ?string $label = 'Block';
     protected static ?string $pluralLabel = 'Blocks';
     protected static ?int $navigationSort = 8;
+
+     // Permissions Start
+      public static function canViewAny(): bool
+    {
+        return Gate::allows('view_any_block');
+    }
+
+    public static function canCreate(): bool
+    {
+        return Gate::allows('create_block');
+    }
+
+    public static function canEdit($record): bool
+    {
+        return Gate::allows('update_block');
+    }
+
+    public static function canDelete($record): bool
+    {
+        return Gate::allows('delete_block');
+    }
+    // Permission End
 
     public static function form(Form $form): Form
     {

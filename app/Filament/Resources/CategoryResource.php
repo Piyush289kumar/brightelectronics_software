@@ -11,6 +11,7 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Gate;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 class CategoryResource extends Resource
 {
@@ -18,6 +19,28 @@ class CategoryResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
     protected static ?string $navigationGroup = 'Products & Categories';
     protected static ?int $navigationSort = 16;
+
+    // Permissions Start
+      public static function canViewAny(): bool
+    {
+        return Gate::allows('view_any_category');
+    }
+
+    public static function canCreate(): bool
+    {
+        return Gate::allows('create_category');
+    }
+
+    public static function canEdit($record): bool
+    {
+        return Gate::allows('update_category');
+    }
+
+    public static function canDelete($record): bool
+    {
+        return Gate::allows('delete_category');
+    }
+    // Permission End
     public static function form(Form $form): Form
     {
         return $form

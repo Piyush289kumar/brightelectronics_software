@@ -13,6 +13,7 @@ use Filament\Tables\Table;
 use Illuminate\Support\Facades\Auth;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 use Filament\Facades\Filament;
+use Illuminate\Support\Facades\Gate;
 
 class FloorResource extends Resource
 {
@@ -22,28 +23,28 @@ class FloorResource extends Resource
     protected static ?string $navigationGroup = 'Branches';
     protected static ?string $label = 'Floor';
     protected static ?string $pluralLabel = 'Floors';
-    protected static ?int $navigationSort = 6;   
+    protected static ?int $navigationSort = 6;
 
-    
-public static function canViewAny(): bool
-{
-    return Filament::auth()->user()?->can('view_any_floor') ?? false;
-}
 
-public static function canCreate(): bool
-{
-    return Filament::auth()->user()?->can('create_floor') ?? false;
-}
+    public static function canViewAny(): bool
+    {
+        return Gate::allows('view_any_floor');
+    }
 
-public static function canEdit($record): bool
-{
-    return Filament::auth()->user()?->can('update_floor') ?? false;
-}
+    public static function canCreate(): bool
+    {
+        return Gate::allows('create_floor');
+    }
 
-public static function canDelete($record): bool
-{
-    return Filament::auth()->user()?->can('delete_floor') ?? false;
-}
+    public static function canEdit($record): bool
+    {
+        return Gate::allows('update_floor');
+    }
+
+    public static function canDelete($record): bool
+    {
+        return Gate::allows('delete_floor');
+    }
 
     public static function form(Form $form): Form
     {
