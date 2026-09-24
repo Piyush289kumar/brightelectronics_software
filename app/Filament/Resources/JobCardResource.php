@@ -19,7 +19,7 @@ use TomatoPHP\FilamentDocs\Models\Document;
 use TomatoPHP\FilamentDocs\Models\DocumentTemplate;
 use TomatoPHP\FilamentDocs\Filament\Resources\DocumentResource\Pages\PrintDocument;
 
-class JobCardResource extends BaseResource
+class JobCardResource extends Resource
 {
     protected static ?string $model = JobCard::class;
     protected static ?string $navigationIcon = 'heroicon-o-briefcase';
