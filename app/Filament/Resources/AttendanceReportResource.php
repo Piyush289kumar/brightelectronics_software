@@ -15,7 +15,7 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 
-class AttendanceReportResource extends BaseResource
+class AttendanceReportResource extends Resource
 {
     protected static ?string $model = AttendanceReport::class;
 
