@@ -15,6 +15,7 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Support\Facades\Gate;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 
 class KnowledgeBaseResource extends Resource
@@ -24,6 +25,28 @@ class KnowledgeBaseResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
     protected static ?string $navigationGroup = 'Help Desk';
     protected static ?int $navigationSort = 20;
+
+     // Permissions Start
+      public static function canViewAny(): bool
+    {
+        return Gate::allows('view_any_knowledge_base');
+    }
+
+    public static function canCreate(): bool
+    {
+        return Gate::allows('create_knowledge_base');
+    }
+
+    public static function canEdit($record): bool
+    {
+        return Gate::allows('update_knowledge_base');
+    }
+
+    public static function canDelete($record): bool
+    {
+        return Gate::allows('delete_knowledge_base');
+    }
+    // Permission End
 
     public static function form(Form $form): Form
     {

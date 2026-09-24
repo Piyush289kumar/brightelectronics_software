@@ -15,6 +15,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Toggle;
+use Illuminate\Support\Facades\Gate;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 class CustomerResource extends Resource
 {
@@ -23,6 +24,29 @@ class CustomerResource extends Resource
     protected static ?string $navigationGroup = 'Suppliers & Customers';
     // Optional: sort order inside group
     protected static ?int $navigationSort = 3;
+
+     // Permissions Start
+      public static function canViewAny(): bool
+    {
+        return Gate::allows('view_any_customer');
+    }
+
+    public static function canCreate(): bool
+    {
+        return Gate::allows('create_customer');
+    }
+
+    public static function canEdit($record): bool
+    {
+        return Gate::allows('update_customer');
+    }
+
+    public static function canDelete($record): bool
+    {
+        return Gate::allows('delete_customer');
+    }
+    // Permission End
+    
     public static function form(Form $form): Form
     {
         return $form

@@ -9,6 +9,7 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Support\Facades\Gate;
 
 class JournalEntryResource extends Resource
 {
@@ -17,6 +18,28 @@ class JournalEntryResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-o-clipboard-document-list';
     protected static ?string $navigationGroup = 'Accounting';
     protected static ?string $navigationLabel = 'Journal Entries';
+
+     // Permissions Start
+      public static function canViewAny(): bool
+    {
+        return Gate::allows('view_any_journal_entry');
+    }
+
+    public static function canCreate(): bool
+    {
+        return Gate::allows('create_journal_entry');
+    }
+
+    public static function canEdit($record): bool
+    {
+        return Gate::allows('update_journal_entry');
+    }
+
+    public static function canDelete($record): bool
+    {
+        return Gate::allows('delete_journal_entry');
+    }
+    // Permission End
 
     protected static ?int $navigationSort = 8;
     public static function form(Form $form): Form
