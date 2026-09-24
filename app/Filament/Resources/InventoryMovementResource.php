@@ -12,11 +12,10 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
-use Illuminate\Support\Facades\Gate;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 use function Livewire\wrap;
 
-class InventoryMovementResource extends Resource
+class InventoryMovementResource extends BaseResource
 {
     protected static ?string $model = InventoryMovement::class;
 
@@ -24,28 +23,6 @@ class InventoryMovementResource extends Resource
     protected static ?string $navigationGroup = 'Inventory Management';
 
     protected static ?int $navigationSort = 4;
-
-     // Permissions Start
-      public static function canViewAny(): bool
-    {
-        return Gate::allows('view_any_inventory_movement');
-    }
-
-    public static function canCreate(): bool
-    {
-        return Gate::allows('create_inventory_movement');
-    }
-
-    public static function canEdit($record): bool
-    {
-        return Gate::allows('update_inventory_movement');
-    }
-
-    public static function canDelete($record): bool
-    {
-        return Gate::allows('delete_inventory_movement');
-    }
-    // Permission End
 
 
     public static function form(Form $form): Form

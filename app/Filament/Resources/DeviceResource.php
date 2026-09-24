@@ -12,9 +12,8 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
-use Illuminate\Support\Facades\Gate;
 
-class DeviceResource extends Resource
+class DeviceResource extends BaseResource
 {
     protected static ?string $model = Device::class;
 
@@ -22,28 +21,6 @@ class DeviceResource extends Resource
     protected static ?string $navigationGroup = 'Leads & Services';
     protected static ?string $pluralLabel = 'Devices';
     protected static ?string $modelLabel = 'Device';
-
-    // Permissions Start
-    public static function canViewAny(): bool
-    {
-        return Gate::allows('view_any_device');
-    }
-
-    public static function canCreate(): bool
-    {
-        return Gate::allows('create_device');
-    }
-
-    public static function canEdit($record): bool
-    {
-        return Gate::allows('update_device');
-    }
-
-    public static function canDelete($record): bool
-    {
-        return Gate::allows('delete_device');
-    }
-    // Permission End
 
     public static function form(Form $form): Form
     {

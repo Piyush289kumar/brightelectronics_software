@@ -12,39 +12,16 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
-use Illuminate\Support\Facades\Gate;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 use Str;
 
-class BrandResource extends Resource
+class BrandResource extends BaseResource
 {
     protected static ?string $model = Brand::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-cube';
     protected static ?string $navigationGroup = 'Products & Categories';
     protected static ?int $navigationSort = 3;
-
-     // Permissions Start
-      public static function canViewAny(): bool
-    {
-        return Gate::allows('view_any_brand');
-    }
-
-    public static function canCreate(): bool
-    {
-        return Gate::allows('create_brand');
-    }
-
-    public static function canEdit($record): bool
-    {
-        return Gate::allows('update_brand');
-    }
-
-    public static function canDelete($record): bool
-    {
-        return Gate::allows('delete_brand');
-    }
-    // Permission End
 
 
     public static function form(Form $form): Form

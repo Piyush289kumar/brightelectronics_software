@@ -18,7 +18,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 
-class DiscountCouponResource extends Resource
+class DiscountCouponResource extends BaseResource
 {
     protected static ?string $model = DiscountCoupon::class;
 

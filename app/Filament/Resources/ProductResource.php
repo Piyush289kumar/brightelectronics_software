@@ -14,10 +14,9 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
-use Illuminate\Support\Facades\Gate;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 
-class ProductResource extends Resource
+class ProductResource extends BaseResource
 {
     protected static ?string $model = Product::class;
     protected static ?string $navigationIcon = 'heroicon-o-cube';
@@ -25,30 +24,6 @@ class ProductResource extends Resource
 
     protected static ?string $label = 'Spare Parts';
     protected static ?int $navigationSort = 15;
-
-    // Permissions Start
-    public static function canViewAny(): bool
-    {
-        return Gate::allows('view_any_product');
-    }
-
-    public static function canCreate(): bool
-    {
-        return Gate::allows('create_product');
-    }
-
-    public static function canEdit($record): bool
-    {
-        return Gate::allows('update_product');
-    }
-
-    public static function canDelete($record): bool
-    {
-        return Gate::allows('delete_product');
-    }
-    // Permission End
-
-
     public static function form(Form $form): Form
     {
         return $form

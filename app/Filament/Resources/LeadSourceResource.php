@@ -12,39 +12,15 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
-use Illuminate\Support\Facades\Gate;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 
-class LeadSourceResource extends Resource
+class LeadSourceResource extends BaseResource
 {
     protected static ?string $model = LeadSource::class;
-
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
     protected static ?string $navigationGroup = 'Leads & Services';
     protected static ?string $pluralLabel = 'Lead Sources';
-
-     // Permissions Start
-      public static function canViewAny(): bool
-    {
-        return Gate::allows('view_any_lead_source');
-    }
-
-    public static function canCreate(): bool
-    {
-        return Gate::allows('create_lead_source');
-    }
-
-    public static function canEdit($record): bool
-    {
-        return Gate::allows('update_lead_source');
-    }
-
-    public static function canDelete($record): bool
-    {
-        return Gate::allows('delete_lead_source');
-    }
-    // Permission End
 
     public static function form(Form $form): Form
     {

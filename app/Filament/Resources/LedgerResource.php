@@ -14,9 +14,8 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 use Filament\Tables\Columns\Summarizers\Sum;
-use Illuminate\Support\Facades\Gate;
 
-class LedgerResource extends Resource
+class LedgerResource extends BaseResource
 {
     protected static ?string $model = Ledger::class;
 
@@ -24,28 +23,6 @@ class LedgerResource extends Resource
     protected static ?string $navigationGroup = 'Accounting';
     protected static ?string $navigationLabel = 'Ledger Entries';
     protected static ?int $navigationSort = 6;
-
-    // Permissions Start
-    public static function canViewAny(): bool
-    {
-        return Gate::allows('view_any_ledger');
-    }
-
-    public static function canCreate(): bool
-    {
-        return Gate::allows('create_ledger');
-    }
-
-    public static function canEdit($record): bool
-    {
-        return Gate::allows('update_ledger');
-    }
-
-    public static function canDelete($record): bool
-    {
-        return Gate::allows('delete_ledger');
-    }
-    // Permission End
 
     public static function form(Form $form): Form
     {

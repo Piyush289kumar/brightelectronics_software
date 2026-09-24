@@ -14,7 +14,7 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 
-class AppDownloadResource extends Resource
+class AppDownloadResource extends BaseResource
 {
     protected static ?string $model = User::class;
 

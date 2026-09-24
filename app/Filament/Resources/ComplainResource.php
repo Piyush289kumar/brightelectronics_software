@@ -16,37 +16,14 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Gate;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
-class ComplainResource extends Resource
+class ComplainResource extends BaseResource
 {
     protected static ?string $model = Complain::class;
     protected static ?string $navigationIcon = 'heroicon-o-exclamation-circle';
     protected static ?string $navigationGroup = 'Complains & Jobs';
     protected static ?string $pluralLabel = 'Complains';
-
-     // Permissions Start
-      public static function canViewAny(): bool
-    {
-        return Gate::allows('view_any_complain');
-    }
-
-    public static function canCreate(): bool
-    {
-        return Gate::allows('create_complain');
-    }
-
-    public static function canEdit($record): bool
-    {
-        return Gate::allows('update_complain');
-    }
-
-    public static function canDelete($record): bool
-    {
-        return Gate::allows('delete_complain');
-    }
-    // Permission End
-    public static function form(Form $form): Form    
+    public static function form(Form $form): Form
     {
         return $form->schema([
             Forms\Components\Section::make('General Information')

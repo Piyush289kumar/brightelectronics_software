@@ -17,10 +17,9 @@ use Illuminate\Support\HtmlString;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Filament\Forms\Components\TextInput;
-use Illuminate\Support\Facades\Gate;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 
-class InventoryResource extends Resource
+class InventoryResource extends BaseResource
 {
     protected static ?string $model = Inventory::class;
 
@@ -28,28 +27,6 @@ class InventoryResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
     protected static ?string $navigationGroup = 'Inventory Management';
     protected static ?int $navigationSort = -1;
-
-    // Permissions Start
-    public static function canViewAny(): bool
-    {
-        return Gate::allows('view_any_inventory');
-    }
-
-    public static function canCreate(): bool
-    {
-        return Gate::allows('create_inventory');
-    }
-
-    public static function canEdit($record): bool
-    {
-        return Gate::allows('update_inventory');
-    }
-
-    public static function canDelete($record): bool
-    {
-        return Gate::allows('delete_inventory');
-    }
-    // Permission End
 
 
     public static function form(Form $form): Form
@@ -134,8 +111,8 @@ class InventoryResource extends Resource
                     ->formatStateUsing(
                         fn($state, $record) =>
                         $record->product
-                            ? "{$record->product->id} ({$record->product->barcode})"
-                            : '-'
+                        ? "{$record->product->id} ({$record->product->barcode})"
+                        : '-'
                     )
                     ->searchable(['name', 'barcode'])
                     ->sortable(),

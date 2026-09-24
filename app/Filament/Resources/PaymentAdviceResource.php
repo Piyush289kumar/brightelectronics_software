@@ -18,12 +18,11 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Gate;
 use TomatoPHP\FilamentDocs\Filament\Resources\DocumentResource\Pages\PrintDocument;
 use TomatoPHP\FilamentDocs\Models\Document;
 use TomatoPHP\FilamentDocs\Models\DocumentTemplate;
 
-class PaymentAdviceResource extends Resource
+class PaymentAdviceResource extends BaseResource
 {
     protected static ?string $model = PaymentAdvice::class;
     protected static ?string $navigationGroup = 'Advices';
@@ -32,29 +31,6 @@ class PaymentAdviceResource extends Resource
     protected static ?string $pluralModelLabel = 'Payment Advices';
     protected static ?string $label = 'Payment Advices';
     protected static ?string $pluralLabel = 'Payment Advices';
-
-    // Permissions Start
-    public static function canViewAny(): bool
-    {
-        return Gate::allows('view_any_payment_advice');
-    }
-
-    public static function canCreate(): bool
-    {
-        return Gate::allows('create_payment_advice');
-    }
-
-    public static function canEdit($record): bool
-    {
-        return Gate::allows('update_payment_advice');
-    }
-
-    public static function canDelete($record): bool
-    {
-        return Gate::allows('delete_payment_advice');
-    }
-    // Permission End
-
 
     public static function form(Form $form): Form
     {
@@ -258,7 +234,7 @@ class PaymentAdviceResource extends Resource
                         ->action(function (PaymentAdvice $record, $livewire) {
 
                             // 🔁 SAME LOGIC AS PREVIEW (generate first)
-
+                
                             $template = DocumentTemplate::find(16);
                             $templateBody = (string) ($template->body ?? '');
 
@@ -441,4 +417,6 @@ class PaymentAdviceResource extends Resource
         };
     JS);
     }
+
+
 }

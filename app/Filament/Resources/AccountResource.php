@@ -10,9 +10,8 @@ use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Illuminate\Support\Facades\Gate;
 
-class AccountResource extends Resource
+class AccountResource extends BaseResource
 {
     protected static ?string $model = Account::class;
 
@@ -20,28 +19,6 @@ class AccountResource extends Resource
     protected static ?string $navigationGroup = 'Accounting';
     protected static ?string $navigationLabel = 'Accounts';
     protected static ?int $navigationSort = 7;
-
-     // Permissions Start
-      public static function canViewAny(): bool
-    {
-        return Gate::allows('view_any_account');
-    }
-
-    public static function canCreate(): bool
-    {
-        return Gate::allows('create_account');
-    }
-
-    public static function canEdit($record): bool
-    {
-        return Gate::allows('update_account');
-    }
-
-    public static function canDelete($record): bool
-    {
-        return Gate::allows('delete_account');
-    }
-    // Permission End
 
     public static function form(Form $form): Form
     {

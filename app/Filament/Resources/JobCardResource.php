@@ -12,7 +12,6 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 use pxlrbt\FilamentExcel\Exports\ExcelExport;
@@ -20,34 +19,12 @@ use TomatoPHP\FilamentDocs\Models\Document;
 use TomatoPHP\FilamentDocs\Models\DocumentTemplate;
 use TomatoPHP\FilamentDocs\Filament\Resources\DocumentResource\Pages\PrintDocument;
 
-class JobCardResource extends Resource
+class JobCardResource extends BaseResource
 {
     protected static ?string $model = JobCard::class;
     protected static ?string $navigationIcon = 'heroicon-o-briefcase';
     protected static ?string $navigationGroup = 'Complains & Jobs';
     protected static ?string $pluralLabel = 'Job Cards';
-
-     // Permissions Start
-      public static function canViewAny(): bool
-    {
-        return Gate::allows('view_any_job_card');
-    }
-
-    public static function canCreate(): bool
-    {
-        return Gate::allows('create_job_card');
-    }
-
-    public static function canEdit($record): bool
-    {
-        return Gate::allows('update_job_card');
-    }
-
-    public static function canDelete($record): bool
-    {
-        return Gate::allows('delete_job_card');
-    }
-    // Permission End
 
     public static function form(Form $form): Form
     {

@@ -1,7 +1,5 @@
 <?php
-
 namespace App\Filament\Resources;
-
 use App\Filament\Resources\InvoiceResource\Pages;
 use App\Models\Customer;
 use App\Models\Invoice;
@@ -30,9 +28,7 @@ use TomatoPHP\FilamentDocs\Filament\Resources\DocumentResource\Pages\PrintDocume
 use TomatoPHP\FilamentDocs\Models\Document;
 use TomatoPHP\FilamentDocs\Models\DocumentTemplate;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Gate;
-
-class InvoiceResource extends Resource
+class InvoiceResource extends BaseResource
 {
     protected static ?string $model = Invoice::class;
     protected static ?string $navigationIcon = 'heroicon-o-document-text';
@@ -54,31 +50,6 @@ class InvoiceResource extends Resource
     }
     // (Optional) Add tooltip to the badge
     protected static ?string $navigationBadgeTooltip = 'Total number of invoices';
-
-
-
-
-    // Permissions Start
-    public static function canViewAny(): bool
-    {
-        return Gate::allows('view_any_invoice');
-    }
-
-    public static function canCreate(): bool
-    {
-        return Gate::allows('create_invoice');
-    }
-
-    public static function canEdit($record): bool
-    {
-        return Gate::allows('update_invoice');
-    }
-
-    public static function canDelete($record): bool
-    {
-        return Gate::allows('delete_invoice');
-    }
-    // Permission End
 
     public static function form(Form $form): Form
     {
@@ -653,7 +624,7 @@ class InvoiceResource extends Resource
                                 $discountAmount = $item->discount_amount_per_item ?? 0; // discount ₹
                                 $gstRate = $item->gst_rate ?? 0; // GST %
                                 $gstAmount = $item->gst_amount ?? 0; // GST ₹
-
+                
                                 return "<tr style='border-bottom: 1px solid #000;'>
                 <td style='padding:6px; text-align:center; font-weight: 900;'>" . ($index + 1) . "</td>
                 <td style='padding:6px;'>{$item->product->name}</td>
@@ -723,7 +694,7 @@ class InvoiceResource extends Resource
                                 $discountAmount = $item->discount_amount_per_item ?? 0; // discount ₹
                                 $gstRate = $item->gst_rate ?? 0; // GST %
                                 $gstAmount = $item->gst_amount ?? 0; // GST ₹
-
+                
                                 return "<tr style='border-bottom: 1px solid #000;'>
                 <td style='padding:6px; text-align:center; font-weight: 900;'>" . ($index + 1) . "</td>
                 <td style='padding:6px;'>{$item->product->name}</td>
@@ -879,4 +850,5 @@ class InvoiceResource extends Resource
             'edit' => Pages\EditInvoice::route('/{record}/edit'),
         ];
     }
+
 }
