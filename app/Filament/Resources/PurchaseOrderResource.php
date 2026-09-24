@@ -160,7 +160,7 @@ class PurchaseOrderResource extends BaseResource
                                 'inclusive' => 'Include GST',
                             ])
                             ->inline()
-                            ->default('exclusive')
+                            ->default('inclusive')
                             ->live()
                             ->afterStateUpdated(function ($set, $get) {
                                 PurchaseOrderResource::recalculateInvoiceTotals($set, $get);
