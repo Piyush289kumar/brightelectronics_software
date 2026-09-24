@@ -21,7 +21,7 @@ use Filament\Forms\Components\Toggle;
 use Illuminate\Support\Facades\Auth;
 use Filament\Forms\Get;
 
-class StoreTargetResource extends Resource
+class StoreTargetResource extends BaseResource
 {
     use HasRoleBasedAccess;
 

@@ -26,7 +26,7 @@ use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 use Filament\Forms\Components\FileUpload;
 use App\Models\Category;
 
-class PurchaseRequisitionResource extends Resource
+class PurchaseRequisitionResource extends BaseResource
 {
     protected static ?string $model = PurchaseRequisition::class;
     protected static ?string $navigationIcon = 'heroicon-o-document-text';

@@ -18,7 +18,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Facades\Auth;
 
-class SalaryReportResource extends Resource
+class SalaryReportResource extends BaseResource
 {
     protected static ?string $model = User::class;
 

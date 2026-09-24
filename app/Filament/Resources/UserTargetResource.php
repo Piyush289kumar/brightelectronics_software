@@ -17,11 +17,9 @@ use Filament\Forms\Get;
 use Filament\Forms\Set;
 use Illuminate\Support\Facades\Auth;
 
-class UserTargetResource extends Resource
+class UserTargetResource extends BaseResource
 {
     protected static ?string $model = UserTarget::class;
-
-
     protected static ?string $navigationGroup = 'Targets';
     protected static ?string $navigationIcon = 'heroicon-o-user-group';
     protected static ?string $navigationLabel = 'Member Targets';

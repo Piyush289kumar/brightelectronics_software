@@ -19,9 +19,8 @@ use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use App\Models\Category;
-use Illuminate\Support\Facades\Gate;
 
-class ProductVendorResource extends Resource
+class ProductVendorResource extends BaseResource
 {
     protected static ?string $model = ProductVendor::class;
 
@@ -32,28 +31,6 @@ class ProductVendorResource extends Resource
     protected static ?string $label = 'Spare Parts Vendors';
     // Optional: sort order inside group
     protected static ?int $navigationSort = 12;
-
-    // Permissions Start
-    public static function canViewAny(): bool
-    {
-        return Gate::allows('view_any_product_vendor');
-    }
-
-    public static function canCreate(): bool
-    {
-        return Gate::allows('create_product_vendor');
-    }
-
-    public static function canEdit($record): bool
-    {
-        return Gate::allows('update_product_vendor');
-    }
-
-    public static function canDelete($record): bool
-    {
-        return Gate::allows('delete_product_vendor');
-    }
-    // Permission End
 
     public static function form(Form $form): Form
     {

@@ -14,7 +14,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 
-class ServiceResource extends Resource
+class ServiceResource extends BaseResource
 {
     protected static ?string $model = Service::class;
 

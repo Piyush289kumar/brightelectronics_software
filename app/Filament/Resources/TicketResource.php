@@ -23,7 +23,7 @@ use Filament\Tables\Columns\BadgeColumn;
 use Illuminate\Support\Str;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 
-class TicketResource extends Resource
+class TicketResource extends BaseResource
 {
     protected static ?string $model = Ticket::class;
 

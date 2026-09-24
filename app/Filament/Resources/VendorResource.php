@@ -14,7 +14,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 
-class VendorResource extends Resource
+class VendorResource extends BaseResource
 {
     protected static ?string $model = Vendor::class;
 
@@ -50,7 +50,6 @@ class VendorResource extends Resource
                                     $random = random_int(50000, 99999);
 
                                     $code = $nextId . $random;
-
                                 } while (\App\Models\Store::where('code', $code)->exists());
 
                                 $set('code', $code);
@@ -219,8 +218,8 @@ class VendorResource extends Resource
                         ->url(
                             fn($record) =>
                             str_starts_with($record->google_map_location, 'http')
-                            ? $record->google_map_location
-                            : 'https://' . $record->google_map_location
+                                ? $record->google_map_location
+                                : 'https://' . $record->google_map_location
                         )
                         ->openUrlInNewTab(),
                     Tables\Actions\ViewAction::make(),

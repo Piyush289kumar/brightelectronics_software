@@ -30,7 +30,7 @@ use TomatoPHP\FilamentDocs\Models\Document;
 use TomatoPHP\FilamentDocs\Models\DocumentTemplate;
 use Filament\Tables\Filters\Filter;
 
-class TransferOrderResource extends Resource
+class TransferOrderResource extends BaseResource
 {
     protected static ?string $model = Invoice::class;
     protected static ?string $navigationIcon = 'heroicon-o-document-text';

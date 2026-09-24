@@ -488,8 +488,8 @@ class PurchaseOrderResource extends BaseResource
         $user = Auth::user();
 
         $query = parent::getEloquentQuery()
-            ->where('document_type', 'purchase_order'); // Show only 'invoice' documents       
-
+            ->where('document_type', 'purchase_order'); // Show only 'invoice' documents
+        
         return $query;
     }
 

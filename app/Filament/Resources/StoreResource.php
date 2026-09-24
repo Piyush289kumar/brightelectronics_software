@@ -15,7 +15,7 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Facades\Auth;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 
-class StoreResource extends Resource
+class StoreResource extends BaseResource
 {    
     protected static ?string $model = Store::class;
 

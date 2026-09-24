@@ -35,7 +35,7 @@ use Filament\Tables\Filters\Filter;
 use Filament\Tables\Actions\BulkAction;
 use Illuminate\Support\Collection;
 use Filament\Forms\Components\Hidden;
-class PurchaseResource extends Resource
+class PurchaseResource extends BaseResource
 {
     protected static ?string $model = Invoice::class;
     protected static ?string $navigationIcon = 'heroicon-o-document-text';

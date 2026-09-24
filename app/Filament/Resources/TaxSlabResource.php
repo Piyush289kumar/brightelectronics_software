@@ -14,10 +14,9 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 
-class TaxSlabResource extends Resource
+class TaxSlabResource extends BaseResource
 {
     protected static ?string $model = TaxSlab::class;
-
     protected static ?string $navigationIcon = 'heroicon-o-percent-badge';
     protected static ?string $navigationGroup = 'Products & Categories';
     protected static ?int $navigationSort = 5;

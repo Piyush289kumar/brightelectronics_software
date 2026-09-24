@@ -30,7 +30,7 @@ use TomatoPHP\FilamentDocs\Models\Document;
 use TomatoPHP\FilamentDocs\Models\DocumentTemplate;
 use Filament\Tables\Filters\Filter;
 
-class ProformaResource extends Resource
+class ProformaResource extends BaseResource
 {
     protected static ?string $model = Invoice::class;
 

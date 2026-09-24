@@ -14,7 +14,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 
-class StockTransferResource extends Resource
+class StockTransferResource extends BaseResource
 {
     protected static ?string $model = StockTransfer::class;
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';

@@ -16,7 +16,7 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Filament\Tables\Filters\SelectFilter;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 
-class StoreInventoryResource extends Resource
+class StoreInventoryResource extends BaseResource
 {
     protected static ?string $model = StoreInventory::class;
 
