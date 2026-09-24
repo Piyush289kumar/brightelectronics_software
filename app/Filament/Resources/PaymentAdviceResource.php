@@ -22,7 +22,7 @@ use TomatoPHP\FilamentDocs\Filament\Resources\DocumentResource\Pages\PrintDocume
 use TomatoPHP\FilamentDocs\Models\Document;
 use TomatoPHP\FilamentDocs\Models\DocumentTemplate;
 
-class PaymentAdviceResource extends BaseResource
+class PaymentAdviceResource extends Resource
 {
     protected static ?string $model = PaymentAdvice::class;
     protected static ?string $navigationGroup = 'Advices';
