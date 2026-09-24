@@ -32,7 +32,7 @@ use TomatoPHP\FilamentDocs\Filament\Resources\DocumentResource\Pages\PrintDocume
 use TomatoPHP\FilamentDocs\Models\Document;
 use TomatoPHP\FilamentDocs\Models\DocumentTemplate;
 use Filament\Tables\Filters\Filter;
-class PurchaseOrderResource extends Resource
+class PurchaseOrderResource extends BaseResource
 {
     protected static ?string $model = Invoice::class;
     protected static ?string $navigationIcon = 'heroicon-o-document-text';
@@ -488,12 +488,7 @@ class PurchaseOrderResource extends Resource
         $user = Auth::user();
 
         $query = parent::getEloquentQuery()
-            ->where('document_type', 'purchase_order'); // Show only 'invoice' documents
-
-        // ✅ Restrict visibility for non-admin users
-        if (!$user->hasRole(['Administrator', 'Developer', 'admin']) && $user->email !== 'vipprow@gmail.com') {
-            $query->where('created_by', $user->id);
-        }
+            ->where('document_type', 'purchase_order'); // Show only 'invoice' documents       
 
         return $query;
     }

@@ -14,7 +14,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 
-class UnitResource extends Resource
+class UnitResource extends BaseResource
 {
     protected static ?string $model = Unit::class;
 
