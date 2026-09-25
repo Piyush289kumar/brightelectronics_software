@@ -1,5 +1,7 @@
 <?php
+
 namespace App\Filament\Resources;
+
 use App\Filament\Resources\SiteInventoryIssueResource\Pages;
 use App\Filament\Resources\SiteInventoryIssueResource\RelationManagers;
 use App\Models\Product;
@@ -19,6 +21,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
+
 class SiteInventoryIssueResource extends Resource
 {
     protected static ?string $model = SiteInventoryIssue::class;
@@ -186,7 +189,7 @@ class SiteInventoryIssueResource extends Resource
                         ->relationship('issuer', 'name') // assumes model has issuer() -> belongsTo(User::class, 'issued_by')
                         ->required()
                         ->default(fn() => Auth::id()) // always default to current logged in user
-                        ->disabled(fn() => !Auth::user()?->isAdmin())// disable if not admin
+                        ->disabled(fn() => !Auth::user()?->isAdmin()) // disable if not admin
                         ->dehydrated(),
 
                     Textarea::make('notes')
