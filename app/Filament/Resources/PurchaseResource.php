@@ -35,6 +35,8 @@ use Filament\Tables\Filters\Filter;
 use Filament\Tables\Actions\BulkAction;
 use Illuminate\Support\Collection;
 use Filament\Forms\Components\Hidden;
+use App\Models\StoreInventoryIn;
+
 class PurchaseResource extends BaseResource
 {
     protected static ?string $model = Invoice::class;
@@ -639,7 +641,7 @@ class PurchaseResource extends BaseResource
                                 $discountAmount = $item->discount_amount_per_item ?? 0; // discount ₹
                                 $gstRate = $item->gst_rate ?? 0; // GST %
                                 $gstAmount = $item->gst_amount ?? 0; // GST ₹
-                
+
                                 return "<tr style='border-bottom: 1px solid #000;'>
                 <td style='padding:6px; text-align:center; font-weight: 900;'>" . ($index + 1) . "</td>
                 <td style='padding:6px;'>{$item->product->name}</td>
@@ -711,7 +713,7 @@ class PurchaseResource extends BaseResource
                                 $discountAmount = $item->discount_amount_per_item ?? 0; // discount ₹
                                 $gstRate = $item->gst_rate ?? 0; // GST %
                                 $gstAmount = $item->gst_amount ?? 0; // GST ₹
-                
+
                                 return "<tr style='border-bottom: 1px solid #000;'>
                 <td style='padding:6px; text-align:center; font-weight: 900;'>" . ($index + 1) . "</td>
                 <td style='padding:6px;'>{$item->product->name}</td>
@@ -845,7 +847,23 @@ class PurchaseResource extends BaseResource
                                 'created_by' => auth()->id(),
                             ]);
                         })
-                        ->visible(fn($record) => $record->status !== 'paid' && $record->document_type === 'purchase'),
+                        //->visible(fn($record) => $record->status !== 'paid' && $record->document_type === 'purchase')
+                        ->visible(function ($record) {
+
+                            // Only for Purchase Invoice
+                            if (
+                                $record->status === 'paid' ||
+                                $record->document_type !== 'purchase'
+                            ) {
+                                return false;
+                            }
+
+                            // Check whether Stock In was created
+                            // from THIS Purchase Invoice
+                            return StoreInventoryIn::query()
+                                ->where('purchase_order_id', $record->id)
+                                ->exists();
+                        }),
 
 
                     Tables\Actions\EditAction::make(),
@@ -873,7 +891,7 @@ class PurchaseResource extends BaseResource
                                 ->filter(
                                     fn($r) =>
                                     $r->document_type === 'purchase'
-                                    && in_array($r->status, ['draft', 'pending'])
+                                        && in_array($r->status, ['draft', 'pending'])
                                 )
                                 ->map(function ($record) {
 

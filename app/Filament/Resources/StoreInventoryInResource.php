@@ -79,6 +79,7 @@ class StoreInventoryInResource extends Resource
                                     'Developer',
                                     'admin',
                                 ]))
+                                ->live()
                                 ->dehydrated(),
 
                             Select::make('received_by')
@@ -234,45 +235,65 @@ class StoreInventoryInResource extends Resource
                             ->schema([
 
                                 Select::make('purchase_order_id')
-                                    ->label('Load from Purchase Order')
+                                    ->label('Load from Purchase Invoice')
                                     ->options(function (callable $get) {
 
-                                        $storeId = $get('store_id');
+                                        $usedPurchaseOrders = StoreInventoryIn::query()
+                                            ->whereNotNull('purchase_order_id')
+                                            ->pluck('purchase_order_id')
+                                            ->toArray();
 
                                         return Invoice::query()
-                                            ->where('document_type', 'purchase_order')
-                                            ->where('billable_id', $storeId)
-                                            ->whereNotIn(
-                                                'id',
-                                                StoreInventoryIn::whereNotNull('purchase_order_id')
-                                                    ->pluck('purchase_order_id')
-                                            )
+                                            ->where('document_type', 'purchase')
+                                            ->whereNotIn('id', $usedPurchaseOrders)
                                             ->latest('id')
-                                            ->pluck('number', 'id');
+                                            ->pluck('number', 'id')
+                                            ->toArray();
                                     })
                                     ->searchable()
+                                    ->preload()
                                     ->live()
                                     ->afterStateUpdated(function ($state, callable $set) {
 
                                         if (!$state) {
+                                            $set('items', []);
+                                            $set('notes', null);
+
                                             return;
                                         }
 
-                                        $po = Invoice::with('items')->find($state);
+                                        $purchase = Invoice::query()
+                                            ->with('items')
+                                            ->where('document_type', 'purchase')
+                                            ->whereKey($state)
+                                            ->first();
 
-                                        if (!$po) {
+                                        if (!$purchase) {
+                                            $set('items', []);
+
                                             return;
                                         }
 
                                         $set(
+                                            'notes',
+                                            'Stock received from Purchase Invoice: ' . $purchase->number
+                                        );
+
+                                        $set(
                                             'items',
-                                            $po->items->map(fn($item) => [
-                                                'product_id' => $item->product_id,
-                                                'quantity' => $item->quantity,
-                                                'note' => 'Imported from PO ' . $po->number,
-                                            ])->toArray()
+                                            $purchase->items
+                                                ->map(function ($item) use ($purchase) {
+                                                    return [
+                                                        'product_id' => $item->product_id,
+                                                        'quantity' => $item->quantity,
+                                                        'note' => 'Imported from Purchase Invoice ' . $purchase->number,
+                                                    ];
+                                                })
+                                                ->values()
+                                                ->toArray()
                                         );
                                     }),
+
                             ]),
 
                         Forms\Components\Tabs\Tab::make('Transfer Order')
@@ -287,7 +308,8 @@ class StoreInventoryInResource extends Resource
                                         return Invoice::query()
                                             ->where('document_type', 'transfer_order')
                                             ->where('status', 'pending')
-                                            ->where('billable_id', $storeId)
+                                            //->where('billable_id', $storeId)
+                                            ->where('destination_store_id', $storeId)
                                             ->latest('id')
                                             ->pluck('number', 'id');
                                     })
