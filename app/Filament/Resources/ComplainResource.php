@@ -182,11 +182,11 @@ class ComplainResource extends BaseResource
                             if (!$leadSourceId)
                                 return false;
 
-                            return LeadSource::find($leadSourceId)?->lead_name === 'Partnership';
+                            return LeadSource::find($leadSourceId)?->lead_name === 'PARTNER CALL';
                         })
                         ->required(
                             fn(callable $get) =>
-                            LeadSource::find($get('lead_source_id'))?->lead_name === 'Partnership'
+                            LeadSource::find($get('lead_source_id'))?->lead_name === 'PARTNER CALL'
                         ),
 
                     Forms\Components\Select::make('staff_id')
@@ -202,11 +202,11 @@ class ComplainResource extends BaseResource
                             if (!$leadSourceId)
                                 return false;
 
-                            return LeadSource::find($leadSourceId)?->lead_name === 'Staff Call';
+                            return LeadSource::find($leadSourceId)?->lead_name === 'STAFF CALL';
                         })
                         ->required(
                             fn(callable $get) =>
-                            LeadSource::find($get('lead_source_id'))?->lead_name === 'Staff Call'
+                            LeadSource::find($get('lead_source_id'))?->lead_name === 'STAFF CALL'
                         ),
 
 
