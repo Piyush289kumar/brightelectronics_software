@@ -21,7 +21,8 @@ class User extends Authenticatable
         'password',
         'store_id',
         'basic_salary',
-        'incentive'
+        'incentive',
+        'allowance'
     ];
 
     protected function casts(): array
@@ -54,5 +55,4 @@ class User extends Authenticatable
     {
         return $this->hasRole(['Administrator', 'Developer', 'admin']);
     }
-
 }

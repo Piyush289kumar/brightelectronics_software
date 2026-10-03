@@ -50,13 +50,19 @@ class UserResource extends BaseResource
                 ->label('Basic Salary (₹)')
                 ->numeric()
                 ->prefix('₹')
-                ->nullable(),
+                ->default(0),
 
             Forms\Components\TextInput::make('incentive')
                 ->label('Incentive (%)')
                 ->numeric()
                 ->suffix('%')
-                ->nullable(),
+                ->default(0),
+
+            Forms\Components\TextInput::make('allowance')
+                ->label('Allowance')
+                ->numeric()
+                ->prefix('₹')
+                ->default(0),
 
             Forms\Components\TextInput::make('password')
                 ->label('Password')
@@ -94,6 +100,10 @@ class UserResource extends BaseResource
             Tables\Columns\TextColumn::make('incentive')
                 ->label('Incentive (%)')
                 ->suffix('%')
+                ->sortable(),
+            Tables\Columns\TextColumn::make('allowance')
+                ->label('Allowance')
+                ->prefix('₹')
                 ->sortable(),
             Tables\Columns\TextColumn::make('created_at')->dateTime()->label('Created'),
         ])
