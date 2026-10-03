@@ -14,7 +14,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 
-class LeadSourceResource extends BaseResource
+class LeadSourceResource extends Resource
 {
     protected static ?string $model = LeadSource::class;
 
