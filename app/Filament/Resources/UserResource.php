@@ -79,7 +79,7 @@ class UserResource extends BaseResource
     public static function table(Table $table): Table
     {
         return $table->columns([
-            Tables\Columns\TextColumn::make('id')->label('ID')->formatStateUsing(fn($state) => 'EMP-' . str_pad($state, 4, '0', STR_PAD_LEFT))->searchable()->sortable(),
+            Tables\Columns\TextColumn::make('id')->label('ID')->searchable()->sortable(),
             Tables\Columns\TextColumn::make('name')->searchable()->sortable(),
             Tables\Columns\TextColumn::make('email')->searchable()->sortable(),
             Tables\Columns\TextColumn::make('store.name')->label('Store')->sortable(),
