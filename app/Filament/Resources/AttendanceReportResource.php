@@ -82,24 +82,48 @@ class AttendanceReportResource extends BaseResource
                         Forms\Components\TextInput::make('working_days')
                             ->numeric()
                             ->default(0)
-                            ->required(),
+                            ->required()
+                            ->reactive()
+                            ->afterStateUpdated(function ($state, callable $set, callable $get) {
+                                $workingDays = (int) $state;
+                                $presentDays = (int) $get('present_count');
+
+                                $set(
+                                    'absent_count',
+                                    max(0, $workingDays - $presentDays)
+                                );
+                            }),
 
                         Forms\Components\TextInput::make('present_count')
                             ->numeric()
                             ->default(0)
-                            ->required(),
+                            ->required()
+                            ->reactive()
+                            ->afterStateUpdated(function ($state, callable $set, callable $get) {
+                                $workingDays = (int) $get('working_days');
+                                $presentDays = (int) $state;
+
+                                $set(
+                                    'absent_count',
+                                    max(0, $workingDays - $presentDays)
+                                );
+                            }),
 
                         Forms\Components\TextInput::make('absent_count')
                             ->numeric()
                             ->default(0)
+                            ->readOnly()
+                            ->dehydrated()
                             ->required(),
 
                         Forms\Components\TextInput::make('leave_count')
                             ->numeric()
+                            ->hidden()
                             ->default(0),
 
                         Forms\Components\TextInput::make('half_day_count')
                             ->numeric()
+                            ->hidden()
                             ->default(0),
 
                         Forms\Components\TextInput::make('late_punch_count')
@@ -108,6 +132,7 @@ class AttendanceReportResource extends BaseResource
 
                         Forms\Components\TextInput::make('overtime_hours')
                             ->numeric()
+                            ->hidden()
                             ->step('0.5')
                             ->default(0),
                     ])

@@ -14,13 +14,17 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 
-class LeadSourceResource extends Resource
+class LeadSourceResource extends BaseResource
 {
     protected static ?string $model = LeadSource::class;
-
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
     protected static ?string $navigationGroup = 'Leads & Services';
     protected static ?string $pluralLabel = 'Lead Sources';
+
+     protected static function permission(string $action): string
+    {
+        return "{$action}_lead::source";
+    }
 
     public static function form(Form $form): Form
     {
