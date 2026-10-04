@@ -86,7 +86,7 @@ class UserResource extends BaseResource
     {
         return $table->columns([
             Tables\Columns\TextColumn::make('id')->label('ID')->searchable()->sortable(),
-            Tables\Columns\TextColumn::make('user_code')->label('User Code')->searchable()->sortable(),
+            Tables\Columns\TextColumn::make('user_code')->label('Emp Code')->searchable()->sortable(),
             Tables\Columns\TextColumn::make('name')->searchable()->sortable(),
             Tables\Columns\TextColumn::make('email')->searchable()->sortable(),
             Tables\Columns\TextColumn::make('store.name')->label('Store')->sortable(),
