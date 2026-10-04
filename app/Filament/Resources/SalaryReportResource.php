@@ -15,7 +15,7 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 
-class SalaryReportResource extends Resource
+class SalaryReportResource extends BaseResource
 {
     protected static ?string $model = User::class;
 
@@ -31,7 +31,7 @@ class SalaryReportResource extends Resource
 
     protected static function permission(string $action): string
     {
-        return "{$action}_salary_report";
+        return "{$action}_salary::report";
     }
 
     public static function form(Form $form): Form
