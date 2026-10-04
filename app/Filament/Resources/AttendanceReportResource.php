@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\AttendanceReportResource\Pages;
 use App\Filament\Resources\AttendanceReportResource\RelationManagers;
+use App\Filament\Resources\Concerns\HasRoleBasedDataScope;
 use App\Models\AttendanceReport;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -15,10 +16,10 @@ use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Storage;
 
-class AttendanceReportResource extends Resource
+class AttendanceReportResource extends BaseResource
 {
+    use HasRoleBasedDataScope;
     protected static ?string $model = AttendanceReport::class;
-
 
     protected static ?string $navigationLabel = 'Attendance Report';
 
@@ -29,6 +30,11 @@ class AttendanceReportResource extends Resource
     protected static ?string $navigationIcon = 'heroicon-o-document-text';
 
     protected static ?string $navigationGroup = 'HR & Payroll';
+
+    protected static function permission(string $action): string
+    {
+        return "{$action}_attendance::report";
+    }
 
     public static function form(Form $form): Form
     {
@@ -195,8 +201,8 @@ class AttendanceReportResource extends Resource
                     ->formatStateUsing(fn($state) => $state ? 'Download PDF' : '-')
                     ->url(
                         fn($record) => $record->pdf_file
-                        ? Storage::disk('public')->url($record->pdf_file)
-                        : null,
+                            ? Storage::disk('public')->url($record->pdf_file)
+                            : null,
                         shouldOpenInNewTab: true
                     )
                     ->color('primary'),
@@ -251,29 +257,10 @@ class AttendanceReportResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        $query = parent::getEloquentQuery();
-
-        $user = Auth::user();
-
-        if (!$user) {
-            return $query->whereRaw('1 = 0');
-        }
-
-        // Super Admin Roles
-        if (
-            $user->hasRole(['Administrator', 'Developer', 'admin'])
-            || $user->email === 'piyushraikwar289@gmail.com'
-        ) {
-            return $query;
-        }
-
-        // Store Manager → All employees of own branch
-        if ($user->hasRole('Store Manager')) {
-            return $query->where('store_id', $user->store_id);
-        }
-
-        // Employee → Only own report
-        return $query->where('user_id', $user->id);
+        return static::applyRoleBasedDataScope(
+            parent::getEloquentQuery(),
+            Auth::user()
+        );
     }
 
     public static function getPages(): array

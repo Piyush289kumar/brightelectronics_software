@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Filament\Resources\Concerns\HasRoleBasedDataScope;
 use App\Filament\Resources\SalaryReportResource\Pages;
 use App\Models\AttendanceReport;
 use App\Models\JobCard;
@@ -17,6 +18,7 @@ use Illuminate\Support\Facades\Auth;
 
 class SalaryReportResource extends BaseResource
 {
+    use HasRoleBasedDataScope;
     protected static ?string $model = User::class;
 
     protected static ?string $navigationLabel = 'Salary Report';
@@ -734,30 +736,45 @@ class SalaryReportResource extends BaseResource
     // PERMISSION / USER FILTER
     // ======================================================
 
+    // public static function getEloquentQuery(): Builder
+    // {
+    //     $user = Auth::user();
+
+    //     // Admin / Manager / Team Lead / Developer
+    //     // can see all employees.
+
+    //     if (
+    //         $user->hasAnyRole([
+    //             'Administrator',
+    //             'Developer',
+    //             'Manager',
+    //             'Team Lead',
+    //             'admin'
+    //         ])
+    //     ) {
+    //         return parent::getEloquentQuery();
+    //     }
+
+    //     // Engineer / Machine Men
+    //     // can see only their own salary.
+
+    //     return parent::getEloquentQuery()
+    //         ->where('id', $user->id);
+    // }
+
     public static function getEloquentQuery(): Builder
     {
-        $user = Auth::user();
+        return static::applyRoleBasedDataScope(
+            parent::getEloquentQuery(),
+            Auth::user()
+        );
+    }
 
-        // Admin / Manager / Team Lead / Developer
-        // can see all employees.
-
-        if (
-            $user->hasAnyRole([
-                'Administrator',
-                'Developer',
-                'Manager',
-                'Team Lead',
-                'admin'
-            ])
-        ) {
-            return parent::getEloquentQuery();
-        }
-
-        // Engineer / Machine Men
-        // can see only their own salary.
-
-        return parent::getEloquentQuery()
-            ->where('id', $user->id);
+    protected static function applyUserScope(
+        Builder $query,
+        int $userId
+    ): Builder {
+        return $query->whereKey($userId);
     }
 
     public static function getPages(): array
