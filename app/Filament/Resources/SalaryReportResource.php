@@ -579,7 +579,12 @@ class SalaryReportResource extends BaseResource
                     ->query(fn($query) => $query),
 
             ])
+            ->heading(function ($livewire) {
+                $month = static::getSelectedMonth($livewire);
+                $year = static::getSelectedYear($livewire);
 
+                return 'Salary Report - ' . date('F', mktime(0, 0, 0, $month, 1)) . ' ' . $year;
+            })
             ->defaultSort('name');
     }
 
