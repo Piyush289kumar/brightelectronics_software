@@ -50,6 +50,11 @@ class SalaryReportResource extends BaseResource
                 // EMPLOYEE
                 // ==========================================
 
+                Tables\Columns\TextColumn::make('user_code')
+                    ->label('Emp Code')
+                    ->searchable()
+                    ->sortable(),
+
                 Tables\Columns\TextColumn::make('name')
                     ->label('Employee')
                     ->searchable()
