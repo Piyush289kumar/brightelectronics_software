@@ -12,6 +12,7 @@ return new class extends Migration {
     {
         Schema::create('users', function (Blueprint $table) {
             $table->id();
+            $table->string('user_code')->unique();
             $table->string('name');
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
@@ -20,7 +21,8 @@ return new class extends Migration {
             $table->foreignId('store_id')->nullable()->constrained()->cascadeOnDelete();
              $table->decimal('basic_salary', 10, 2)->nullable();
             $table->decimal('incentive', 10, 2)->default(0);
-            $table->decimal('allowance', 10, 2)->default(0);            
+            $table->decimal('allowance', 10, 2)->default(0);       
+            $table->date('joining_date')->nullable();
             $table->rememberToken();
             $table->timestamps();
         });

@@ -8,6 +8,25 @@ use Illuminate\Support\Facades\Auth;
 
 class UserObserver
 {
+
+    /**
+     * Handle the User "creating" event.
+     */
+    public function creating(User $user): void
+    {
+        $employeeNumber = User::count() + 1;
+
+        $joiningDate = $user->joining_date ?? now();
+
+        $month = $joiningDate->format('m');
+        $year = $joiningDate->format('y');
+
+        $user->user_code =
+            str_pad($employeeNumber, 3, '0', STR_PAD_LEFT)
+            . $month
+            . $year;
+    }
+
     /**
      * Handle the User "created" event.
      */

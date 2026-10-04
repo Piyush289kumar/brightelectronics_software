@@ -64,6 +64,12 @@ class UserResource extends BaseResource
                 ->prefix('₹')
                 ->default(0),
 
+            Forms\Components\DatePicker::make('joining_date')
+                ->label('Joining Date')
+                ->required()
+                ->default(now())
+                ->nullable(),
+
             Forms\Components\TextInput::make('password')
                 ->label('Password')
                 ->password()
@@ -80,6 +86,7 @@ class UserResource extends BaseResource
     {
         return $table->columns([
             Tables\Columns\TextColumn::make('id')->label('ID')->searchable()->sortable(),
+            Tables\Columns\TextColumn::make('user_code')->label('User Code')->searchable()->sortable(),
             Tables\Columns\TextColumn::make('name')->searchable()->sortable(),
             Tables\Columns\TextColumn::make('email')->searchable()->sortable(),
             Tables\Columns\TextColumn::make('store.name')->label('Store')->sortable(),

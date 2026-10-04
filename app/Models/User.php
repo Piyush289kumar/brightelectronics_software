@@ -22,7 +22,9 @@ class User extends Authenticatable
         'store_id',
         'basic_salary',
         'incentive',
-        'allowance'
+        'allowance',
+        'user_code',
+        'joining_date'
     ];
 
     protected function casts(): array
@@ -32,6 +34,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'basic_salary' => 'decimal:2',
             'incentive' => 'decimal:2',
+            'joining_date' => 'date',
         ];
     }
 
