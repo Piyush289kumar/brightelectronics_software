@@ -86,6 +86,7 @@ class CustomerResource extends BaseResource
     {
         return $table
             ->columns([
+                TextColumn::make('id')->sortable()->searchable()->toggleable(),
                 TextColumn::make('name')->sortable()->searchable()->toggleable(),
                 TextColumn::make('email')->sortable()->searchable()->toggleable(),
                 TextColumn::make('phone')->label('Phone')->sortable()->toggleable(),
