@@ -29,9 +29,9 @@ class SalaryReportResource extends Resource
 
     protected static ?string $navigationGroup = 'HR & Payroll';
 
-    public static function canCreate(): bool
+    protected static function permission(string $action): string
     {
-        return false;
+        return "{$action}_salary_report";
     }
 
     public static function form(Form $form): Form
@@ -276,11 +276,11 @@ class SalaryReportResource extends Resource
                     }),
 
                 // ==========================================
-                // LEAVE
+                // ABSENT
                 // ==========================================
 
-                Tables\Columns\TextColumn::make('leave_count')
-                    ->label('Leave')
+                Tables\Columns\TextColumn::make('absent_count')
+                    ->label('Absent')
                     ->color('danger')
                     ->state(function ($record, $livewire) {
 
@@ -291,15 +291,15 @@ class SalaryReportResource extends Resource
                             $record->id,
                             $month,
                             $year
-                        )?->leave_count ?? 0;
+                        )?->absent_count ?? 0;
                     }),
 
                 // ==========================================
-                // LEAVE DEDUCTION
+                // ABSENT DEDUCTION
                 // ==========================================
 
-                Tables\Columns\TextColumn::make('leave_deduction')
-                    ->label('Leave Deduction')
+                Tables\Columns\TextColumn::make('absent_deduction')
+                    ->label('Absent Deduction')
                     ->money('INR')
                     ->color('danger')
                     ->state(function ($record, $livewire) {
@@ -313,8 +313,8 @@ class SalaryReportResource extends Resource
                             $year
                         );
 
-                        $leaveCount = (float) (
-                            $attendance?->leave_count ?? 0
+                        $absentCount = (float) (
+                            $attendance?->absent_count ?? 0
                         );
 
                         $perDaySalary = static::getPerDaySalary(
@@ -324,7 +324,7 @@ class SalaryReportResource extends Resource
                         );
 
                         return round(
-                            $leaveCount * $perDaySalary,
+                            $absentCount * $perDaySalary,
                             2
                         );
                     }),
@@ -407,8 +407,8 @@ class SalaryReportResource extends Resource
                             $year
                         );
 
-                        $leaveCount = (float) (
-                            $attendance?->leave_count ?? 0
+                        $absentCount = (float) (
+                            $attendance?->absent_count ?? 0
                         );
 
                         $latePunchCount = (float) (
@@ -421,14 +421,14 @@ class SalaryReportResource extends Resource
                             $year
                         );
 
-                        $leaveDeduction =
-                            $leaveCount * $perDaySalary;
+                        $absentDeduction =
+                            $absentCount * $perDaySalary;
 
                         $lateDeduction =
                             $latePunchCount * ($perDaySalary / 4);
 
                         return round(
-                            $leaveDeduction + $lateDeduction,
+                            $absentDeduction + $lateDeduction,
                             2
                         );
                     }),
@@ -495,23 +495,23 @@ class SalaryReportResource extends Resource
                         $perDaySalary =
                             $grossSalary / $workingDays;
 
-                        $leaveCount = (float) (
-                            $attendance?->leave_count ?? 0
+                        $absentCount = (float) (
+                            $attendance?->absent_count ?? 0
                         );
 
                         $latePunchCount = (float) (
                             $attendance?->late_punch_count ?? 0
                         );
 
-                        $leaveDeduction =
-                            $perDaySalary * $leaveCount;
+                        $absentDeduction =
+                            $perDaySalary * $absentCount;
 
                         $lateDeduction =
                             ($perDaySalary / 4) *
                             $latePunchCount;
 
                         $totalDeduction =
-                            $leaveDeduction +
+                            $absentDeduction +
                             $lateDeduction;
 
                         $allowance = (float) (
@@ -747,8 +747,7 @@ class SalaryReportResource extends Resource
                 'Developer',
                 'Manager',
                 'Team Lead',
-                'admin',
-                'Engineer',
+                'admin'
             ])
         ) {
             return parent::getEloquentQuery();
