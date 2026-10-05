@@ -153,8 +153,8 @@ class PaymentAdviceResource extends Resource
                 Tables\Actions\ActionGroup::make([
 
                     /* =========================
-      PREVIEW PAYMENT ADVICE
-      ========================= */
+                    PREVIEW PAYMENT ADVICE
+                    ========================= */
                     Tables\Actions\Action::make('preview_payment_advice')
                         ->label('Preview')
                         ->icon('heroicon-s-eye')
@@ -227,81 +227,139 @@ class PaymentAdviceResource extends Resource
                     /* =========================
                        PRINT PAYMENT ADVICE
                        ========================= */
+                    //         Tables\Actions\Action::make('print_payment_advice')
+                    //             ->label('Print')
+                    //             ->icon('heroicon-s-printer')
+                    //             ->color('warning')
+                    //             ->action(function (PaymentAdvice $record, $livewire) {
+
+                    //                 // 🔁 SAME LOGIC AS PREVIEW (generate first)
+
+                    //                 $template = DocumentTemplate::find(16);
+                    //                 $templateBody = (string) ($template->body ?? '');
+
+                    //                 $itemsHtml = $record->items->map(function ($item, $index) {
+                    //                     return "
+                    //     <tr style='border-bottom:1px solid #000;'>
+                    //         <td style='padding:6px; text-align:center;'>" . ($index + 1) . "</td>
+                    //         <td style='padding:6px; text-align:center;'>" . \Carbon\Carbon::parse($item->po_date)->format('d-m-Y') . "</td>
+                    //         <td style='padding:6px; text-align:center;'>" . ($item->purchaseOrder?->number ?? '') . "</td>
+                    //         <td style='padding:6px; text-align:center;'>" . ($item->invoice_no ?? '') . "</td>
+                    //         <td style='padding:6px; text-align:right;'>₹ " . number_format($item->amount, 2) . "</td>
+                    //         <td style='padding:6px; text-align:center;'>" . $item->payment_doc_no . "</td>
+                    //     </tr>";
+                    //                 })->implode('');
+
+                    //                 $totalAmount = (float) $record->items->sum('amount');
+
+                    //                 $map = [
+                    //                     '$ACCOUNT_NAME' => $record->vendor->name ?? '',
+                    //                     '$ACCOUNT_ADDRESS' => $record->vendor->address ?? '',
+                    //                     '$ACCOUNT_PHONE' => $record->vendor->phone ?? '',
+                    //                     '$ACCOUNT_GSTIN' => $record->vendor->gst_number ?? '',
+                    //                     '$ACCOUNT_STATE' => $record->vendor->state ?? '',
+                    //                     '$PAYMENT_DOC_NO' => $record->payment_doc_no,
+                    //                     '$DATE' => \Carbon\Carbon::parse($record->date)->format('d-m-Y'),
+                    //                     '$AMOUNT' => number_format($totalAmount, 2),
+                    //                     '$AMOUNT_IN_WORDS' => ucfirst(
+                    //                         \NumberFormatter::create('en_IN', \NumberFormatter::SPELLOUT)->format($totalAmount)
+                    //                     ),
+                    //                     '$ITEMS' => $itemsHtml,
+                    //                 ];
+
+                    //                 $body = $templateBody;
+                    //                 foreach ($map as $key => $value) {
+                    //                     $body = str_replace($key, (string) $value, $body);
+                    //                 }
+
+                    //                 if ($record->document_id) {
+                    //                     Document::where('id', $record->document_id)->delete();
+                    //                 }
+
+                    //                 $document = Document::create([
+                    //                     'document_template_id' => 16,
+                    //                     'model_type' => PaymentAdvice::class,
+                    //                     'model_id' => $record->id,
+                    //                     'body' => $body,
+                    //                 ]);
+
+                    //                 // $record->document_id = $document->id;
+                    //                 $record->save();
+
+                    //                 // 🖨 PRINT
+                    //                 $url = PrintDocument::getUrl(['record' => $document->id]);
+
+                    //                 $livewire->js(<<<JS
+                    //     const iframe = document.createElement('iframe');
+                    //     iframe.style.position = 'absolute';
+                    //     iframe.style.width = '0';
+                    //     iframe.style.height = '0';
+                    //     iframe.style.border = '0';
+                    //     iframe.src = "{$url}";
+                    //     document.body.appendChild(iframe);
+                    //     iframe.onload = function () {
+                    //         iframe.contentWindow.focus();
+                    //         iframe.contentWindow.print();
+                    //     };
+                    // JS);
+                    //             }),
+
+
                     Tables\Actions\Action::make('print_payment_advice')
                         ->label('Print')
-                        ->icon('heroicon-s-printer')
+                        ->icon('heroicon-o-printer')
                         ->color('warning')
                         ->action(function (PaymentAdvice $record, $livewire) {
 
-                            // 🔁 SAME LOGIC AS PREVIEW (generate first)
-                
-                            $template = DocumentTemplate::find(16);
-                            $templateBody = (string) ($template->body ?? '');
+                            // Generate latest document
+                            self::generatePaymentAdviceDocument($record);
 
-                            $itemsHtml = $record->items->map(function ($item, $index) {
-                                return "
-                <tr style='border-bottom:1px solid #000;'>
-                    <td style='padding:6px; text-align:center;'>" . ($index + 1) . "</td>
-                    <td style='padding:6px; text-align:center;'>" . \Carbon\Carbon::parse($item->po_date)->format('d-m-Y') . "</td>
-                    <td style='padding:6px; text-align:center;'>" . ($item->purchaseOrder?->number ?? '') . "</td>
-                    <td style='padding:6px; text-align:center;'>" . ($item->invoice_no ?? '') . "</td>
-                    <td style='padding:6px; text-align:right;'>₹ " . number_format($item->amount, 2) . "</td>
-                    <td style='padding:6px; text-align:center;'>" . $item->payment_doc_no . "</td>
-                </tr>";
-                            })->implode('');
+                            // Vendor code
+                            $vendorCode = $record->vendor?->code ?? 'VENDOR';
 
-                            $totalAmount = (float) $record->items->sum('amount');
+                            // Payment date → DDMMYY
+                            $dateCode = Carbon::parse($record->date)->format('dmy');
 
-                            $map = [
-                                '$ACCOUNT_NAME' => $record->vendor->name ?? '',
-                                '$ACCOUNT_ADDRESS' => $record->vendor->address ?? '',
-                                '$ACCOUNT_PHONE' => $record->vendor->phone ?? '',
-                                '$ACCOUNT_GSTIN' => $record->vendor->gst_number ?? '',
-                                '$ACCOUNT_STATE' => $record->vendor->state ?? '',
-                                '$PAYMENT_DOC_NO' => $record->payment_doc_no,
-                                '$DATE' => \Carbon\Carbon::parse($record->date)->format('d-m-Y'),
-                                '$AMOUNT' => number_format($totalAmount, 2),
-                                '$AMOUNT_IN_WORDS' => ucfirst(
-                                    \NumberFormatter::create('en_IN', \NumberFormatter::SPELLOUT)->format($totalAmount)
-                                ),
-                                '$ITEMS' => $itemsHtml,
-                            ];
+                            // Custom filename
+                            $fileName = $vendorCode . $dateCode;
 
-                            $body = $templateBody;
-                            foreach ($map as $key => $value) {
-                                $body = str_replace($key, (string) $value, $body);
-                            }
-
-                            if ($record->document_id) {
-                                Document::where('id', $record->document_id)->delete();
-                            }
-
-                            $document = Document::create([
-                                'document_template_id' => 16,
-                                'model_type' => PaymentAdvice::class,
-                                'model_id' => $record->id,
-                                'body' => $body,
+                            // Print URL
+                            $url = PrintDocument::getUrl([
+                                'record' => $record->document_id,
                             ]);
 
-                            // $record->document_id = $document->id;
-                            $record->save();
-
-                            // 🖨 PRINT
-                            $url = PrintDocument::getUrl(['record' => $document->id]);
-
                             $livewire->js(<<<JS
-                const iframe = document.createElement('iframe');
-                iframe.style.position = 'absolute';
-                iframe.style.width = '0';
-                iframe.style.height = '0';
-                iframe.style.border = '0';
-                iframe.src = "{$url}";
-                document.body.appendChild(iframe);
-                iframe.onload = function () {
-                    iframe.contentWindow.focus();
-                    iframe.contentWindow.print();
-                };
-            JS);
+            const iframe = document.createElement('iframe');
+
+            iframe.style.position = 'absolute';
+            iframe.style.width = '0';
+            iframe.style.height = '0';
+            iframe.style.border = '0';
+
+            iframe.src = "{$url}";
+
+            document.body.appendChild(iframe);
+
+            iframe.onload = function () {
+
+                const doc = iframe.contentDocument || iframe.contentWindow.document;
+
+                // Set custom print/PDF title
+                const title = doc.querySelector('title');
+
+                if (title) {
+                    title.textContent = "{$fileName}";
+                } else {
+                    const newTitle = doc.createElement('title');
+                    newTitle.textContent = "{$fileName}";
+                    doc.head.appendChild(newTitle);
+                }
+
+                iframe.contentWindow.focus();
+
+                iframe.contentWindow.print();
+            };
+        JS);
                         }),
                     Tables\Actions\EditAction::make(),
                     Tables\Actions\DeleteAction::make(),
@@ -417,6 +475,4 @@ class PaymentAdviceResource extends Resource
         };
     JS);
     }
-
-
 }
