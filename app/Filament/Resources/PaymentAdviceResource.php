@@ -412,7 +412,6 @@ class PaymentAdviceResource extends Resource
             <td style='padding:6px; text-align:center;'>{$item->payment_doc_no}</td>
         </tr>";
         })->implode('');
-
         // 3️⃣ Calculate total amount
         $totalAmount = $record->items->sum('amount');
 
