@@ -389,7 +389,6 @@ class PaymentAdviceResource extends Resource
             'edit' => Pages\EditPaymentAdvice::route('/{record}/edit'),
         ];
     }
-
     protected static function generatePaymentAdviceDocument(PaymentAdvice $record)
     {
         // 1️⃣ Fetch template
