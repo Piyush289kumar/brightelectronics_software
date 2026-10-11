@@ -24,22 +24,14 @@ use Filament\Forms\Get;
 class StoreTargetResource extends BaseResource
 {
     use HasRoleBasedAccess;
-
-    protected static function allowedRoles(): array
-    {
-        return [
-            'Administrator',
-            'Developer',
-            'Manager',
-            'Team Leader',
-            'Store Manager',
-        ];
-    }
     protected static ?string $model = StoreTarget::class;
     protected static ?string $navigationIcon = 'heroicon-o-flag';
     protected static ?string $label = 'Branch Targets';
     protected static ?string $navigationGroup = 'Targets';
-
+    protected static function permission(string $action): string
+    {
+        return "{$action}_store::target";
+    }
     public static function form(Form $form): Form
     {
         return $form->schema([
@@ -213,13 +205,14 @@ class StoreTargetResource extends BaseResource
                     })->visible(
                         fn(StoreTarget $record) =>
                         !$record->distributed &&
-                        auth()->user()->hasRole([
-                            'Administrator',
-                            'Developer',
-                            'admin',
-                            'Store Manager',
-                            'Team Leader', 'Team Lead'
-                        ])
+                            auth()->user()->hasRole([
+                                'Administrator',
+                                'Developer',
+                                'admin',
+                                'Store Manager',
+                                'Team Leader',
+                                'Team Lead'
+                            ])
                     ),
                 Tables\Actions\DeleteAction::make(),
             ])
