@@ -32,6 +32,11 @@ class PaymentAdviceResource extends Resource
     protected static ?string $label = 'Payment Advices';
     protected static ?string $pluralLabel = 'Payment Advices';
 
+    protected static function permission(string $action): string
+    {
+        return "{$action}_payment::advice";
+    }
+
     public static function form(Form $form): Form
     {
         return $form->schema([

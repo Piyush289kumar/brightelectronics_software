@@ -19,11 +19,14 @@ class UnitResource extends BaseResource
     protected static ?string $model = Unit::class;
 
     // protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
-     protected static ?string $navigationIcon = 'heroicon-o-cube';
+    protected static ?string $navigationIcon = 'heroicon-o-cube';
     protected static ?string $navigationGroup = 'Products & Categories';
     protected static ?int $navigationSort = 4;
 
-
+    protected static function permission(string $action): string
+    {
+        return "{$action}_app::download";
+    }
     public static function form(Form $form): Form
     {
         return $form
