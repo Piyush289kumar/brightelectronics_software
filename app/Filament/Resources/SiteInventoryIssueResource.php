@@ -22,13 +22,20 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Textarea;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 
-class SiteInventoryIssueResource extends Resource
+class SiteInventoryIssueResource extends BaseResource
 {
     protected static ?string $model = SiteInventoryIssue::class;
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
     protected static ?string $navigationGroup = 'Branches';
     protected static ?string $label = 'Stock Out';
     protected static ?string $navigationLabel = 'Stock Out';
+
+
+    protected static function permission(string $action): string
+    {
+        return "{$action}_site::inventory::issue";
+    }
+
     protected static ?int $navigationSort = 10;
     public static function form(Form $form): Form
     {

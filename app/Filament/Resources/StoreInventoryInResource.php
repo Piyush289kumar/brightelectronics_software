@@ -27,13 +27,19 @@ use Illuminate\Support\Facades\Auth;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 use App\Models\Invoice;
 
-class StoreInventoryInResource extends Resource
+class StoreInventoryInResource extends BaseResource
 {
     protected static ?string $model = StoreInventoryIn::class;
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
     protected static ?string $navigationGroup = 'Branches';
     protected static ?string $navigationLabel = 'Stock In';
+    protected static ?string $pluralLabel = 'Stock In';
+    protected static ?string $label = 'Stock In';
     protected static ?int $navigationSort = 12;
+    protected static function permission(string $action): string
+    {
+        return "{$action}_store::inventory::in";
+    }
 
     public static function form(Form $form): Form
     {
