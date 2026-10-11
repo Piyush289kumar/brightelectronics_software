@@ -15,6 +15,12 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
+use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
+use Filament\Tables\Actions\Action;
+use TomatoPHP\FilamentDocs\Models\Document;
+use TomatoPHP\FilamentDocs\Models\DocumentTemplate;
+use NumberFormatter;
+use TomatoPHP\FilamentDocs\Filament\Resources\DocumentResource\Pages\PrintDocument;
 
 class SalaryReportResource extends BaseResource
 {
@@ -590,6 +596,242 @@ class SalaryReportResource extends BaseResource
 
                 return 'Salary Report - ' . date('F', mktime(0, 0, 0, $month, 1)) . ' ' . $year;
             })
+            ->actions([
+                Action::make('printPayslip')
+                    ->label('Print Payslip')
+                    ->color('warning')
+                    ->icon('heroicon-o-printer')
+                    ->tooltip('Generate and print employee salary payslip')
+
+                    ->action(function ($record, $livewire) {
+
+                        // 1. Get selected salary period
+                        $month = static::getSelectedMonth($livewire);
+                        $year = static::getSelectedYear($livewire);
+
+                        // 2. Load your existing Salary Payslip template
+                        $templateId = 14;
+
+                        $template = DocumentTemplate::findOrFail($templateId);
+                        $templateBody = (string) $template->body;
+
+                        // 3. Employee salary information
+                        $basicSalary = (float) ($record->basic_salary ?? 0);
+
+                        $incentive = static::getUserIncentive(
+                            $record->id,
+                            $month,
+                            $year
+                        );
+
+                        $grossSalary = round(
+                            $basicSalary + $incentive,
+                            2
+                        );
+
+                        // 4. Attendance information
+                        $attendance = static::getAttendance(
+                            $record->id,
+                            $month,
+                            $year
+                        );
+
+                        $workingDays = (float) (
+                            $attendance?->working_days ?? 0
+                        );
+
+                        $presentDays = (float) (
+                            $attendance?->present_count ?? 0
+                        );
+
+                        $absentDays = (float) (
+                            $attendance?->absent_count ?? 0
+                        );
+
+                        $latePunches = (float) (
+                            $attendance?->late_punch_count ?? 0
+                        );
+
+                        // 5. Calculate deductions using your existing salary rules
+                        $perDaySalary = $workingDays > 0
+                            ? $grossSalary / $workingDays
+                            : 0;
+
+                        $absentDeduction = round(
+                            $absentDays * $perDaySalary,
+                            2
+                        );
+
+                        $lateDeduction = round(
+                            $latePunches * ($perDaySalary / 4),
+                            2
+                        );
+
+                        $totalDeduction = round(
+                            $absentDeduction + $lateDeduction,
+                            2
+                        );
+
+                        // 6. Allowance and net salary
+                        $allowance = (float) ($record->allowance ?? 0);
+
+                        $netSalary = round(
+                            $grossSalary - $totalDeduction + $allowance,
+                            2
+                        );
+
+                        // 7. Salary period
+                        $salaryMonth = \Carbon\Carbon::create(
+                            $year,
+                            $month,
+                            1
+                        )->format('F Y');
+
+                        // 8. Amount in words
+                        $formatter = new NumberFormatter(
+                            'en_IN',
+                            NumberFormatter::SPELLOUT
+                        );
+
+                        $amountInWords = ucfirst(
+                            $formatter->format((int) round($netSalary))
+                        ) . ' Rupees Only';
+
+                        // 9. Replace placeholders in your template
+                        $map = [
+                            '$COMPANY_NAME' => config('app.name', 'Bright Electronics'),
+
+                            '$PAYSLIP_NUMBER' => sprintf(
+                                'PS-%d-%02d-%4d',
+                                $record->id,
+                                $month,
+                                $year
+                            ),
+
+                            '$GENERATED_DATE' => now()->format('d-m-Y'),
+
+                            '$SALARY_MONTH' => $salaryMonth,
+
+                            '$EMPLOYEE_NAME' => (string) $record->name,
+
+                            '$EMPLOYEE_CODE' => (string) (
+                                $record->user_code ?? $record->id
+                            ),
+
+                            '$EMPLOYEE_EMAIL' => (string) (
+                                $record->email ?? ''
+                            ),
+
+                            '$WORKING_DAYS' => number_format($workingDays,0),
+
+                            '$PRESENT_DAYS' => number_format(
+                                $presentDays,
+                                0
+                            ),
+
+                            '$ABSENT_DAYS' => number_format(
+                                $absentDays,
+                                0
+                            ),
+
+                            '$LATE_PUNCHES' => number_format(
+                                $latePunches,
+                                0
+                            ),
+
+                            '$BASIC_SALARY' => number_format(
+                                $basicSalary,
+                                2
+                            ),
+
+                            '$INCENTIVE' => number_format(
+                                $incentive,
+                                2
+                            ),
+
+                            '$ALLOWANCE' => number_format(
+                                $allowance,
+                                2
+                            ),
+
+                            '$GROSS_EARNINGS' => number_format(
+                                $grossSalary + $allowance,
+                                2
+                            ),
+
+                            '$ABSENT_DEDUCTION' => number_format(
+                                $absentDeduction,
+                                2
+                            ),
+
+                            '$LATE_DEDUCTION' => number_format(
+                                $lateDeduction,
+                                2
+                            ),
+
+                            '$TOTAL_DEDUCTION' => number_format(
+                                $totalDeduction,
+                                2
+                            ),
+
+                            '$NET_SALARY' => number_format(
+                                $netSalary,
+                                2
+                            ),
+
+                            '$AMOUNT_IN_WORDS' => $amountInWords,
+                        ];
+
+                        // 10. Replace template variables
+                        $body = $templateBody;
+
+                        foreach ($map as $key => $value) {
+                            $body = str_replace(
+                                $key,
+                                (string) $value,
+                                $body
+                            );
+                        }
+
+                        // 11. Create the payslip document
+                        $document = Document::create([
+                            'document_template_id' => $templateId,
+                            'model_type' => User::class,
+                            'model_id' => $record->id,
+                            'body' => $body,
+                        ]);
+
+                        // 12. Get the print URL using your working implementation
+                        $url = PrintDocument::getUrl([
+                            'record' => $document->id,
+                        ]);
+
+                        // 13. Open print preview and trigger printing
+                        $livewire->js(<<<JS
+            const iframe = document.createElement('iframe');
+
+            iframe.style.position = 'fixed';
+            iframe.style.width = '0';
+            iframe.style.height = '0';
+            iframe.style.border = '0';
+
+            iframe.src = "{$url}";
+
+            document.body.appendChild(iframe);
+
+            iframe.onload = function () {
+                iframe.contentWindow.focus();
+                iframe.contentWindow.print();
+            };
+        JS);
+                    }),
+                Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make(),
+            ])
+            ->bulkActions([
+                // Tables\Actions\DeleteBulkAction::make(),
+                ExportBulkAction::make()
+            ])
             ->defaultSort('name');
     }
 
