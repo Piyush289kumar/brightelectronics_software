@@ -30,7 +30,6 @@ class SiteInventoryIssueResource extends BaseResource
     protected static ?string $label = 'Stock Out';
     protected static ?string $navigationLabel = 'Stock Out';
 
-
     protected static function permission(string $action): string
     {
         return "{$action}_site::inventory::issue";

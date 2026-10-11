@@ -1,5 +1,7 @@
 <?php
+
 namespace App\Filament\Resources;
+
 use App\Filament\Resources\JobCardResource\Pages;
 use App\Models\JobCard;
 use App\Models\Product;
@@ -19,13 +21,16 @@ use TomatoPHP\FilamentDocs\Models\Document;
 use TomatoPHP\FilamentDocs\Models\DocumentTemplate;
 use TomatoPHP\FilamentDocs\Filament\Resources\DocumentResource\Pages\PrintDocument;
 
-class JobCardResource extends Resource
+class JobCardResource extends BaseResource
 {
     protected static ?string $model = JobCard::class;
     protected static ?string $navigationIcon = 'heroicon-o-briefcase';
     protected static ?string $navigationGroup = 'Complains & Jobs';
     protected static ?string $pluralLabel = 'Job Cards';
-
+    protected static function permission(string $action): string
+    {
+        return "{$action}_job::card";
+    }
     public static function form(Form $form): Form
     {
         return $form->schema([
@@ -418,86 +423,86 @@ class JobCardResource extends Resource
                                 'md' => 3,      // Tablet
                                 'xl' => 5,      // Desktop
                             ])->schema([
-                                        Forms\Components\TextInput::make('expense')
-                                            ->label('Product Expense (₹)')
-                                            ->disabled()
-                                            ->dehydrated(true)
-                                            ->reactive(),
+                                Forms\Components\TextInput::make('expense')
+                                    ->label('Product Expense (₹)')
+                                    ->disabled()
+                                    ->dehydrated(true)
+                                    ->reactive(),
 
-                                        Forms\Components\TextInput::make('gst_amount')
-                                            ->label('GST Amount (18%)')
-                                            ->disabled()
-                                            ->dehydrated(true)
-                                            ->reactive(),
+                                Forms\Components\TextInput::make('gst_amount')
+                                    ->label('GST Amount (18%)')
+                                    ->disabled()
+                                    ->dehydrated(true)
+                                    ->reactive(),
 
-                                        Forms\Components\TextInput::make('gross_amount')
-                                            ->label('Gross After Expense (₹)')
-                                            ->disabled()
-                                            ->dehydrated(true)
-                                            ->reactive(),
+                                Forms\Components\TextInput::make('gross_amount')
+                                    ->label('Gross After Expense (₹)')
+                                    ->disabled()
+                                    ->dehydrated(true)
+                                    ->reactive(),
 
-                                        Forms\Components\TextInput::make('incentive_amount')
-                                            ->label('Engineer Total Cut (₹)')
-                                            ->disabled()
-                                            ->dehydrated(true)
-                                            ->prefix('₹')
-                                            ->extraAttributes([
-                                                'class' => 'font-bold text-warning-600'
-                                            ]),
-
-                                        Forms\Components\TextInput::make('bright_electronics_profit')
-                                            ->label('Profit (₹)')
-                                            ->disabled()
-                                            ->dehydrated(true)
-                                            ->reactive(),
-
-                                        Grid::make()->schema([
-
-                                            Forms\Components\TextInput::make('payment_reference_number')
-                                                ->label('Payment Reference Number')
-                                                ->placeholder('Enter UPI / Transaction Ref No.')
-                                                ->maxLength(255),
-
-                                            Forms\Components\FileUpload::make('payment_reference_image_path')
-                                                ->label('Payment Reference Image')
-                                                ->image()
-                                                ->previewable(true)
-                                                ->nullable()
-                                                ->directory('payment-references')
-                                                ->disk('public')
-                                                ->visibility('public')
-                                                ->imagePreviewHeight('150')
-                                                ->downloadable()
-                                                ->openable()
-                                                ->acceptedFileTypes([
-                                                    'image/jpeg',
-                                                    'image/png',
-                                                    'image/webp',
-                                                ])
-                                                ->maxSize(2048)
-                                                ->required(fn(Forms\Get $get) => filled($get('payment_reference_number')))
-                                                ->validationMessages([
-                                                    'required' => 'Payment reference image is required when a reference number is entered.',
-                                                ]),
-
-                                            Forms\Components\Toggle::make('job_verified_by_admin')
-                                                ->label('Verified by Admin')
-                                                ->helperText('Only Admins can verify the job card. This is a read-only field for other users.')
-                                                ->inline(false)
-                                                ->default(false)
-                                                ->onColor('success')
-                                                ->offColor('danger')
-                                                ->onIcon('heroicon-o-check-circle')
-                                                ->offIcon('heroicon-o-x-circle')
-                                                ->visible(fn() => auth()->user()->hasAnyRole([
-                                                    'Administrator',
-                                                    'Developer',
-                                                    'admin',
-                                                    'Team Leader',
-                                                    'Team Lead',
-                                                ]))
-                                        ])
+                                Forms\Components\TextInput::make('incentive_amount')
+                                    ->label('Engineer Total Cut (₹)')
+                                    ->disabled()
+                                    ->dehydrated(true)
+                                    ->prefix('₹')
+                                    ->extraAttributes([
+                                        'class' => 'font-bold text-warning-600'
                                     ]),
+
+                                Forms\Components\TextInput::make('bright_electronics_profit')
+                                    ->label('Profit (₹)')
+                                    ->disabled()
+                                    ->dehydrated(true)
+                                    ->reactive(),
+
+                                Grid::make()->schema([
+
+                                    Forms\Components\TextInput::make('payment_reference_number')
+                                        ->label('Payment Reference Number')
+                                        ->placeholder('Enter UPI / Transaction Ref No.')
+                                        ->maxLength(255),
+
+                                    Forms\Components\FileUpload::make('payment_reference_image_path')
+                                        ->label('Payment Reference Image')
+                                        ->image()
+                                        ->previewable(true)
+                                        ->nullable()
+                                        ->directory('payment-references')
+                                        ->disk('public')
+                                        ->visibility('public')
+                                        ->imagePreviewHeight('150')
+                                        ->downloadable()
+                                        ->openable()
+                                        ->acceptedFileTypes([
+                                            'image/jpeg',
+                                            'image/png',
+                                            'image/webp',
+                                        ])
+                                        ->maxSize(2048)
+                                        ->required(fn(Forms\Get $get) => filled($get('payment_reference_number')))
+                                        ->validationMessages([
+                                            'required' => 'Payment reference image is required when a reference number is entered.',
+                                        ]),
+
+                                    Forms\Components\Toggle::make('job_verified_by_admin')
+                                        ->label('Verified by Admin')
+                                        ->helperText('Only Admins can verify the job card. This is a read-only field for other users.')
+                                        ->inline(false)
+                                        ->default(false)
+                                        ->onColor('success')
+                                        ->offColor('danger')
+                                        ->onIcon('heroicon-o-check-circle')
+                                        ->offIcon('heroicon-o-x-circle')
+                                        ->visible(fn() => auth()->user()->hasAnyRole([
+                                            'Administrator',
+                                            'Developer',
+                                            'admin',
+                                            'Team Leader',
+                                            'Team Lead',
+                                        ]))
+                                ])
+                            ]),
 
                         ])
                         ->collapsible()
@@ -660,7 +665,6 @@ class JobCardResource extends Resource
                     // ✅ Engineers → HALF %
                     $percent = $basePercent / 2;
                 }
-
             } else {
                 // ✅ Normal case (no machine man)
                 $percent = $basePercent;
@@ -1270,9 +1274,9 @@ HTML;
 
             return trim(
                 ($user?->name ?? 'Unknown') .
-                ' | ' .
-                number_format((float) ($row['percent'] ?? 0), 2) . '% | ₹' .
-                number_format((float) ($row['amount'] ?? 0), 2)
+                    ' | ' .
+                    number_format((float) ($row['percent'] ?? 0), 2) . '% | ₹' .
+                    number_format((float) ($row['amount'] ?? 0), 2)
             );
         })->implode(' ; ');
     }
@@ -1288,7 +1292,7 @@ HTML;
 
             return trim(
                 ($product?->name ?? 'Unknown Product') .
-                ' | Qty: ' . (int) ($row['qty'] ?? 1)
+                    ' | Qty: ' . (int) ($row['qty'] ?? 1)
             );
         })->implode(' ; ');
     }
