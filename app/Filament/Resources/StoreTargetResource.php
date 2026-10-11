@@ -31,7 +31,7 @@ class StoreTargetResource extends BaseResource
     protected static function permission(string $action): string
     {
         return "{$action}_store::target";
-    }
+    }    
 
     public static function shouldRegisterNavigation(): bool
     {
