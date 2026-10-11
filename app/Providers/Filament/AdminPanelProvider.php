@@ -50,7 +50,7 @@ class AdminPanelProvider extends PanelProvider
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
             ->widgets([
                 Widgets\AccountWidget::class,
-                    // Widgets\FilamentInfoWidget::class,
+                // Widgets\FilamentInfoWidget::class,
                 CompanyInfoWidget::class,
                 DashboardStats::class,
                 LowStockWidget::class, // 👈 Add here
@@ -75,7 +75,13 @@ class AdminPanelProvider extends PanelProvider
             ->plugins([
                 FilamentShieldPlugin::make(),
                 \TomatoPHP\FilamentDocs\FilamentDocsPlugin::make(),
-                FilamentLogViewer::make(),
+                FilamentLogViewer::make()->authorize(
+                    fn(): bool => auth()->check()
+                        && auth()->user()->hasAnyRole([
+                            'Administrator',
+                            'Developer',
+                        ])
+                ),
                 // \TomatoPHP\FilamentLanguageSwitcher\FilamentLanguageSwitcherPlugin::make(),
             ])
             ->authMiddleware([
