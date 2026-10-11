@@ -98,7 +98,7 @@ class UserResource extends BaseResource
             Tables\Columns\TextColumn::make('user_code')->label('Emp Code')->searchable()->sortable(),
             Tables\Columns\TextColumn::make('name')->searchable()->sortable(),
             Tables\Columns\TextColumn::make('email')->searchable()->sortable(),
-            //Tables\Columns\TextColumn::make('store.name')->label('Store')->sortable(),
+            Tables\Columns\TextColumn::make('store.name')->label('Single Store')->sortable(),
             Tables\Columns\TextColumn::make('multi_store_id')
                 ->label('Stores')
                 ->formatStateUsing(function ($state, User $record): string {
