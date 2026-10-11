@@ -3,6 +3,7 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\UserResource\Pages;
+use App\Models\Store;
 use App\Models\User;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -37,6 +38,14 @@ class UserResource extends BaseResource
             Forms\Components\Select::make('store_id')
                 ->label('Store')
                 ->relationship('store', 'name')
+                ->searchable()
+                ->preload()
+                ->nullable(),
+
+            Forms\Components\Select::make('multi_store_id')
+                ->label('Additional Stores')
+                ->options(\App\Models\Store::query()->pluck('name', 'id'))
+                ->multiple()
                 ->searchable()
                 ->preload()
                 ->nullable(),
@@ -89,7 +98,19 @@ class UserResource extends BaseResource
             Tables\Columns\TextColumn::make('user_code')->label('Emp Code')->searchable()->sortable(),
             Tables\Columns\TextColumn::make('name')->searchable()->sortable(),
             Tables\Columns\TextColumn::make('email')->searchable()->sortable(),
-            Tables\Columns\TextColumn::make('store.name')->label('Store')->sortable(),
+            //Tables\Columns\TextColumn::make('store.name')->label('Store')->sortable(),
+            Tables\Columns\TextColumn::make('multi_store_id')
+                ->label('Stores')
+                ->formatStateUsing(function ($state, User $record): string {
+                    $storeIds = $record->multi_store_id ?? [];
+
+                    if (! is_array($storeIds) || empty($storeIds)) {
+                        return '-';
+                    }
+
+                    return Store::whereIn('id', $storeIds)->pluck('name')->implode(', ') ?: '-';
+                })
+                ->wrap(),
             Tables\Columns\BadgeColumn::make('roles.name')
                 ->label('Roles')
                 ->separator(', ')

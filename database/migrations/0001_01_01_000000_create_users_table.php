@@ -17,11 +17,12 @@ return new class extends Migration {
             $table->string('email')->unique();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
-             $table->enum('role', ['admin', 'manager', 'staff'])->default('staff');
+            $table->enum('role', ['admin', 'manager', 'staff'])->default('staff');
             $table->foreignId('store_id')->nullable()->constrained()->cascadeOnDelete();
-             $table->decimal('basic_salary', 10, 2)->nullable();
+            $table->json('multi_store_id')->nullable(); // List of store IDs
+            $table->decimal('basic_salary', 10, 2)->nullable();
             $table->decimal('incentive', 10, 2)->default(0);
-            $table->decimal('allowance', 10, 2)->default(0);       
+            $table->decimal('allowance', 10, 2)->default(0);
             $table->date('joining_date')->nullable();
             $table->rememberToken();
             $table->timestamps();

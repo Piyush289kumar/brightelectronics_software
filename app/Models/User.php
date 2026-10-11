@@ -20,6 +20,7 @@ class User extends Authenticatable
         'email',
         'password',
         'store_id',
+        'multi_store_id',
         'basic_salary',
         'incentive',
         'allowance',
@@ -33,6 +34,7 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'basic_salary' => 'decimal:2',
+            'multi_store_id' => 'array',
             'incentive' => 'decimal:2',
             'joining_date' => 'date',
         ];
@@ -41,6 +43,18 @@ class User extends Authenticatable
     public function store()
     {
         return $this->belongsTo(Store::class);
+    }
+
+    // Get all stores assigned through multi_store_id
+    public function getMultiStoresAttribute()
+    {
+        $storeIds = $this->multi_store_id ?? [];
+
+        if (! is_array($storeIds) || empty($storeIds)) {
+            return collect();
+        }
+
+        return Store::whereIn('id', $storeIds)->get();
     }
 
     // REMOVE these to avoid shadowing Spatie methods:
