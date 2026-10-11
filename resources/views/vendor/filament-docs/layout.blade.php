@@ -5,7 +5,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
-    <title>{{ config('app.name', 'Laravel') }}</title>
+    <title>{{ request()->query('payslip_filename', config('app.name', 'Laravel')) }}</title>
 
     <script src="https://cdn.tailwindcss.com"></script>
     <style type="text/css" media="print">
@@ -13,6 +13,7 @@
             size: A4;
             margin: 0;
         }
+
         table {
             width: 100%;
         }
@@ -25,8 +26,10 @@
             background: transparent;
         }
 
-        .header, .footer {
-            display: none; /* Hide header and footer by default */
+        .header,
+        .footer {
+            display: none;
+            /* Hide header and footer by default */
             background: transparent;
         }
 
@@ -40,7 +43,9 @@
 
         /* Print-specific styles */
         @media print {
-            .header, .footer {
+
+            .header,
+            .footer {
                 display: block;
                 position: fixed;
                 left: 0;
@@ -59,37 +64,42 @@
             }
 
             .content {
-                margin-top: 0; /* Adjust based on header height */
-                margin-bottom: 0; /* Adjust based on footer height */
+                margin-top: 0;
+                /* Adjust based on header height */
+                margin-bottom: 0;
+                /* Adjust based on footer height */
             }
 
             @page {
-                margin: 0; /* Adjust based on header and footer height */
+                margin: 0;
+                /* Adjust based on header and footer height */
             }
 
-            @if(\TomatoPHP\FilamentDocs\Facades\FilamentDocs::getCss())
-              {!! \TomatoPHP\FilamentDocs\Facades\FilamentDocs::getCss() !!}
+            @if(\TomatoPHP\FilamentDocs\Facades\FilamentDocs::getCss()) {
+                ! ! \TomatoPHP\FilamentDocs\Facades\FilamentDocs: :getCss() ! !
+            }
+
             @endif
         }
     </style>
 </head>
 
 <body>
-@if(\TomatoPHP\FilamentDocs\Facades\FilamentDocs::getHeader())
-<div class="header">
-    {!! \TomatoPHP\FilamentDocs\Facades\FilamentDocs::getHeader() !!}
-</div>
-<br/>
-@endif
-<div class="content p-4">
-    {{ $slot }}
-</div>
-@if(\TomatoPHP\FilamentDocs\Facades\FilamentDocs::getFooter())
-<br/>
-<div class="footer">
-    {!! \TomatoPHP\FilamentDocs\Facades\FilamentDocs::getFooter() !!}
-</div>
-@endif
+    @if(\TomatoPHP\FilamentDocs\Facades\FilamentDocs::getHeader())
+    <div class="header">
+        {!! \TomatoPHP\FilamentDocs\Facades\FilamentDocs::getHeader() !!}
+    </div>
+    <br />
+    @endif
+    <div class="content p-4">
+        {{ $slot }}
+    </div>
+    @if(\TomatoPHP\FilamentDocs\Facades\FilamentDocs::getFooter())
+    <br />
+    <div class="footer">
+        {!! \TomatoPHP\FilamentDocs\Facades\FilamentDocs::getFooter() !!}
+    </div>
+    @endif
 
 </body>
 

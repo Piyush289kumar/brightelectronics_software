@@ -722,7 +722,7 @@ class SalaryReportResource extends BaseResource
                                 $record->email ?? ''
                             ),
 
-                            '$WORKING_DAYS' => number_format($workingDays,0),
+                            '$WORKING_DAYS' => number_format($workingDays, 0),
 
                             '$PRESENT_DAYS' => number_format(
                                 $presentDays,
@@ -801,29 +801,43 @@ class SalaryReportResource extends BaseResource
                             'body' => $body,
                         ]);
 
-                        // 12. Get the print URL using your working implementation
+                        // 12. Generate the desired payslip filename
+                        $employeeCode = (string) ($record->user_code ?? $record->id);
+
+                        $filename = $employeeCode . ' - ' . strtoupper(
+                            \Carbon\Carbon::create($year, $month, 1)->format('M-y')
+                        );
+
+                        // 13. Generate the print URL with the filename in the query string
                         $url = PrintDocument::getUrl([
                             'record' => $document->id,
                         ]);
 
-                        // 13. Open print preview and trigger printing
+                        $url .= (str_contains($url, '?') ? '&' : '?')
+                            . 'payslip_filename=' . urlencode($filename);
+
+                        // 14. Open the print page and trigger printing
                         $livewire->js(<<<JS
-            const iframe = document.createElement('iframe');
+    const iframe = document.createElement('iframe');
 
-            iframe.style.position = 'fixed';
-            iframe.style.width = '0';
-            iframe.style.height = '0';
-            iframe.style.border = '0';
+    iframe.style.position = 'fixed';
+    iframe.style.width = '0';
+    iframe.style.height = '0';
+    iframe.style.border = '0';
 
-            iframe.src = "{$url}";
+    iframe.src = "{$url}";
+    document.body.appendChild(iframe);
 
-            document.body.appendChild(iframe);
+    iframe.onload = function () {
+        const printWindow = iframe.contentWindow;
 
-            iframe.onload = function () {
-                iframe.contentWindow.focus();
-                iframe.contentWindow.print();
-            };
-        JS);
+        printWindow.focus();
+
+        setTimeout(() => {
+            printWindow.print();
+        }, 500);
+    };
+JS);
                     }),
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\DeleteAction::make(),
