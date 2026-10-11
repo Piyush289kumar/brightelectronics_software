@@ -109,8 +109,7 @@ class UserResource extends BaseResource
                     }
 
                     return Store::whereIn('id', $storeIds)->pluck('name')->implode(', ') ?: '-';
-                })
-                ->wrap(),
+                }),
             Tables\Columns\BadgeColumn::make('roles.name')
                 ->label('Roles')
                 ->separator(', ')
