@@ -23,6 +23,10 @@ class UserTargetResource extends BaseResource
     protected static ?string $navigationGroup = 'Targets';
     protected static ?string $navigationIcon = 'heroicon-o-user-group';
     protected static ?string $navigationLabel = 'Member Targets';
+    protected static function permission(string $action): string
+    {
+        return "{$action}_user::target";
+    }
 
     public static function form(Form $form): Form
     {

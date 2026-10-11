@@ -32,6 +32,11 @@ class StoreTargetResource extends BaseResource
     {
         return "{$action}_store::target";
     }
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return static::canViewAny();
+    }
     public static function form(Form $form): Form
     {
         return $form->schema([
