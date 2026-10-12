@@ -1,3 +1,5 @@
+All Permissions
+
 php artisan tinker
 Psy Shell v0.12.10 (PHP 8.5.4 — cli) by Justin Hileman
 > $user = App\Models\User::whereHas('roles', fn($q) => $q->where('name', 'Engineer'))->first();
