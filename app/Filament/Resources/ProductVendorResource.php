@@ -32,6 +32,11 @@ class ProductVendorResource extends BaseResource
     // Optional: sort order inside group
     protected static ?int $navigationSort = 12;
 
+    protected static function permission(string $action): string
+    {
+        return "{$action}_product::vendor";
+    }
+
     public static function form(Form $form): Form
     {
         return $form->schema([

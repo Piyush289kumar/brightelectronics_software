@@ -21,9 +21,14 @@ class ProductResource extends BaseResource
     protected static ?string $model = Product::class;
     protected static ?string $navigationIcon = 'heroicon-o-cube';
     protected static ?string $navigationGroup = 'Products & Categories';
-
     protected static ?string $label = 'Spare Parts';
     protected static ?int $navigationSort = 15;
+
+    protected static function permission(string $action): string
+    {
+        return "{$action}_product";
+    }
+
     public static function form(Form $form): Form
     {
         return $form
