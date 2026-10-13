@@ -28,6 +28,11 @@ class InventoryResource extends BaseResource
     protected static ?string $navigationGroup = 'Inventory Management';
     protected static ?int $navigationSort = -1;
 
+    protected static function permission(string $action): string
+    {
+        return "{$action}_inventory";
+    }
+
 
     public static function form(Form $form): Form
     {
@@ -111,8 +116,8 @@ class InventoryResource extends BaseResource
                     ->formatStateUsing(
                         fn($state, $record) =>
                         $record->product
-                        ? "{$record->product->id} ({$record->product->barcode})"
-                        : '-'
+                            ? "{$record->product->id} ({$record->product->barcode})"
+                            : '-'
                     )
                     ->searchable(['name', 'barcode'])
                     ->sortable(),

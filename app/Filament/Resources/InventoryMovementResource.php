@@ -24,6 +24,11 @@ class InventoryMovementResource extends BaseResource
 
     protected static ?int $navigationSort = 4;
 
+    protected static function permission(string $action): string
+    {
+        return "{$action}_inventory::movement";
+    }
+
 
     public static function form(Form $form): Form
     {

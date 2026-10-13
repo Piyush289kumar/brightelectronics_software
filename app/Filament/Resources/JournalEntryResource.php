@@ -18,6 +18,11 @@ class JournalEntryResource extends BaseResource
     protected static ?string $navigationGroup = 'Accounting';
     protected static ?string $navigationLabel = 'Journal Entries';
 
+    protected static function permission(string $action): string
+    {
+        return "{$action}_journal::entry";
+    }
+
     protected static ?int $navigationSort = 8;
     public static function form(Form $form): Form
     {

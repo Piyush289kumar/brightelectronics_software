@@ -1,5 +1,7 @@
 <?php
+
 namespace App\Filament\Resources;
+
 use App\Filament\Resources\InvoiceResource\Pages;
 use App\Models\Customer;
 use App\Models\Invoice;
@@ -28,6 +30,7 @@ use TomatoPHP\FilamentDocs\Filament\Resources\DocumentResource\Pages\PrintDocume
 use TomatoPHP\FilamentDocs\Models\Document;
 use TomatoPHP\FilamentDocs\Models\DocumentTemplate;
 use Illuminate\Support\Facades\Auth;
+
 class InvoiceResource extends BaseResource
 {
     protected static ?string $model = Invoice::class;
@@ -37,6 +40,11 @@ class InvoiceResource extends BaseResource
 
     protected static ?string $pluralLabel = 'Invoice';
     protected static ?int $navigationSort = 2;
+
+    protected static function permission(string $action): string
+    {
+        return "{$action}_invoice";
+    }
 
     // 🔹 Show badge count (only invoices where document_type = 'invoice')
     public static function getNavigationBadge(): ?string
@@ -624,7 +632,7 @@ class InvoiceResource extends BaseResource
                                 $discountAmount = $item->discount_amount_per_item ?? 0; // discount ₹
                                 $gstRate = $item->gst_rate ?? 0; // GST %
                                 $gstAmount = $item->gst_amount ?? 0; // GST ₹
-                
+
                                 return "<tr style='border-bottom: 1px solid #000;'>
                 <td style='padding:6px; text-align:center; font-weight: 900;'>" . ($index + 1) . "</td>
                 <td style='padding:6px;'>{$item->product->name}</td>
@@ -694,7 +702,7 @@ class InvoiceResource extends BaseResource
                                 $discountAmount = $item->discount_amount_per_item ?? 0; // discount ₹
                                 $gstRate = $item->gst_rate ?? 0; // GST %
                                 $gstAmount = $item->gst_amount ?? 0; // GST ₹
-                
+
                                 return "<tr style='border-bottom: 1px solid #000;'>
                 <td style='padding:6px; text-align:center; font-weight: 900;'>" . ($index + 1) . "</td>
                 <td style='padding:6px;'>{$item->product->name}</td>
@@ -850,5 +858,4 @@ class InvoiceResource extends BaseResource
             'edit' => Pages\EditInvoice::route('/{record}/edit'),
         ];
     }
-
 }
