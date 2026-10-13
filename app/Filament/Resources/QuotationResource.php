@@ -41,6 +41,11 @@ class QuotationResource extends BaseResource
     protected static ?string $pluralLabel = 'Quotation';
     protected static ?int $navigationSort = 2;
 
+    protected static function permission(string $action): string
+    {
+        return "{$action}_quotation";
+    }
+
     // 🔹 Show badge count (only invoices where document_type = 'invoice')
     public static function getNavigationBadge(): ?string
     {
@@ -537,7 +542,7 @@ class QuotationResource extends BaseResource
                                 $discountAmount = $item->discount_amount_per_item ?? 0; // discount ₹
                                 $gstRate = $item->gst_rate ?? 0; // GST %
                                 $gstAmount = $item->gst_amount ?? 0; // GST ₹
-                
+
                                 return "<tr style='border-bottom: 1px solid #000;'>
                 <td style='padding:6px; text-align:center; font-weight: 900;'>" . ($index + 1) . "</td>
                 <td style='padding:6px;'>{$item->product->name}</td>
@@ -607,7 +612,7 @@ class QuotationResource extends BaseResource
                                 $discountAmount = $item->discount_amount_per_item ?? 0; // discount ₹
                                 $gstRate = $item->gst_rate ?? 0; // GST %
                                 $gstAmount = $item->gst_amount ?? 0; // GST ₹
-                
+
                                 return "<tr style='border-bottom: 1px solid #000;'>
                 <td style='padding:6px; text-align:center; font-weight: 900;'>" . ($index + 1) . "</td>
                 <td style='padding:6px;'>{$item->product->name}</td>

@@ -45,6 +45,11 @@ class PurchaseResource extends BaseResource
     protected static ?string $pluralLabel = 'Purchase Invoice';
     protected static ?int $navigationSort = 4;
 
+    protected static function permission(string $action): string
+    {
+        return "{$action}_purchase";
+    }
+
     // 🔹 Show badge count (only invoices where document_type = 'invoice')
     public static function getNavigationBadge(): ?string
     {
