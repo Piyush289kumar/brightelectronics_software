@@ -24,6 +24,12 @@ class BlockInventoryResource extends BaseResource
     protected static ?string $label = 'Block Inventory';    
 
 
+    protected static function permission(string $action): string
+    {
+        return "{$action}_block::inventory";
+    }
+
+
     public static function form(Form $form): Form
     {
         return $form
