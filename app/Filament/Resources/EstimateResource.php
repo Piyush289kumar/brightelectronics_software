@@ -37,6 +37,11 @@ class EstimateResource extends BaseResource
     protected static ?string $navigationGroup = 'Pre Sales';
     protected static ?string $pluralLabel = 'Estimate';
     protected static ?int $navigationSort = 1;
+
+    protected static function permission(string $action): string
+    {
+        return "{$action}_estimate";
+    }
     public static function form(Form $form): Form
     {
         return $form
@@ -429,7 +434,7 @@ class EstimateResource extends BaseResource
         ]);
     }
 
-     /**
+    /**
      * Show Only Document Estimate
      */
 
@@ -662,5 +667,5 @@ class EstimateResource extends BaseResource
             'create' => Pages\CreateEstimate::route('/create'),
             'edit' => Pages\EditEstimate::route('/{record}/edit'),
         ];
-    }   
+    }
 }

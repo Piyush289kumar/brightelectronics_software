@@ -23,6 +23,11 @@ class FloorResource extends BaseResource
     protected static ?string $pluralLabel = 'Floors';
     protected static ?int $navigationSort = 6;
 
+     protected static function permission(string $action): string
+    {
+        return "{$action}_floor";
+    }
+
     public static function form(Form $form): Form
     {
         return $form
