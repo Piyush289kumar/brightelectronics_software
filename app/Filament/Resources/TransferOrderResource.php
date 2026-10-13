@@ -38,7 +38,10 @@ class TransferOrderResource extends BaseResource
     protected static ?string $pluralLabel = 'Branch Transfer Order';
     protected static ?int $navigationSort = 5;
 
-
+    protected static function permission(string $action): string
+    {
+        return "{$action}_transfer::order";
+    }
 
     // 🔹 Show badge count (only invoices where document_type = 'invoice')
     public static function getNavigationBadge(): ?string
@@ -465,7 +468,7 @@ class TransferOrderResource extends BaseResource
                 Tables\Columns\TextColumn::make('number')->sortable()->searchable(),
                 Tables\Columns\TextColumn::make('billable.name')->label('Source Store')->sortable()->searchable(),
                 Tables\Columns\TextColumn::make('destinationStore.name')->label('Destination Store')->sortable()->searchable(),
-                Tables\Columns\TextColumn::make('document_date')->date()->sortable(),                                
+                Tables\Columns\TextColumn::make('document_date')->date()->sortable(),
                 Tables\Columns\TextColumn::make('status')->sortable(),
             ])->defaultSort('created_at', 'desc')
 

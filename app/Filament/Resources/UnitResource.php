@@ -25,7 +25,7 @@ class UnitResource extends BaseResource
 
     protected static function permission(string $action): string
     {
-        return "{$action}_app::download";
+        return "{$action}_unit";
     }
     public static function form(Form $form): Form
     {
