@@ -39,6 +39,12 @@ class ProformaResource extends BaseResource
     protected static ?string $pluralLabel = 'Proforma';
     protected static ?int $navigationSort = 3;
 
+
+    protected static function permission(string $action): string
+    {
+        return "{$action}_proforma";
+    }
+
     public static function form(Form $form): Form
     {
         return $form

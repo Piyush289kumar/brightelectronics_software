@@ -33,6 +33,11 @@ class PurchaseRequisitionResource extends Resource
     protected static ?string $navigationGroup = 'Purchase';
     protected static ?int $navigationSort = 2;
 
+    protected static function permission(string $action): string
+    {
+        return "{$action}_purchase::requisition";
+    }
+
     public static function getNavigationBadge(): ?string
     {
         return static::getModel()::where('status', 'pending')->count();
@@ -227,9 +232,7 @@ class PurchaseRequisitionResource extends Resource
                                 ->nullable()
                                 ->columnSpanFull(),
 
-                            Grid::make(1)->schema([
-
-                            ])
+                            Grid::make(1)->schema([])
                         ])
                     ])
                     ->columnSpan('full')
@@ -280,8 +283,8 @@ class PurchaseRequisitionResource extends Resource
                         ->tooltip(
                             fn($record) =>
                             $record->status !== 'pending'
-                            ? 'This requisition is already approved'
-                            : null
+                                ? 'This requisition is already approved'
+                                : null
                         )
                         ->modalHeading('Approve / Fulfill Requisition')
                         ->visible(fn($record) => Auth::user()?->isAdmin() ?? false)
@@ -420,7 +423,7 @@ class PurchaseRequisitionResource extends Resource
 
                                         // ✅ SHOW NAME + BARCODE
                                         'product_name' =>
-                                            $i->product?->name .
+                                        $i->product?->name .
                                             ' (' .
                                             $i->product?->barcode .
                                             ')',
@@ -430,18 +433,17 @@ class PurchaseRequisitionResource extends Resource
                                         'purchase_price' => $i->purchase_price,
 
                                         'approved_quantity' =>
-                                            $i->approved_quantity ?? $i->quantity,
+                                        $i->approved_quantity ?? $i->quantity,
 
                                         'approved_price' =>
-                                            $i->approved_price ?? $i->purchase_price,
+                                        $i->approved_price ?? $i->purchase_price,
 
-                                        'approved_total' =>
-                                            ($i->approved_quantity ?? $i->quantity)
+                                        'approved_total' => ($i->approved_quantity ?? $i->quantity)
                                             *
                                             ($i->approved_price ?? $i->purchase_price),
 
                                         'vendor_id' =>
-                                            $i->vendor_id ?? $globalVendor,
+                                        $i->vendor_id ?? $globalVendor,
 
                                     ])->toArray() ?? [];
                                 })
@@ -624,7 +626,7 @@ class PurchaseRequisitionResource extends Resource
                                             TextInput::make('total_amount')->disabled()->label('Total')->dehydrated(true),
                                         ]),
                                         // Grid::make(4)->schema([]),
-                
+
                                         Select::make('vendor_id')
                                             ->label('Vendor')
                                             ->options(Vendor::pluck('name', 'id'))
