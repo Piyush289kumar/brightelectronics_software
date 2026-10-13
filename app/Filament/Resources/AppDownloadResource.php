@@ -31,6 +31,12 @@ class AppDownloadResource extends BaseResource
     protected static ?int $navigationSort = 10;
 
 
+    protected static function permission(string $action): string
+    {
+        return "{$action}_app::download";
+    }
+
+
     public static function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()
