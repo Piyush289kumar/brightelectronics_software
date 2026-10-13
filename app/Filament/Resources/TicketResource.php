@@ -31,6 +31,11 @@ class TicketResource extends BaseResource
     protected static ?string $navigationGroup = 'Help Desk';
     protected static ?int $navigationSort = 50;
 
+    protected static function permission(string $action): string
+    {
+        return "{$action}_ticket";
+    }
+
     public static function form(Form $form): Form
     {
         return $form

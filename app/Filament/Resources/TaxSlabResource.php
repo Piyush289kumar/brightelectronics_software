@@ -21,6 +21,10 @@ class TaxSlabResource extends BaseResource
     protected static ?string $navigationGroup = 'Products & Categories';
     protected static ?int $navigationSort = 5;
 
+    protected static function permission(string $action): string
+    {
+        return "{$action}_tax::slab";
+    }
 
     public static function form(Form $form): Form
     {

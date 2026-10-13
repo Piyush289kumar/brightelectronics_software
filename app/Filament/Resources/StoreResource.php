@@ -16,14 +16,18 @@ use Illuminate\Support\Facades\Auth;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 
 class StoreResource extends BaseResource
-{    
+{
     protected static ?string $model = Store::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-home';
     protected static ?string $navigationGroup = 'Branches';
     protected static ?string $label = 'Branch';
-
     protected static ?int $navigationSort = 5;
+
+    protected static function permission(string $action): string
+    {
+        return "{$action}_store";
+    }
 
     public static function form(Form $form): Form
     {
@@ -339,8 +343,8 @@ class StoreResource extends BaseResource
                         ->url(
                             fn($record) =>
                             str_starts_with($record->google_map_location, 'http')
-                            ? $record->google_map_location
-                            : 'https://' . $record->google_map_location
+                                ? $record->google_map_location
+                                : 'https://' . $record->google_map_location
                         )
                         ->openUrlInNewTab(),
                     Tables\Actions\ViewAction::make(),
