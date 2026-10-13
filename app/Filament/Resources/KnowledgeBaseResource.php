@@ -25,6 +25,11 @@ class KnowledgeBaseResource extends BaseResource
     protected static ?string $navigationGroup = 'Help Desk';
     protected static ?int $navigationSort = 20;
 
+    protected static function permission(string $action): string
+    {
+        return "{$action}_knowledge::base";
+    }
+
     public static function form(Form $form): Form
     {
         return $form

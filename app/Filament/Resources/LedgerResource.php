@@ -23,6 +23,10 @@ class LedgerResource extends BaseResource
     protected static ?string $navigationGroup = 'Accounting';
     protected static ?string $navigationLabel = 'Ledger Entries';
     protected static ?int $navigationSort = 6;
+    protected static function permission(string $action): string
+    {
+        return "{$action}_ledger";
+    }
 
     public static function form(Form $form): Form
     {
