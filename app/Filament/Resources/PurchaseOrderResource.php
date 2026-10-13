@@ -39,8 +39,12 @@ class PurchaseOrderResource extends BaseResource
     protected static ?string $navigationGroup = 'Purchase';
     protected static ?string $pluralLabel = 'Purchase Order';
     protected static ?string $label = 'Purchase Orders';
-
     protected static ?int $navigationSort = 3;
+
+    protected static function permission(string $action): string
+    {
+        return "{$action}_purchase::order";
+    }
 
     // 🔹 Show badge count (only invoices where document_type = 'invoice')
     public static function getNavigationBadge(): ?string
