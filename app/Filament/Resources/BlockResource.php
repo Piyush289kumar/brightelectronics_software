@@ -23,6 +23,11 @@ class BlockResource extends BaseResource
     protected static ?string $pluralLabel = 'Blocks';
     protected static ?int $navigationSort = 8;
 
+    protected static function permission(string $action): string
+    {
+        return "{$action}_block";
+    }
+
     public static function form(Form $form): Form
     {
         return $form

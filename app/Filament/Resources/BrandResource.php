@@ -23,6 +23,11 @@ class BrandResource extends BaseResource
     protected static ?string $navigationGroup = 'Products & Categories';
     protected static ?int $navigationSort = 3;
 
+     protected static function permission(string $action): string
+    {
+        return "{$action}_brand";
+    }
+
 
     public static function form(Form $form): Form
     {

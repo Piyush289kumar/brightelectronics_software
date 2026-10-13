@@ -19,9 +19,9 @@ class BlockInventoryResource extends BaseResource
     protected static ?string $model = BlockInventory::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
-     protected static ?string $navigationGroup = 'Inventory Management';
+    protected static ?string $navigationGroup = 'Inventory Management';
     protected static ?int $navigationSort = 3;
-    protected static ?string $label = 'Block Inventory';    
+    protected static ?string $label = 'Block Inventory';
 
 
     protected static function permission(string $action): string
