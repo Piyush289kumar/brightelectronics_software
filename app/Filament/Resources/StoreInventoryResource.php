@@ -25,6 +25,12 @@ class StoreInventoryResource extends BaseResource
     protected static ?string $navigationGroup = 'Inventory Management';
     protected static ?int $navigationSort = 2;
 
+    protected static function permission(string $action): string
+    {
+        return "{$action}_store::inventory";
+    }
+
+
     public static function form(Form $form): Form
     {
         return $form

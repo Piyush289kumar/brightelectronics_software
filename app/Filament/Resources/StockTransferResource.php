@@ -21,6 +21,11 @@ class StockTransferResource extends BaseResource
     protected static ?string $navigationGroup = 'Inventory Management';
     protected static ?int $navigationSort = 3;
 
+    protected static function permission(string $action): string
+    {
+        return "{$action}_stock::transfer";
+    }
+
     public static function form(Form $form): Form
     {
         return $form

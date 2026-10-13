@@ -24,6 +24,11 @@ class SiteResource extends BaseResource
     protected static ?string $navigationGroup = 'Branches';
     protected static ?int $navigationSort = 9;
 
+    protected static function permission(string $action): string
+    {
+        return "{$action}_site";
+    }
+
     public static function form(Form $form): Form
     {
         return $form
