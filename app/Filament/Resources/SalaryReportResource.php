@@ -624,6 +624,12 @@ class SalaryReportResource extends BaseResource
                             $year
                         );
 
+                        $leadIncentive = static::getUserLeadIncentive(
+                            $record->id,
+                            $month,
+                            $year
+                        );
+
                         $grossSalary = round(
                             $basicSalary + $incentive,
                             2
@@ -675,10 +681,7 @@ class SalaryReportResource extends BaseResource
                         // 6. Allowance and net salary
                         $allowance = (float) ($record->allowance ?? 0);
 
-                        $netSalary = round(
-                            $grossSalary - $totalDeduction + $allowance,
-                            2
-                        );
+                        $netSalary = round($grossSalary - $totalDeduction + $allowance + $leadIncentive, 2);
 
                         // 7. Salary period
                         $salaryMonth = \Carbon\Carbon::create(
@@ -754,8 +757,13 @@ class SalaryReportResource extends BaseResource
                                 2
                             ),
 
+                            '$LEAD_INCENTIVE' => number_format(
+                                $leadIncentive,
+                                2
+                            ),
+
                             '$GROSS_EARNINGS' => number_format(
-                                $grossSalary + $allowance,
+                                $grossSalary + $allowance + $leadIncentive,
                                 2
                             ),
 
@@ -976,6 +984,32 @@ JS);
         }
 
         return round($total, 2);
+    }
+
+    // ==========================================
+    // STAFF CALL LEAD INCENTIVE
+    // Credit the employee who referred the lead
+    // ==========================================
+
+    protected static function getUserLeadIncentive(
+        int $userId,
+        int $month,
+        int $year
+    ): float {
+        return round(
+            JobCard::query()
+                ->whereYear('created_at', $year)
+                ->whereMonth('created_at', $month)
+                ->whereHas('complain', function ($query) use ($userId) {
+                    $query
+                        ->where('staff_id', $userId)
+                        ->whereHas('leadSource', function ($leadQuery) {
+                            $leadQuery->where('lead_name', 'STAFF CALL');
+                        });
+                })
+                ->sum('lead_incentive_amount'),
+            2
+        );
     }
 
     // ======================================================
