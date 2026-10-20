@@ -36,15 +36,30 @@ class UserResource extends BaseResource
                 ->unique(ignoreRecord: true),
 
             Forms\Components\Select::make('store_id')
-                ->label('Store')
-                ->relationship('store', 'name')
-                ->searchable()
+                ->label('Branch')
+                ->relationship(
+                    name: 'store',
+                    titleAttribute: 'name',
+                    modifyQueryUsing: fn($query) => $query->orderBy('name')
+                )
+                ->getOptionLabelFromRecordUsing(
+                    fn(Store $record) => "{$record->name} ({$record->code})"
+                )
+                ->searchable(['name', 'code'])
                 ->preload()
                 ->nullable(),
 
             Forms\Components\Select::make('multi_store_id')
-                ->label('Additional Stores')
-                ->options(\App\Models\Store::query()->pluck('name', 'id'))
+                ->label('Additional Branches')
+                ->options(
+                    Store::query()
+                        ->orderBy('name')
+                        ->get()
+                        ->mapWithKeys(fn(Store $store) => [
+                            $store->id => "{$store->name} ({$store->code})",
+                        ])
+                        ->toArray()
+                )
                 ->multiple()
                 ->searchable()
                 ->preload()
@@ -100,7 +115,7 @@ class UserResource extends BaseResource
             Tables\Columns\TextColumn::make('email')->searchable()->sortable(),
             Tables\Columns\TextColumn::make('store.name')->label('Single Store')->sortable(),
             Tables\Columns\TextColumn::make('multi_store_id')
-                ->label('Stores')
+                ->label('Branches')
                 ->formatStateUsing(function ($state, User $record): string {
                     $storeIds = $record->multi_store_id ?? [];
 
