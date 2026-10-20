@@ -128,24 +128,62 @@ class ComplainResource extends BaseResource
                             )
                             ->suffixAction(
                                 Forms\Components\Actions\Action::make('fetchLocation')
+                                    ->label('Get Current Location')
                                     ->icon('heroicon-o-map-pin')
+                                    ->tooltip('Get current location')
+                                    ->requiresConfirmation()
+                                    ->modalHeading('Update Customer Location?')
+                                    ->modalDescription(
+                                        'This will replace the saved location with your current GPS location.'
+                                    )
+                                    ->modalSubmitActionLabel('Update Location')
+                                    ->action(function (Forms\Set $set) {
+                                        // This action is handled through Filament.
+                                        // GPS retrieval itself is performed by the browser.
+                                    })
                                     ->alpineClickHandler(<<<'JS'
+                                    if (!window.complainLocationEditingEnabled) {
+                                        $tooltip('First unlock Location Editing using the map button.');
+                                        return;
+                                    }
+
+                                    if (!navigator.geolocation) {
+                                        new FilamentNotification()
+                                            .title('Location Not Supported')
+                                            .body('Your browser does not support GPS location.')
+                                            .danger()
+                                            .send();
+                                        return;
+                                    }
+
                                     navigator.geolocation.getCurrentPosition(
                                         (position) => {
-                                            const lat = position.coords.latitude;
-                                            const lng = position.coords.longitude;
+                                            const lat = Number(position.coords.latitude.toFixed(7));
+                                            const lng = Number(position.coords.longitude.toFixed(7));
                                             const url = `https://www.google.com/maps?q=${lat},${lng}`;
 
                                             $wire.set('data.latitude', lat);
                                             $wire.set('data.longitude', lng);
                                             $wire.set('data.google_map_location', url);
 
-                                            window.dispatchEvent(new CustomEvent('complain-map-updated', {
-                                                detail: { lat, lng }
-                                            }));
+                                            window.dispatchEvent(
+                                                new CustomEvent('complain-map-updated', {
+                                                    detail: { lat, lng }
+                                                })
+                                            );
+
+                                            new FilamentNotification()
+                                                .title('Location Updated')
+                                                .body('The GPS location has been updated.')
+                                                .success()
+                                                .send();
                                         },
                                         (error) => {
-                                            alert(error.message);
+                                            new FilamentNotification()
+                                                .title('Unable to Get Location')
+                                                .body(error.message || 'Please check your location permissions.')
+                                                .danger()
+                                                .send();
                                         },
                                         {
                                             enableHighAccuracy: true,
@@ -153,7 +191,7 @@ class ComplainResource extends BaseResource
                                             maximumAge: 0
                                         }
                                     );
-                                    JS)
+                                JS)
                             ),
 
                         Forms\Components\ViewField::make('map_picker')

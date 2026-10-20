@@ -175,6 +175,9 @@
             function setEditing(enabled) {
                 editingEnabled = enabled;
 
+                // Shared state for the GPS suffix action.
+                window.complainLocationEditingEnabled = enabled;
+
                 map.dragging[enabled ? 'enable' : 'disable']();
                 map.scrollWheelZoom[enabled ? 'enable' : 'disable']();
                 map.doubleClickZoom[enabled ? 'enable' : 'disable']();
