@@ -1,5 +1,7 @@
 <?php
+
 namespace App\Filament\Resources;
+
 use App\Filament\Resources\ComplainResource\Pages;
 use App\Models\Complain;
 use App\Models\Device;
@@ -17,6 +19,7 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
+
 class ComplainResource extends BaseResource
 {
     protected static ?string $model = Complain::class;
@@ -78,12 +81,24 @@ class ComplainResource extends BaseResource
                         //     ->columnSpan(1),
 
 
-                        Forms\Components\TextInput::make('latitude'),
-                        Forms\Components\TextInput::make('longitude'),
+                        Forms\Components\TextInput::make('latitude')
+                            ->extraAttributes([
+                                'data-location-input' => 'latitude',
+                                'readonly' => true,
+                            ]),
+                        Forms\Components\TextInput::make('longitude')
+                            ->extraAttributes([
+                                'data-location-input' => 'longitude',
+                                'readonly' => true,
+                            ]),
 
                         Forms\Components\TextInput::make('google_map_location')
                             ->label('Google Map Location')
                             ->live()
+                            ->extraAttributes([
+                                'data-location-input' => 'google_map_location',
+                                'readonly' => true,
+                            ])
                             ->afterStateUpdated(function ($state, callable $set, $livewire) {
 
                                 if (blank($state)) {
@@ -372,8 +387,8 @@ class ComplainResource extends BaseResource
                         ->url(
                             fn($record) =>
                             str_starts_with($record->google_map_location, 'http')
-                            ? $record->google_map_location
-                            : 'https://' . $record->google_map_location
+                                ? $record->google_map_location
+                                : 'https://' . $record->google_map_location
                         )
                         ->openUrlInNewTab(),
 
@@ -457,5 +472,4 @@ class ComplainResource extends BaseResource
         // Engineer / Machine Men -> Only assigned complaints
         return $query->whereJsonContains('assigned_engineers', $user->id);
     }
-
 }
