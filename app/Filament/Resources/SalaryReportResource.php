@@ -460,6 +460,27 @@ class SalaryReportResource extends BaseResource
                     }),
 
                 // ==========================================
+                // LEAD INCENTIVE
+                // STAFF CALL referrals only
+                // ==========================================
+
+                Tables\Columns\TextColumn::make('lead_incentive')
+                    ->label('Lead Incentive')
+                    ->money('INR')
+                    ->color('success')
+                    ->state(function ($record, $livewire) {
+                        $month = static::getSelectedMonth($livewire);
+                        $year = static::getSelectedYear($livewire);
+
+                        return static::getUserLeadIncentive(
+                            $record->id,
+                            $month,
+                            $year
+                        );
+                    })
+                    ->toggleable(),
+
+                // ==========================================
                 // FINAL SALARY
                 // Gross - Deduction + Allowance
                 // ==========================================
@@ -484,6 +505,12 @@ class SalaryReportResource extends BaseResource
                             $year
                         );
 
+                        $leadIncentive = static::getUserLeadIncentive(
+                            $record->id,
+                            $month,
+                            $year
+                        );
+
                         $grossSalary =
                             $basicSalary + $incentive;
 
@@ -498,11 +525,7 @@ class SalaryReportResource extends BaseResource
                         );
 
                         if ($workingDays <= 0) {
-                            return round(
-                                $grossSalary +
-                                    (float) ($record->allowance ?? 0),
-                                2
-                            );
+                            return round($grossSalary + (float) ($record->allowance ?? 0) + $leadIncentive, 2);
                         }
 
                         $perDaySalary =
@@ -534,7 +557,8 @@ class SalaryReportResource extends BaseResource
                         return round(
                             $grossSalary
                                 - $totalDeduction
-                                + $allowance,
+                                + $allowance
+                                + $leadIncentive,
                             2
                         );
                     }),
