@@ -1,3 +1,23 @@
+<style>
+    /* Keep the complaint map behind Filament form controls */
+    #complain-map {
+        position: relative;
+        z-index: 0 !important;
+    }
+
+    #complain-map .leaflet-pane,
+    #complain-map .leaflet-control {
+        z-index: 1 !important;
+    }
+
+    /* Ensure dropdowns and popovers appear above the map */
+    .fi-dropdown-panel,
+    .fi-select-dropdown,
+    [data-radix-popper-content-wrapper] {
+        z-index: 9999 !important;
+    }
+</style>
+
 <div wire:ignore class="space-y-3">
     <div id="complain-map" style="height:400px;border-radius:10px;"></div>
 </div>
