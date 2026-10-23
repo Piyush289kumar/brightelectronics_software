@@ -62,6 +62,8 @@ class JobCardObserver
             'status',
             'amount',
             'complain_id',
+            'lead_incentive_amount',
+            'expense',
         ])) {
             $this->syncUserTargets($jobCard);
         }
@@ -297,13 +299,35 @@ class JobCardObserver
                 |
                 */
 
+                // $achievedAmount = JobCard::query()
+                //     ->where('status', 'Delivered')
+                //     ->whereHas('complain', function ($query) use (
+                //         $storeId,
+                //         $engineerId
+                //     ) {
+
+                //         $query
+                //             ->where('store_id', $storeId)
+                //             ->whereJsonContains(
+                //                 'assigned_engineers',
+                //                 $engineerId
+                //             );
+                //     })
+                //     ->sum('amount');
+
+                // ================================================
+                // CALCULATE ACTUAL ACHIEVED TARGET
+                // Delivered Job Card Amount - Lead Incentive - Expense
+                // ================================================
+
                 $achievedAmount = JobCard::query()
                     ->where('status', 'Delivered')
+                    ->whereYear('created_at', $year)
+                    ->whereMonth('created_at', $month)
                     ->whereHas('complain', function ($query) use (
                         $storeId,
                         $engineerId
                     ) {
-
                         $query
                             ->where('store_id', $storeId)
                             ->whereJsonContains(
@@ -311,7 +335,14 @@ class JobCardObserver
                                 $engineerId
                             );
                     })
-                    ->sum('amount');
+                    ->sum(
+                        \Illuminate\Support\Facades\DB::raw(
+                            'amount
+                        - COALESCE(lead_incentive_amount, 0)
+                        - COALESCE(expense, 0)'
+                        )
+                    );
+
 
 
                 /*
