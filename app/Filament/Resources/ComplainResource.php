@@ -475,6 +475,41 @@ class ComplainResource extends BaseResource
             'edit' => Pages\EditComplain::route('/{record}/edit'),
         ];
     }
+    // public static function getEloquentQuery(): Builder
+    // {
+    //     $query = parent::getEloquentQuery()
+    //         ->where('first_action_code', '!=', 'PKD');
+
+    //     $user = Auth::user();
+
+    //     // Administrator / Developer -> All branches
+    //     if (
+    //         $user &&
+    //         $user->hasAnyRole([
+    //             'Administrator',
+    //             'Developer',
+    //             'admin',
+    //         ])
+    //     ) {
+    //         return $query;
+    //     }
+
+    //     // Manager / Store Manager / Team Leader -> Only own store
+    //     if (
+    //         $user &&
+    //         $user->hasAnyRole([
+    //             'Manager',
+    //             'Store Manager',
+    //             'Team Leader',
+    //             'Team Lead',
+    //         ])
+    //     ) {
+    //         return $query->where('store_id', $user->store_id);
+    //     }
+
+    //     // Engineer / Machine Men -> Only assigned complaints
+    //     return $query->whereJsonContains('assigned_engineers', $user->id);
+    // }
     public static function getEloquentQuery(): Builder
     {
         $query = parent::getEloquentQuery()
@@ -482,32 +517,27 @@ class ComplainResource extends BaseResource
 
         $user = Auth::user();
 
-        // Administrator / Developer -> All branches
-        if (
-            $user &&
-            $user->hasAnyRole([
-                'Administrator',
-                'Developer',
-                'admin',
-            ])
-        ) {
+        if (! $user) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        // Admins can access all branches.
+        if ($user->hasRole([
+            'Administrator',
+            'Developer',
+            'admin',
+        ])) {
             return $query;
         }
 
-        // Manager / Store Manager / Team Leader -> Only own store
-        if (
-            $user &&
-            $user->hasAnyRole([
-                'Manager',
-                'Store Manager',
-                'Team Leader',
-                'Team Lead',
-            ])
-        ) {
-            return $query->where('store_id', $user->store_id);
+        // Get ONLY the logged-in user's multi_store_id.
+        $storeIds = $user->multi_store_id ?? [];
+
+        if (! is_array($storeIds) || empty($storeIds)) {
+            return $query->whereRaw('1 = 0');
         }
 
-        // Engineer / Machine Men -> Only assigned complaints
-        return $query->whereJsonContains('assigned_engineers', $user->id);
+        // Show complaints belonging to assigned branches only.
+        return $query->whereIn('store_id', $storeIds);
     }
 }

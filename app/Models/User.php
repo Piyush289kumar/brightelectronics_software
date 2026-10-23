@@ -72,4 +72,17 @@ class User extends Authenticatable
     {
         return $this->hasRole(['Administrator', 'Developer', 'admin']);
     }
+
+    /**
+     * Get all store IDs accessible to this user.
+     */
+    public function accessibleStoreIds(): array
+    {
+        return collect($this->multi_store_id ?? [])
+            ->merge([$this->store_id])
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
+    }
 }
