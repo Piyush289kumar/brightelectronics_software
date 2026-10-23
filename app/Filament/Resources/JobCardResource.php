@@ -1344,51 +1344,119 @@ HTML;
 
 
 
+    // public static function getEloquentQuery(): Builder
+    // {
+    //     $query = parent::getEloquentQuery();
+
+    //     $user = Auth::user();
+
+    //     // Admin
+    //     if (
+    //         $user->hasAnyRole([
+    //             'Administrator',
+    //             'Developer',
+    //             'admin',
+    //         ])
+    //     ) {
+    //         return $query;
+    //     }
+
+    //     // Manager / Store Manager / Team Leader
+    //     if (
+    //         $user->hasAnyRole([
+    //             'Manager',
+    //             'Store Manager',
+    //             'Team Leader',
+    //             'Team Lead',
+    //         ])
+    //     ) {
+    //         return $query->whereHas('complain', function ($q) use ($user) {
+    //             $q->where('store_id', $user->store_id);
+    //         });
+    //     }
+
+    //     // Engineer / Machine Men
+    //     if (
+    //         $user->hasAnyRole([
+    //             'Engineer',
+    //             'Machine Men',
+    //         ])
+    //     ) {
+    //         return $query->whereHas('complain', function ($q) use ($user) {
+    //             $q->whereJsonContains('assigned_engineers', $user->id);
+    //         });
+    //     }
+
+    //     return $query;
+    // }
+
+
     public static function getEloquentQuery(): Builder
     {
         $query = parent::getEloquentQuery();
-
         $user = Auth::user();
 
-        // Admin
-        if (
-            $user->hasAnyRole([
-                'Administrator',
-                'Developer',
-                'admin',
-            ])
-        ) {
+        if (! $user) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        // Admin: All Job Cards.
+        if ($user->hasAnyRole([
+            'Administrator',
+            'Developer',
+            'admin',
+        ])) {
             return $query;
         }
 
-        // Manager / Store Manager / Team Leader
-        if (
-            $user->hasAnyRole([
-                'Manager',
-                'Store Manager',
-                'Team Leader',
-                'Team Lead',
-            ])
-        ) {
-            return $query->whereHas('complain', function ($q) use ($user) {
-                $q->where('store_id', $user->store_id);
+        // Read only multi_store_id.
+        $storeIds = $user->multi_store_id ?? [];
+
+        if (is_string($storeIds)) {
+            $storeIds = json_decode($storeIds, true) ?? [];
+        }
+
+        if (! is_array($storeIds) || empty($storeIds)) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        $storeIds = array_map('intval', $storeIds);
+
+        // Manager / Store Manager / Team Leader:
+        // All Job Cards in their assigned stores.
+        if ($user->hasAnyRole([
+            'Manager',
+            'Store Manager',
+            'Team Leader',
+            'Team Lead',
+        ])) {
+            return $query->whereHas('complain', function (Builder $q) use ($storeIds) {
+                $q->whereIn('store_id', $storeIds);
             });
         }
 
-        // Engineer / Machine Men
-        if (
-            $user->hasAnyRole([
-                'Engineer',
-                'Machine Men',
-            ])
-        ) {
-            return $query->whereHas('complain', function ($q) use ($user) {
-                $q->whereJsonContains('assigned_engineers', $user->id);
+        // Engineer / Machine Men:
+        // Only assigned Job Cards in their assigned stores.
+        if ($user->hasAnyRole([
+            'Engineer',
+            'Machine Men',
+        ])) {
+            $userId = (int) $user->id;
+
+            return $query->whereHas('complain', function (Builder $q) use ($storeIds, $userId) {
+                $q->whereIn('store_id', $storeIds)
+                    ->where(function (Builder $assignmentQuery) use ($userId) {
+                        $assignmentQuery
+                            ->whereJsonContains('assigned_engineers', $userId)
+                            ->orWhereJsonContains('assigned_engineers', (string) $userId);
+                    });
             });
         }
 
-        return $query;
+        // Other roles: No access.
+        return $query->whereRaw('1 = 0');
     }
+
 
     protected static function canEditFinancials(): bool
     {
