@@ -84,6 +84,7 @@ class PurchaseRequisitionResource extends Resource
                 Repeater::make('items')
                     ->relationship('items')
                     ->label('Requested Items')
+                    ->addable(false)
                     ->schema([
                         Grid::make(columns: 3)->schema([
 
@@ -101,7 +102,6 @@ class PurchaseRequisitionResource extends Resource
                                 ->preload()
                                 ->required()
                                 ->reactive()
-
 
                                 ->createOptionForm([
                                     Grid::make(2)->schema([
