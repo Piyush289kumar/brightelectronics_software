@@ -87,7 +87,6 @@ class PurchaseRequisitionResource extends Resource
                     ->addable(false)
                     ->schema([
                         Grid::make(columns: 3)->schema([
-
                             Select::make('product_id')
                                 ->label('Spare Parts')
                                 ->relationship(
@@ -192,7 +191,6 @@ class PurchaseRequisitionResource extends Resource
                                 ->afterStateUpdated(function ($state, callable $get, callable $set) {
                                     $set('total_price', $state * ($get('purchase_price') ?? 0));
                                 }),
-
                             TextInput::make('purchase_price')
                                 ->label('Rete')
                                 ->numeric()
@@ -252,7 +250,6 @@ class PurchaseRequisitionResource extends Resource
 
         return $query;
     }
-
 
     public static function table(Table $table): Table
     {
