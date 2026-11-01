@@ -112,31 +112,26 @@ class ComplainObserver
 
             $jobId = $storeCode . $newNumber;
 
-            JobCard::create([
+            $jobCard = JobCard::create([
                 'complain_id' => $complain->id,
-                'job_id' => $jobId,
-
+                'job_id' => 'TEMP-' . \Illuminate\Support\Str::uuid(),
                 'status' => 'Pending',
-
-                // ✅ Default visit charge
                 'visit_charge_amount' => 200,
                 'amount' => 0,
-
                 'gst_amount' => 0,
                 'expense' => 0,
                 'gross_amount' => 0,
-
                 'incentive_type' => null,
                 'incentive_amount' => 0,
-
                 'net_profit' => 0,
-
                 'lead_incentive_amount' => 0,
                 'bright_electronics_profit' => 0,
-
                 'job_verified_by_admin' => false,
-
                 'note' => 'Auto-generated job card with visit charge ₹200',
+            ]);
+
+            $jobCard->updateQuietly([
+                'job_id' => $storeCode . str_pad($jobCard->id, 5, '0', STR_PAD_LEFT),
             ]);
         }
     }
