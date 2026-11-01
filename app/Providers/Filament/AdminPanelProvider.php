@@ -52,8 +52,8 @@ class AdminPanelProvider extends PanelProvider
                 Widgets\AccountWidget::class,
                 // Widgets\FilamentInfoWidget::class,
                 CompanyInfoWidget::class,
-                DashboardStats::class,
-                LowStockWidget::class, // 👈 Add here
+                // DashboardStats::class,
+                // LowStockWidget::class, // 👈 Add here
                 // PurchaseAnalyticsWidget::class,
                 // TopVendorskWidget::class,
                 // MonthlyPurchaseTrendWidget::class,

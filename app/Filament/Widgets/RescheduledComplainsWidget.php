@@ -14,82 +14,158 @@ class RescheduledComplainsWidget extends BaseWidget
 
     protected int|string|array $columnSpan = 'full';
 
+    public static function canView(): bool
+    {
+        return Auth::user()?->hasAnyRole([
+            'Administrator',
+            'Developer',
+            'admin',
+            'Manager',
+            'Store Manager',
+            'Team Leader',
+            'Team Lead',
+            'Engineer',
+            'Machine Men',
+        ]) ?? false;
+    }
 
     public function table(Tables\Table $table): Tables\Table
     {
+        $user = Auth::user();
+
+        $query = Complain::query()
+            ->where('first_action_code', 'RSD');
+
+        $isAdmin = $user?->hasAnyRole([
+            'Administrator',
+            'Developer',
+            'admin',
+        ]);
+
+        $isEngineer = $user?->hasAnyRole([
+            'Engineer',
+            'Machine Men',
+        ]);
+
+        $isBranchManagement = $user?->hasAnyRole([
+            'Manager',
+            'Store Manager',
+            'Team Leader',
+            'Team Lead',
+        ]);
+
+        if (! $isAdmin) {
+            $storeIds = $user?->multi_store_id ?? [];
+
+            $storeIds = is_array($storeIds)
+                ? array_map('intval', $storeIds)
+                : [];
+
+            if (empty($storeIds)) {
+                $query->whereRaw('1 = 0');
+            } elseif ($isBranchManagement || $isEngineer) {
+                $query->whereIn('store_id', $storeIds);
+
+                if ($isEngineer) {
+                    $userId = (int) $user->id;
+
+                    $query->where(function ($q) use ($userId) {
+                        $q->whereJsonContains('assigned_engineers', $userId)
+                            ->orWhereJsonContains(
+                                'assigned_engineers',
+                                (string) $userId
+                            );
+                    });
+                }
+            } else {
+                $query->whereRaw('1 = 0');
+            }
+        }
+
         return $table
             ->query(
-                tap(
-                    Complain::query()
-                        ->where('first_action_code', 'RSD'), // ✅ ONLY this
-
-                    function ($query) {
-                        $user = Auth::user();
-
-                        // Store Manager restriction
-                        if ($user && $user->hasRole('Store Manager')) {
-                            $query->where('store_id', $user->store_id);
-                        }
-
-                        // Engineer restriction (same as Resource)
-                        if (
-                            $user &&
-                            !$user->hasRole(['Administrator', 'Developer', 'admin']) &&
-                            $user->email !== 'vipprow@gmail.com'
-                        ) {
-                            $query->whereJsonContains(
-                                'assigned_engineers',
-                                $user->id // 👈 SAME AS RESOURCE (int works here)
-                            );
-                        }
-                    }
-                )
-                    ->orderBy('rsd_time', 'asc')
+                $query->orderBy('rsd_time', 'asc')
                     ->limit(10)
             )
             ->columns([
-                Tables\Columns\TextColumn::make('rsd_time')->label('RSD')->dateTime()->sortable()->toggleable(),
-                Tables\Columns\TextColumn::make('complain_id')->label('Complain ID')->sortable()->toggleable(),
-                Tables\Columns\TextColumn::make('name')->label('Customer Name')->sortable()->toggleable(),
-                Tables\Columns\TextColumn::make('mobile')->label('Phone')->sortable()->toggleable(),
+                Tables\Columns\TextColumn::make('rsd_time')
+                    ->label('RSD')
+                    ->dateTime()
+                    ->sortable()
+                    ->toggleable(),
 
-                Tables\Columns\TextColumn::make('first_action_code')->label('Action Code')->sortable()->toggleable(),
+                Tables\Columns\TextColumn::make('complain_id')
+                    ->label('Complain ID')
+                    ->sortable()
+                    ->toggleable(),
+
+                Tables\Columns\TextColumn::make('store.name')
+                    ->label('Store')
+                    ->toggleable(),
+
+                Tables\Columns\TextColumn::make('name')
+                    ->label('Customer Name')
+                    ->sortable()
+                    ->toggleable(),
+
+                Tables\Columns\TextColumn::make('mobile')
+                    ->label('Phone')
+                    ->sortable()
+                    ->toggleable(),
+
+                Tables\Columns\TextColumn::make('first_action_code')
+                    ->label('Action Code')
+                    ->sortable()
+                    ->toggleable(),
+
                 Tables\Columns\TextColumn::make('assigned_engineers')
                     ->label('Assigned Engineers')
                     ->state(function ($record) {
-                        if (empty($record->assigned_engineers)) {
+                        $engineerIds = $record->assigned_engineers ?? [];
+
+                        if (empty($engineerIds)) {
                             return '—';
                         }
 
-                        return User::whereIn('id', $record->assigned_engineers)
+                        return User::whereIn('id', $engineerIds)
                             ->pluck('name')
                             ->implode(', ');
                     })
                     ->wrap()
-                    ->sortable()->toggleable(),
-                // ⭐ NEW MAP BUTTON COLUMN
+                    ->toggleable(),
+
                 Tables\Columns\TextColumn::make('map')
                     ->label('Map')
                     ->html()
                     ->alignCenter()
                     ->state(function ($record) {
-                        if (!$record->google_map_location) {
+                        if (! $record->google_map_location) {
                             return '<span class="text-gray-400 text-xs">No Map</span>';
                         }
-                        $url = str_starts_with($record->google_map_location, 'http')
-                            ? $record->google_map_location
-                            : 'https://' . $record->google_map_location;
+
+                        $url = $record->google_map_location;
+
+                        if (
+                            ! str_starts_with($url, 'https://') &&
+                            ! str_starts_with($url, 'http://')
+                        ) {
+                            $url = 'https://' . $url;
+                        }
+
+                        $safeUrl = e($url);
+
                         return '
-                <a href="' . $url . '" target="_blank"
-                   class="px-2 py-1 text-xs rounded bg-green-600 text-white hover:bg-green-700" style="background:green;">
-                    Open Map
-                </a>
-            ';
+                            <a href="' . $safeUrl . '"
+                               target="_blank"
+                               rel="noopener noreferrer"
+                               class="px-2 py-1 text-xs rounded text-white"
+                               style="background:green;">
+                                Open Map
+                            </a>
+                        ';
                     }),
             ])
-            ->actions([
-                // Tables\Actions\ViewAction::make(),
-            ])
+            ->actions([])
             ->paginated(false);
     }
 }

@@ -2,12 +2,10 @@
 
 namespace App\Filament\Widgets;
 
-use App\Models\Account;
+
 use App\Models\Complain;
 use App\Models\Invoice;
 use App\Models\JobCard;
-use App\Models\Ledger;
-use App\Models\Product;
 use App\Models\PurchaseRequisition;
 use App\Models\StoreTarget;
 use App\Models\UserTarget;
@@ -25,6 +23,8 @@ class AccountingStats extends BaseWidget
             'Administrator',
             'Developer',
             'admin',
+            'Manager',
+            'Store Manager',
             'Team Leader',
             'Team Lead',
             'Engineer',
@@ -41,13 +41,13 @@ class AccountingStats extends BaseWidget
     {
         $user = Auth::user();
 
-        if (!$user) {
+        if (! $user) {
             return [];
         }
 
-        // =========================================================
+        // =====================================================
         // ROLES
-        // =========================================================
+        // =====================================================
 
         $isAdmin = $user->hasAnyRole([
             'Administrator',
@@ -67,31 +67,45 @@ class AccountingStats extends BaseWidget
             'Machine Men',
         ]);
 
-        // =========================================================
+        if (! $isAdmin && ! $isBranchManagement && ! $isEngineer) {
+            return [];
+        }
+
+        // =====================================================
+        // STORE ACCESS - ONLY multi_store_id
+        // =====================================================
+
+        $storeIds = $user->multi_store_id ?? [];
+
+        $storeIds = is_array($storeIds)
+            ? array_map('intval', $storeIds)
+            : [];
+
+        $userId = (int) $user->id;
+
+        if (! $isAdmin && empty($storeIds)) {
+            return [];
+        }
+
+        // =====================================================
         // COMPLAINTS
-        // =========================================================
+        // =====================================================
 
         $complainQuery = Complain::query();
 
-        if ($isAdmin) {
+        if (! $isAdmin) {
+            $complainQuery->whereIn('store_id', $storeIds);
 
-            // Admin sees ALL complaints
-            // No filter
-
-        } elseif ($isBranchManagement) {
-
-            // Manager / Store Manager / Team Leader / Team Lead
-            // sees ONLY their branch
-            $complainQuery->where('store_id', $user->store_id);
-
-        } elseif ($isEngineer) {
-
-            // Engineer / Machine Men
-            // sees only complaints assigned to them
-            $complainQuery->whereJsonContains(
-                'assigned_engineers',
-                $user->id
-            );
+            // Engineer / Machine Men: only assigned complaints
+            if ($isEngineer) {
+                $complainQuery->where(function ($q) use ($userId) {
+                    $q->whereJsonContains('assigned_engineers', $userId)
+                        ->orWhereJsonContains(
+                            'assigned_engineers',
+                            (string) $userId
+                        );
+                });
+            }
         }
 
         $complainCount = (clone $complainQuery)
@@ -110,36 +124,35 @@ class AccountingStats extends BaseWidget
             ->where('first_action_code', 'Job Cancel')
             ->count();
 
-
-        // =========================================================
+        // =====================================================
         // JOB CARDS
-        // =========================================================
+        // =====================================================
 
         $jobCardQuery = JobCard::query()
             ->whereHas('complain');
 
-        if ($isAdmin) {
+        if (! $isAdmin) {
+            $jobCardQuery->whereHas(
+                'complain',
+                function ($q) use ($storeIds, $isEngineer, $userId) {
+                    $q->whereIn('store_id', $storeIds);
 
-            // Admin sees ALL job cards
-
-        } elseif ($isBranchManagement) {
-
-            // Manager / Store Manager / Team Leader / Team Lead
-            // sees ALL job cards belonging to their branch
-            $jobCardQuery->whereHas('complain', function ($q) use ($user) {
-                $q->where('store_id', $user->store_id);
-            });
-
-        } elseif ($isEngineer) {
-
-            // Engineer / Machine Men
-            // sees all job cards whose complaint is assigned to them
-            $jobCardQuery->whereHas('complain', function ($q) use ($user) {
-                $q->whereJsonContains(
-                    'assigned_engineers',
-                    $user->id
-                );
-            });
+                    // Engineer / Machine Men: only assigned complaints
+                    if ($isEngineer) {
+                        $q->where(function ($assignmentQuery) use ($userId) {
+                            $assignmentQuery
+                                ->whereJsonContains(
+                                    'assigned_engineers',
+                                    $userId
+                                )
+                                ->orWhereJsonContains(
+                                    'assigned_engineers',
+                                    (string) $userId
+                                );
+                        });
+                    }
+                }
+            );
         }
 
         $jobCardTotal = (clone $jobCardQuery)->count();
@@ -160,13 +173,12 @@ class AccountingStats extends BaseWidget
             ->where('status', 'Complete')
             ->count();
 
-
-        // =========================================================
+        // =====================================================
         // PURCHASES
-        // =========================================================
+        // =====================================================
 
-        // Keep these for admin/branch management.
-        // Engineers and Machine Men will not receive these stats below.
+        // These queries retain their existing global scope.
+        // Engineers and Machine Men do not see purchase cards.
 
         $purchaseRequisitionCount = PurchaseRequisition::where(
             'status',
@@ -180,10 +192,9 @@ class AccountingStats extends BaseWidget
             ->whereIn('status', ['pending', 'draft'])
             ->sum('total_amount');
 
-
-        // =========================================================
+        // =====================================================
         // TARGET
-        // =========================================================
+        // =====================================================
 
         $year = now()->year;
         $month = now()->month;
@@ -194,10 +205,7 @@ class AccountingStats extends BaseWidget
 
         if ($isAdmin) {
 
-            // =====================================================
-            // ADMIN
-            // ALL BRANCHES TOTAL
-            // =====================================================
+            // Admin: all branches combined
 
             $targetAmount = StoreTarget::where('year', $year)
                 ->where('month', $month)
@@ -211,35 +219,26 @@ class AccountingStats extends BaseWidget
 
         } elseif ($isBranchManagement) {
 
-            // =====================================================
-            // MANAGER / STORE MANAGER / TEAM LEADER / TEAM LEAD
-            // OWN BRANCH ONLY
-            // =====================================================
+            // Manager / Team Leader: all assigned stores combined
 
-            $storeTarget = StoreTarget::where(
-                'store_id',
-                $user->store_id
-            )
+            $storeTargets = StoreTarget::whereIn('store_id', $storeIds)
                 ->where('year', $year)
                 ->where('month', $month)
-                ->first();
+                ->get();
 
-            $targetAmount = (float) ($storeTarget?->amount ?? 0);
-            $collectedAmount = (float) ($storeTarget?->collected_amount ?? 0);
+            $targetAmount = (float) $storeTargets->sum('amount');
 
-            $targetTitle = 'Branch Target (This Month)';
+            $collectedAmount = (float) $storeTargets->sum(
+                'collected_amount'
+            );
+
+            $targetTitle = 'Assigned Stores Target (This Month)';
 
         } elseif ($isEngineer) {
 
-            // =====================================================
-            // ENGINEER / MACHINE MEN
-            // OWN TARGET ONLY
-            // =====================================================
+            // Engineer: personal target only
 
-            $userTarget = UserTarget::where(
-                'user_id',
-                $user->id
-            )
+            $userTarget = UserTarget::where('user_id', $userId)
                 ->whereHas('storeTarget', function ($q) use ($year, $month) {
                     $q->where('year', $year)
                         ->where('month', $month);
@@ -247,6 +246,7 @@ class AccountingStats extends BaseWidget
                 ->first();
 
             $targetAmount = (float) ($userTarget?->assigned_amount ?? 0);
+
             $collectedAmount = (float) ($userTarget?->achieved_amount ?? 0);
 
             $targetTitle = 'My Target (This Month)';
@@ -256,16 +256,12 @@ class AccountingStats extends BaseWidget
             ? round(($collectedAmount / $targetAmount) * 100, 2)
             : 0;
 
-
-        // =========================================================
-        // ENGINEER / MACHINE MEN
-        // ONLY COMPLAINT + JOB CARD STATS
-        // =========================================================
+        // =====================================================
+        // ENGINEER / MACHINE MEN DASHBOARD
+        // =====================================================
 
         if ($isEngineer) {
             return [
-
-                // ---------------- Complaints ----------------
 
                 Stat::make('Total Complaints', $complainCount)
                     ->icon('heroicon-o-chat-bubble-left-right')
@@ -286,8 +282,6 @@ class AccountingStats extends BaseWidget
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
                     ->description('Cancelled complaints'),
-
-                // ---------------- Job Cards ----------------
 
                 Stat::make('Total Job Cards', $jobCardTotal)
                     ->icon('heroicon-o-clipboard-document-list')
@@ -314,124 +308,84 @@ class AccountingStats extends BaseWidget
                     ->color('success')
                     ->description('Ready for delivery'),
 
-                // ---------------- MY TARGET ----------------
-
                 Stat::make(
                     'My Target (This Month)',
                     '₹' . number_format($collectedAmount, 2)
                     . ' / ₹' . number_format($targetAmount, 2)
                 )
                     ->icon('heroicon-o-flag')
-                    ->color(
-                        $percentage >= 100
-                        ? 'success'
-                        : 'warning'
-                    )
+                    ->color($percentage >= 100 ? 'success' : 'warning')
                     ->description("Achieved {$percentage}%"),
             ];
         }
 
-        // =========================================================
-        // ADMIN + BRANCH MANAGEMENT
-        // =========================================================
+        // =====================================================
+        // ADMIN + MANAGER + TEAM LEADER DASHBOARD
+        // =====================================================
 
         return [
 
-            // ---------------- Complaints ----------------
+            // ---------------- COMPLAINTS ----------------
 
-            Stat::make(
-                'Total Complaints',
-                $complainCount
-            )
+            Stat::make('Total Complaints', $complainCount)
                 ->icon('heroicon-o-chat-bubble-left-right')
                 ->color('info')
                 ->description(
-                    $isAdmin
-                    ? 'All branches'
-                    : 'Current branch'
+                    $isAdmin ? 'All branches' : 'All assigned stores'
                 ),
 
-            Stat::make(
-                'CNC Complaints',
-                $cncComplaints
-            )
+            Stat::make('CNC Complaints', $cncComplaints)
                 ->icon('heroicon-o-clock')
                 ->color('warning')
                 ->description('CNC complaints'),
 
-            Stat::make(
-                'RSD Complaints',
-                $rsdComplaints
-            )
+            Stat::make('RSD Complaints', $rsdComplaints)
                 ->icon('heroicon-o-clock')
                 ->color('warning')
                 ->description('RSD complaints'),
 
-            Stat::make(
-                'Cancel Complaints',
-                $jobCancelComplaints
-            )
+            Stat::make('Cancel Complaints', $jobCancelComplaints)
                 ->icon('heroicon-o-x-circle')
                 ->color('danger')
                 ->description('Cancelled complaints'),
 
-            // ---------------- Job Cards ----------------
+            // ---------------- JOB CARDS ----------------
 
-            Stat::make(
-                'Total Job Cards',
-                $jobCardTotal
-            )
+            Stat::make('Total Job Cards', $jobCardTotal)
                 ->icon('heroicon-o-clipboard-document-list')
                 ->color('primary')
                 ->description(
-                    $isAdmin
-                    ? 'All branches'
-                    : 'Current branch'
+                    $isAdmin ? 'All branches' : 'All assigned stores'
                 ),
 
-            Stat::make(
-                'Pending Job Cards',
-                $jobCardPending
-            )
+            Stat::make('Pending Job Cards', $jobCardPending)
                 ->icon('heroicon-o-clock')
                 ->color('warning')
                 ->description('Pending jobs'),
 
-            Stat::make(
-                'Return Job Cards',
-                $jobCardReturn
-            )
+            Stat::make('Return Job Cards', $jobCardReturn)
                 ->icon('heroicon-o-arrow-path')
                 ->color('danger')
                 ->description('Returned jobs'),
 
-            Stat::make(
-                'Cancelled Job Cards',
-                $jobCardCancelled
-            )
+            Stat::make('Cancelled Job Cards', $jobCardCancelled)
                 ->icon('heroicon-o-x-circle')
                 ->color('danger')
                 ->description('Cancelled jobs'),
 
-            Stat::make(
-                'Completed & Tested Job Cards',
-                $jobCardCompleted
-            )
+            Stat::make('Completed & Tested Job Cards', $jobCardCompleted)
                 ->icon('heroicon-o-check-circle')
                 ->color('success')
                 ->description('Ready for delivery'),
 
-            // ---------------- Purchases ----------------
+            // ---------------- PURCHASES ----------------
 
-            Stat::make(
-                'Purchase Requisitions',
-                $purchaseRequisitionCount
-            )
+            Stat::make('Purchase Requisitions', $purchaseRequisitionCount)
                 ->icon('heroicon-o-clipboard-document')
                 ->color('warning')
                 ->description('Total pending purchase requests'),
 
-            // ---------------- Target ----------------
+            // ---------------- TARGET ----------------
 
             Stat::make(
                 $targetTitle,
@@ -439,16 +393,10 @@ class AccountingStats extends BaseWidget
                 . ' / ₹' . number_format($targetAmount, 2)
             )
                 ->icon('heroicon-o-flag')
-                ->color(
-                    $percentage >= 100
-                    ? 'success'
-                    : 'warning'
-                )
-                ->description(
-                    "Achieved {$percentage}%"
-                ),
+                ->color($percentage >= 100 ? 'success' : 'warning')
+                ->description("Achieved {$percentage}%"),
 
-            // ---------------- Pending Purchase ----------------
+            // ---------------- PENDING PURCHASE ----------------
 
             Stat::make(
                 'Pending Purchase Amount',
