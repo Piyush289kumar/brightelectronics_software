@@ -722,6 +722,14 @@ class JobCardResource extends BaseResource
                     ->searchable()
                     ->toggleable(),
 
+                Tables\Columns\TextColumn::make('complain.store.name')
+                    ->label('Branch')
+                    ->searchable()
+                    ->sortable()
+                    ->badge()
+                    ->color('success')
+                    ->toggleable(),
+
                 Tables\Columns\TextColumn::make('complain.name')
                     ->label('Customer Name')
                     ->searchable()
@@ -1400,7 +1408,7 @@ HTML;
             return $query->whereRaw('1 = 0');
         }
 
-        // Admin: All Job Cards.
+        // Admin: All job cards
         if ($user->hasAnyRole([
             'Administrator',
             'Developer',
@@ -1409,21 +1417,17 @@ HTML;
             return $query;
         }
 
-        // Read only multi_store_id.
+        // ONLY use multi_store_id from users table
         $storeIds = $user->multi_store_id ?? [];
-
-        if (is_string($storeIds)) {
-            $storeIds = json_decode($storeIds, true) ?? [];
-        }
 
         if (! is_array($storeIds) || empty($storeIds)) {
             return $query->whereRaw('1 = 0');
         }
 
         $storeIds = array_map('intval', $storeIds);
+        $userId = (int) $user->id;
 
-        // Manager / Store Manager / Team Leader:
-        // All Job Cards in their assigned stores.
+        // Manager / Store Manager / Team Leader
         if ($user->hasAnyRole([
             'Manager',
             'Store Manager',
@@ -1435,14 +1439,11 @@ HTML;
             });
         }
 
-        // Engineer / Machine Men:
-        // Only assigned Job Cards in their assigned stores.
+        // Engineer / Machine Men
         if ($user->hasAnyRole([
             'Engineer',
             'Machine Men',
         ])) {
-            $userId = (int) $user->id;
-
             return $query->whereHas('complain', function (Builder $q) use ($storeIds, $userId) {
                 $q->whereIn('store_id', $storeIds)
                     ->where(function (Builder $assignmentQuery) use ($userId) {
@@ -1453,7 +1454,7 @@ HTML;
             });
         }
 
-        // Other roles: No access.
+        // Other roles: No access
         return $query->whereRaw('1 = 0');
     }
 

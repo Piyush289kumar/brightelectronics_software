@@ -521,8 +521,8 @@ class ComplainResource extends BaseResource
             return $query->whereRaw('1 = 0');
         }
 
-        // Admins can access all branches.
-        if ($user->hasRole([
+        // Admin roles: all complaints
+        if ($user->hasAnyRole([
             'Administrator',
             'Developer',
             'admin',
@@ -530,14 +530,37 @@ class ComplainResource extends BaseResource
             return $query;
         }
 
-        // Get ONLY the logged-in user's multi_store_id.
+        // IMPORTANT: Use ONLY multi_store_id
         $storeIds = $user->multi_store_id ?? [];
 
         if (! is_array($storeIds) || empty($storeIds)) {
             return $query->whereRaw('1 = 0');
         }
 
-        // Show complaints belonging to assigned branches only.
-        return $query->whereIn('store_id', $storeIds);
+        $storeIds = array_map('intval', $storeIds);
+
+        // Manager / Store Manager / Team Leader
+        if ($user->hasAnyRole([
+            'Manager',
+            'Store Manager',
+            'Team Leader',
+            'Team Lead',
+        ])) {
+            return $query->whereIn('store_id', $storeIds);
+        }
+
+        // Engineer / Machine Men
+        if ($user->hasAnyRole(['Engineer', 'Machine Men'])) {
+
+            return $query
+                ->whereIn('store_id', $storeIds)
+                ->whereJsonContains(
+                    'assigned_engineers',
+                    (int) $user->id
+                );
+        }
+
+        // Other roles: no access
+        return $query->whereRaw('1 = 0');
     }
 }
