@@ -474,35 +474,71 @@ class LedgerResource extends BaseResource
 
         $user = Auth::user();
 
-        if ($user && $user->isStoreManager()) {
-            $query->where('store_id', $user->store_id);
+        if (! $user) {
+            return $query->whereRaw('1 = 0');
         }
 
-        if (
-            $user &&
-            !$user->hasAnyRole([
-                'Administrator',
-                'Developer',
-                'admin',
-                'Team Leader',
-                'Team Lead',
-            ])
-        ) {
-            $query->where(function ($q) use ($user) {
-
-                // Ledger linked directly to Complaint (Visit Charge)
-                $q->whereHas('complain', function ($complain) use ($user) {
-                    $complain->whereJsonContains('assigned_engineers', $user->id);
-                });
-
-                // Ledger linked to Job Card
-                $q->orWhereHas('jobCard.complain', function ($complain) use ($user) {
-                    $complain->whereJsonContains('assigned_engineers', $user->id);
-                });
-            });
+        // Admins can access all ledger entries.
+        if ($user->hasAnyRole([
+            'Administrator',
+            'Developer',
+            'admin',
+        ])) {
+            return $query;
         }
 
-        return $query;
+        // Use ONLY multi_store_id.
+        $storeIds = $user->multi_store_id ?? [];
+
+        if (! is_array($storeIds) || empty($storeIds)) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        $storeIds = array_map('intval', $storeIds);
+        $userId = (int) $user->id;
+
+        // Managers and team leaders: all ledger entries from assigned stores.
+        if ($user->hasAnyRole([
+            'Manager',
+            'Store Manager',
+            'Team Leader',
+            'Team Lead',
+        ])) {
+            return $query->whereIn('store_id', $storeIds);
+        }
+
+        // Engineers and Machine Men:
+        // Assigned stores + complaints assigned to the logged-in user.
+        if ($user->hasAnyRole([
+            'Engineer',
+            'Machine Men',
+        ])) {
+            return $query
+                ->whereIn('store_id', $storeIds)
+                ->where(function (Builder $q) use ($userId) {
+
+                    // Ledger linked directly to a complaint.
+                    $q->whereHas('complain', function (Builder $complain) use ($userId) {
+                        $complain->where(function (Builder $assignment) use ($userId) {
+                            $assignment
+                                ->whereJsonContains('assigned_engineers', $userId)
+                                ->orWhereJsonContains('assigned_engineers', (string) $userId);
+                        });
+                    })
+
+                        // Ledger linked through a Job Card -> Complaint.
+                        ->orWhereHas('jobCard.complain', function (Builder $complain) use ($userId) {
+                            $complain->where(function (Builder $assignment) use ($userId) {
+                                $assignment
+                                    ->whereJsonContains('assigned_engineers', $userId)
+                                    ->orWhereJsonContains('assigned_engineers', (string) $userId);
+                            });
+                        });
+                });
+        }
+
+        // All other roles: no access.
+        return $query->whereRaw('1 = 0');
     }
 
     public static function getPages(): array

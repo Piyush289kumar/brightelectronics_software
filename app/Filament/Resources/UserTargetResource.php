@@ -66,7 +66,7 @@ class UserTargetResource extends BaseResource
 
                 Tables\Columns\TextColumn::make('user.name')->label('Member'),
 
-                Tables\Columns\TextColumn::make('storeTarget.store.name')->label('Store'),
+                Tables\Columns\TextColumn::make('storeTarget.store.name')->label('Branch'),
 
                 Tables\Columns\TextColumn::make('storeTarget.month')
                     ->label('Month')
@@ -167,30 +167,61 @@ class UserTargetResource extends BaseResource
     public static function getEloquentQuery(): Builder
     {
         $query = parent::getEloquentQuery();
+
         $user = Auth::user();
 
-        // Safety
-        if (!$user) {
+        if (! $user) {
             return $query->whereRaw('1 = 0');
         }
 
-        // 🔹 Admin / Developer / Super access → see ALL
-        if (
-            $user->hasRole(['Administrator', 'Developer', 'admin', 'Team Leader', 'Team Lead']) ||
-            $user->email === 'vipprow@gmail.com'
-        ) {
+        // Admin: All member targets
+        if ($user->hasAnyRole([
+            'Administrator',
+            'Developer',
+            'admin',
+        ])) {
             return $query;
         }
 
-        // 🔹 Store Manager restriction (optional – keep if needed)
-        if ($user->hasRole('Store Manager')) {
-            return $query->whereHas('storeTarget', function ($q) use ($user) {
-                $q->where('store_id', $user->store_id);
+        // ONLY use multi_store_id
+        $storeIds = $user->multi_store_id ?? [];
+
+        $storeIds = is_array($storeIds)
+            ? array_map('intval', $storeIds)
+            : [];
+
+        if (empty($storeIds)) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        // Manager / Store Manager / Team Leader / Team Lead
+        // All member targets belonging to assigned stores
+        if ($user->hasAnyRole([
+            'Manager',
+            'Store Manager',
+            'Team Leader',
+            'Team Lead',
+        ])) {
+            return $query->whereHas('storeTarget', function ($q) use ($storeIds) {
+                $q->whereIn('store_id', $storeIds);
             });
         }
 
-        // 🔹 Normal user → see ONLY own targets
-        return $query->where('user_id', $user->id);
+        // Engineer / Machine Men
+        // Only their own targets in assigned stores
+        if ($user->hasAnyRole([
+            'Engineer',
+            'Machine Men',
+        ])) {
+            return $query
+                ->where('user_id', $user->id)
+                ->whereHas('storeTarget', function ($q) use ($storeIds) {
+                    $q->whereIn('store_id', $storeIds);
+                });
+        }
+
+        // Other roles: No access
+        return $query->whereRaw('1 = 0');
     }
 
     public static function getPages(): array
