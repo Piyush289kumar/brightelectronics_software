@@ -20,6 +20,11 @@ use pxlrbt\FilamentExcel\Exports\ExcelExport;
 use TomatoPHP\FilamentDocs\Models\Document;
 use TomatoPHP\FilamentDocs\Models\DocumentTemplate;
 use TomatoPHP\FilamentDocs\Filament\Resources\DocumentResource\Pages\PrintDocument;
+use Illuminate\Support\Facades\DB;
+use Filament\Notifications\Notification;
+use Filament\Tables\Actions\Action;
+use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Filament\Tables\Filters\TrashedFilter;
 
 class JobCardResource extends BaseResource
 {
@@ -916,6 +921,7 @@ class JobCardResource extends BaseResource
                         'Cancelled' => 'Cancelled',
                     ])
                     ->searchable(),
+                TrashedFilter::make(),
                 Tables\Filters\Filter::make('verified')
                     ->label('Verified by Admin')
                     ->toggle()
@@ -1236,7 +1242,81 @@ HTML;
                                     \Filament\Infolists\Components\TextEntry::make('bright_electronics_profit')
                                         ->money('INR'),
                                 ]),
-                        ])
+                        ]),
+
+                    Tables\Actions\Action::make('revertToComplaint')
+                        ->label('Revert to Complaint')
+                        ->icon('heroicon-o-arrow-uturn-left')
+                        ->color('warning')
+                        ->requiresConfirmation()
+                        ->modalHeading('Revert Job Card to Complaint')
+                        ->modalDescription(
+                            'Job Card details will be saved in the note, the Job Card will be soft-deleted, and the Complaint will return to NEW.'
+                        )
+                        ->visible(fn() => Auth::user()?->hasAnyRole([
+                            'Administrator',
+                            'Developer',
+                            'admin',
+                            'Manager',
+                            'Store Manager',
+                            'Team Leader',
+                            'Team Lead',
+                        ]) ?? false)
+                        ->action(function (JobCard $record): void {
+
+                            DB::transaction(function () use ($record) {
+
+                                $record->loadMissing('complain.store');
+
+                                $complain = $record->complain;
+
+                                if (! $complain) {
+                                    throw new \Exception('Related complaint not found.');
+                                }
+
+                                $details = [
+                                    'ACTION' => 'JOB CARD REVERTED TO COMPLAINT',
+                                    'CANCELLED BY' => Auth::user()?->name,
+                                    'CANCELLED AT' => now()->format('d-m-Y h:i A'),
+
+                                    'JOB CARD DETAILS' => $record->getRawOriginal(),
+
+                                    'COMPLAINT DETAILS' => [
+                                        'ID' => $complain->id,
+                                        'COMPLAINT ID' => $complain->complain_id,
+                                        'STORE ID' => $complain->store_id,
+                                        'STORE NAME' => $complain->store?->name,
+                                        'CUSTOMER NAME' => $complain->customer_name ?? null,
+                                        'CUSTOMER MOBILE' => $complain->customer_mobile ?? null,
+                                        'FIRST ACTION CODE' => $complain->first_action_code,
+                                        'ASSIGNED ENGINEERS' => $complain->assigned_engineers,
+                                    ],
+                                ];
+
+                                // Save complete details in existing note column.
+                                $record->update([
+                                    'status' => 'Cancelled',
+                                    'note' => json_encode(
+                                        $details,
+                                        JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE
+                                    ),
+                                ]);
+
+                                // Soft delete Job Card (sets deleted_at).
+                                $record->delete();
+
+                                // Restore Complaint.
+                                $complain->update([
+                                    'first_action_code' => 'NEW',
+                                ]);
+                            });
+
+                            Notification::make()
+                                ->title('Job Card reverted successfully')
+                                ->body('Details saved in note and Complaint restored to NEW.')
+                                ->success()
+                                ->send();
+                        }),
                 ])->dropdown()->tooltip('Actions')
             ])
             ->bulkActions([
@@ -1401,7 +1481,10 @@ HTML;
 
     public static function getEloquentQuery(): Builder
     {
-        $query = parent::getEloquentQuery();
+        $query = parent::getEloquentQuery()
+            ->withoutGlobalScopes([
+                SoftDeletingScope::class,
+            ]);
         $user = Auth::user();
 
         if (! $user) {

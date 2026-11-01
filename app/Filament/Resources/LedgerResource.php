@@ -55,27 +55,50 @@ class LedgerResource extends BaseResource
                         name: 'store',
                         titleAttribute: 'name',
                         modifyQueryUsing: function ($query) {
-
                             $user = Auth::user();
 
-                            if (
-                                !$user->hasAnyRole([
-                                    'Administrator',
-                                    'Developer',
-                                    'admin',
-                                ])
-                            ) {
-                                $query->where('id', $user->store_id);
+                            if (! $user) {
+                                return $query->whereRaw('1 = 0');
                             }
 
-                            return $query;
+                            if ($user->hasAnyRole([
+                                'Administrator',
+                                'Developer',
+                                'admin',
+                            ])) {
+                                return $query;
+                            }
+
+                            $storeIds = $user->multi_store_id ?? [];
+
+                            if (! is_array($storeIds) || empty($storeIds)) {
+                                return $query->whereRaw('1 = 0');
+                            }
+
+                            return $query->whereIn('id', array_map('intval', $storeIds));
                         }
                     )
                     ->required()
                     ->searchable()
                     ->preload()
-                    ->default(fn() => Auth::user()?->store_id)
-                    ->disabled(fn() => !Auth::user()?->hasAnyRole([
+                    ->default(function () {
+                        $user = Auth::user();
+
+                        if (! $user || $user->hasAnyRole([
+                            'Administrator',
+                            'Developer',
+                            'admin',
+                        ])) {
+                            return null;
+                        }
+
+                        $storeIds = $user->multi_store_id ?? [];
+
+                        return is_array($storeIds) && count($storeIds) === 1
+                            ? $storeIds[0]
+                            : null;
+                    })
+                    ->disabled(fn() => ! Auth::user()?->hasAnyRole([
                         'Administrator',
                         'Developer',
                         'admin',
