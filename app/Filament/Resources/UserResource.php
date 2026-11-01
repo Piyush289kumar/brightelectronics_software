@@ -11,6 +11,8 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Auth;
 
 class UserResource extends BaseResource
 {
@@ -163,6 +165,25 @@ class UserResource extends BaseResource
     public static function getRelations(): array
     {
         return [];
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        $query = parent::getEloquentQuery();
+
+        $user = Auth::user();
+
+        if (! $user) {
+            return $query->whereRaw('1 = 0');
+        }
+
+        // Admin and Developer can see all users
+        if ($user->hasAnyRole(['Administrator', 'Developer', 'admin'])) {
+            return $query;
+        }
+
+        // Other users can see only their own record
+        return $query->where('id', $user->id);
     }
 
     public static function getPages(): array
