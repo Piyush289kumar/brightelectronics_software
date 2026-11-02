@@ -247,6 +247,7 @@ class JobCardObserver
 
 
         DB::transaction(function () use (
+            $jobCard,
             $engineers,
             $storeId,
             $year,
@@ -263,20 +264,12 @@ class JobCardObserver
 
                 $target = UserTarget::query()
                     ->where('user_id', $engineerId)
-                    ->whereHas('storeTarget', function ($query) use (
-                        $storeId,
-                        $year,
-                        $month
-                    ) {
-
-                        $query
-                            ->where('store_id', $storeId)
-                            ->where('year', $year)
+                    ->whereHas('storeTarget', function ($query) use ($year, $month) {
+                        $query->where('year', $year)
                             ->where('month', $month);
                     })
                     ->lockForUpdate()
                     ->first();
-
 
                 /*
                 |--------------------------------------------------------------------------
@@ -287,7 +280,6 @@ class JobCardObserver
                 if (!$target) {
                     continue;
                 }
-
 
                 /*
                 |--------------------------------------------------------------------------
@@ -395,22 +387,36 @@ class JobCardObserver
                                 ?->hasRole('Machine Men') ?? false;
                         })
                         ->values();
-                    dd([
-                        'assigned_ids' => $assignedIds->all(),
 
-                        'loaded_user_ids' => $assignedUsers->keys()->all(),
 
-                        'users_and_roles' => $assignedUsers->map(function ($user) {
-                            return [
-                                'id' => $user->id,
-                                'name' => $user->name,
-                                'roles' => $user->getRoleNames()->all(),
-                                'is_machine_man' => $user->hasRole('Machine Men'),
-                            ];
-                        })->values()->all(),
+                    // Debug only the JobCard that triggered this observer
+                    // if ((int) $card->id === (int) $jobCard->id) {
+                    //     dd([
+                    //         'current_observer_job_card_id' => $jobCard->id,
+                    //         'current_observer_complain_id' => $jobCard->complain_id,
 
-                        'machine_men_ids' => $machineMenIds->all(),
-                    ]);
+                    //         'loop_job_card_id' => $card->id,
+                    //         'loop_complain_id' => $card->complain_id,
+
+                    //         'complain_assigned_engineers' => $card->complain?->assigned_engineers,
+
+                    //         'assigned_ids' => $assignedIds->all(),
+
+                    //         'assigned_users' => $assignedIds->map(function ($id) use ($assignedUsers) {
+                    //             $user = $assignedUsers->get($id);
+
+                    //             return [
+                    //                 'id' => $id,
+                    //                 'name' => $user?->name,
+                    //                 'roles' => $user?->getRoleNames()->all(),
+                    //                 'is_machine_man' => $user?->hasRole('Machine Men') ?? false,
+                    //             ];
+                    //         })->values()->all(),
+
+                    //         'machine_men_ids' => $machineMenIds->all(),
+                    //     ]);
+                    // }
+
 
                     if ($machineMenIds->isNotEmpty()) {
 
