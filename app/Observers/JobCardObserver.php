@@ -395,6 +395,22 @@ class JobCardObserver
                                 ?->hasRole('Machine Men') ?? false;
                         })
                         ->values();
+                    dd([
+                        'assigned_ids' => $assignedIds->all(),
+
+                        'loaded_user_ids' => $assignedUsers->keys()->all(),
+
+                        'users_and_roles' => $assignedUsers->map(function ($user) {
+                            return [
+                                'id' => $user->id,
+                                'name' => $user->name,
+                                'roles' => $user->getRoleNames()->all(),
+                                'is_machine_man' => $user->hasRole('Machine Men'),
+                            ];
+                        })->values()->all(),
+
+                        'machine_men_ids' => $machineMenIds->all(),
+                    ]);
 
                     if ($machineMenIds->isNotEmpty()) {
 

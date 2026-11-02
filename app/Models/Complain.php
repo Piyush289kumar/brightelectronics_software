@@ -65,7 +65,7 @@ class Complain extends Model
 
     public function jobCard()
     {
-        return $this->hasOne(JobCard::class);
+        return $this->hasOne(JobCard::class)->latestOfMany();
     }
 
     public function products()
