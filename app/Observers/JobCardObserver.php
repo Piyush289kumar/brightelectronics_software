@@ -7,6 +7,7 @@ use App\Models\JobCard;
 use App\Models\Ledger;
 use App\Models\UserTarget;
 use Illuminate\Support\Facades\DB;
+use App\Models\User;
 
 class JobCardObserver
 {
@@ -320,39 +321,102 @@ class JobCardObserver
                 // Delivered Job Card Amount - Lead Incentive - Expense
                 // ================================================
 
-                $achievedAmount = JobCard::query()
+                // ================================================
+                // CALCULATE DISTRIBUTED ACHIEVED TARGET
+                // ================================================
+
+                $deliveredJobCards = JobCard::query()
+                    ->with('complain:id,assigned_engineers,store_id')
                     ->where('status', 'Delivered')
                     ->whereYear('created_at', $year)
                     ->whereMonth('created_at', $month)
-                    ->whereHas('complain', function ($query) use (
-                        $storeId,
-                        $engineerId
-                    ) {
-                        $query
-                            ->where('store_id', $storeId)
-                            ->whereJsonContains(
-                                'assigned_engineers',
-                                $engineerId
-                            );
+                    ->whereHas('complain', function ($query) use ($storeId) {
+                        $query->where('store_id', $storeId);
                     })
-                    ->sum(
-                        \Illuminate\Support\Facades\DB::raw(
-                            'amount
-                        - COALESCE(lead_incentive_amount, 0)
-                        - COALESCE(expense, 0)'
-                        )
+                    ->get();
+
+                // Normalize assigned engineer IDs
+                $normalizeAssignedIds = function ($assigned) {
+                    return collect($assigned ?? [])
+                        ->map(function ($engineer) {
+                            if (is_array($engineer)) {
+                                return (int) (
+                                    $engineer['id']
+                                    ?? $engineer['user_id']
+                                    ?? 0
+                                );
+                            }
+
+                            return (int) $engineer;
+                        })
+                        ->filter()
+                        ->unique()
+                        ->values();
+                };
+
+                // Collect all assigned user IDs
+                $allAssignedIds = $deliveredJobCards
+                    ->flatMap(function ($card) use ($normalizeAssignedIds) {
+                        return $normalizeAssignedIds(
+                            $card->complain?->assigned_engineers
+                        );
+                    })
+                    ->unique()
+                    ->values();
+
+                // Load users and their roles
+                $assignedUsers = User::with('roles')
+                    ->whereIn('id', $allAssignedIds)
+                    ->get()
+                    ->keyBy('id');
+
+                // Distribute target contribution
+                $achievedByUser = [];
+
+                foreach ($deliveredJobCards as $card) {
+
+                    $assignedIds = $normalizeAssignedIds(
+                        $card->complain?->assigned_engineers
                     );
 
+                    if ($assignedIds->isEmpty()) {
+                        continue;
+                    }
 
+                    // Actual target contribution
+                    $contribution = (float) $card->amount
+                        - (float) $card->lead_incentive_amount
+                        - (float) $card->expense;
 
-                /*
-                |--------------------------------------------------------------------------
-                | Convert to float and round
-                |--------------------------------------------------------------------------
-                */
+                    // Identify Machine Men
+                    $machineMenIds = $assignedIds
+                        ->filter(function ($id) use ($assignedUsers) {
+                            return $assignedUsers->get($id)
+                                ?->hasRole('Machine Men') ?? false;
+                        })
+                        ->values();
 
+                    if ($machineMenIds->isNotEmpty()) {
+
+                        // Machine Men gets 100%; engineers get 0%
+                        $eligibleIds = $machineMenIds;
+                    } else {
+
+                        // No Machine Man: divide equally among engineers
+                        $eligibleIds = $assignedIds;
+                    }
+
+                    $share = $contribution / $eligibleIds->count();
+
+                    foreach ($eligibleIds as $userId) {
+                        $achievedByUser[$userId] =
+                            ($achievedByUser[$userId] ?? 0) + $share;
+                    }
+                }
+
+                // Get achieved amount for the current target owner
                 $achievedAmount = round(
-                    (float) $achievedAmount,
+                    (float) ($achievedByUser[$engineerId] ?? 0),
                     2
                 );
 
