@@ -34,12 +34,26 @@ class ComplainResource extends BaseResource
                     Grid::make(4)->schema([
 
                         Forms\Components\Select::make('store_id')
-                            ->relationship('store', 'code')
+                            ->relationship(
+                                name: 'store',
+                                titleAttribute: 'code',
+                                modifyQueryUsing: function (Builder $query) {
+                                    $user = Auth::user();
+                                    if (! $user) {
+                                        return $query->whereRaw('1 = 0');
+                                    }
+                                    if ($user->hasAnyRole(['Administrator', 'Developer', 'admin'])) {
+                                        return $query;
+                                    }
+                                    $storeIds = $user->multi_store_id ?? [];
+
+                                    return $query->whereIn('id', is_array($storeIds) ? $storeIds : []);
+                                }
+                            )
                             ->preload()
                             ->required()
                             ->label('Branch')
-                            ->default(fn() => Auth::user()?->store_id)
-                            ->disabled(fn() => !Auth::user()?->hasRole(['Administrator', 'Developer', 'Team Leader', 'Store Manager']))
+                            ->default(fn() => collect(Auth::user()?->multi_store_id ?? [])->first())
                             ->dehydrated(true),
 
                         Forms\Components\TextInput::make('complain_id')
