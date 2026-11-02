@@ -142,7 +142,7 @@ class JobCardResourceRelationManager extends RelationManager
                         Forms\Components\MultiSelect::make('assigned_engineers')
                             ->label('Assigned Engineers')
                             ->dehydrated(true)
-                            ->options(fn() => User::role('Engineer')->pluck('name', 'id')->toArray())
+                            ->options(fn() => User::role(['Engineer', 'Machine Men'])->pluck('name', 'id')->toArray())
                             ->disabled(fn() => !auth()->user()->isAdmin() && !auth()->user()->isStoreManager()),
 
                         Forms\Components\Select::make('status')

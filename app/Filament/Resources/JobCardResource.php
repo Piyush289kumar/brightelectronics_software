@@ -289,6 +289,8 @@ class JobCardResource extends BaseResource
                                                 })
                                                 ->searchable()
                                                 ->required()
+                                                ->disabled()
+                                                ->dehydrated(true)
                                                 ->disableOptionsWhenSelectedInSiblingRepeaterItems(), // 🔥 prevent duplicate
 
                                             // Forms\Components\TextInput::make('percent')
@@ -319,6 +321,8 @@ class JobCardResource extends BaseResource
                                         ->columns(3)
                                         ->addActionLabel('Add Engineer')
                                         ->reorderable(false)
+                                        ->addable(false)
+                                        ->deletable(false)                                        
                                         ->reactive()
                                         ->afterStateUpdated(
                                             fn($set, $get) =>
@@ -635,43 +639,49 @@ class JobCardResource extends BaseResource
         $afterLeadProfit = $profit - $leadAmount;
 
         // =============================
-        // ✅ ENGINEER + MACHINE MAN LOGIC
+        // ENGINEER + MACHINE MAN LOGIC
         // =============================
         $engineers = $get('incentive_percentages') ?? [];
 
-        $userIds = collect($engineers)->pluck('user_id')->filter()->toArray();
+        $userIds = collect($engineers)
+            ->pluck('user_id')
+            ->filter()
+            ->map(fn($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->toArray();
 
-        $users = \App\Models\User::whereIn('id', $userIds)->get()->keyBy('id');
+        $users = \App\Models\User::with('roles')
+            ->whereIn('id', $userIds)
+            ->get()
+            ->keyBy('id');
 
-        // 🔥 USE SAME ROLE NAME EVERYWHERE
-        $ROLE_MACHINE = 'Machine Men';
-
-        // 🔥 Detect Machine Man
-        $machineManExists = $users->contains(fn($user) => $user->hasRole($ROLE_MACHINE));
+        $machineManExists = $users->contains(
+            fn($user) => $user->hasRole('Machine Men')
+        );
 
         $totalEngineerAmount = 0;
 
         foreach ($engineers as $index => $row) {
+            $userId = (int) ($row['user_id'] ?? 0);
+            $user = $users->get($userId);
 
-            $user = $users[$row['user_id']] ?? null;
-
-            if (!$user)
+            if (! $user) {
+                $engineers[$index]['percent'] = 0;
+                $engineers[$index]['amount'] = 0;
                 continue;
+            }
 
             $basePercent = (float) ($user->incentive ?? 0);
 
-            // 🎯 RULE APPLY
             if ($machineManExists) {
-
-                if ($user->hasRole($ROLE_MACHINE)) {
-                    // ✅ Machine Man → FULL %
-                    $percent = $basePercent;
-                } else {
-                    // ✅ Engineers → HALF %
-                    $percent = $basePercent / 2;
-                }
+                // Machine Man gets full incentive.
+                // All other assigned engineers get zero.
+                $percent = $user->hasRole('Machine Men')
+                    ? $basePercent
+                    : 0;
             } else {
-                // ✅ Normal case (no machine man)
+                // No Machine Man: normal engineer incentive.
                 $percent = $basePercent;
             }
 
