@@ -54,6 +54,8 @@ class ComplainResource extends BaseResource
                             ->required()
                             ->label('Branch')
                             ->default(fn() => collect(Auth::user()?->multi_store_id ?? [])->first())
+                            ->live()
+                            ->afterStateUpdated(fn(callable $set) => $set('assigned_engineers', []))
                             ->dehydrated(true),
 
                         Forms\Components\TextInput::make('complain_id')
@@ -341,16 +343,60 @@ class ComplainResource extends BaseResource
                         ->dehydrated()
                         ->disabled(fn() => !auth()->user()->hasAnyRole(['Administrator', 'Store Manager', 'Team Lead'])),
 
+                    // Forms\Components\Select::make('assigned_engineers')
+                    //     ->label('Assigned Engineers')
+                    //     ->options(
+                    //         User::role(['Engineer', 'Machine Men'])
+                    //             ->pluck('name', 'id')
+                    //             ->toArray()
+                    //     )
+                    //     ->multiple()
+
+                    //     // Auto-select ONLY Engineer / Machine Men
+                    //     ->default(function () {
+                    //         $user = Auth::user();
+
+                    //         return $user?->hasAnyRole(['Engineer', 'Machine Men'])
+                    //             ? [$user->id]
+                    //             : [];
+                    //     })
+
+                    //     // Engineer/Machine Men cannot change assignment.
+                    //     // Admin/Manager/Team Leader can select manually.
+                    //     ->disabled(function () {
+                    //         return Auth::user()?->hasAnyRole(['Engineer', 'Machine Men']);
+                    //     })
+
+                    //     // Important: disabled fields must still be saved
+                    //     ->dehydrated(true)
+
+                    //     ->dehydrateStateUsing(function ($state) {
+                    //         return collect($state ?? [])
+                    //             ->map(fn($id) => (int) $id)
+                    //             ->values()
+                    //             ->toArray();
+                    //     })
+
+
                     Forms\Components\Select::make('assigned_engineers')
                         ->label('Assigned Engineers')
-                        ->options(
-                            User::role(['Engineer', 'Machine Men'])
-                                ->pluck('name', 'id')
-                                ->toArray()
-                        )
-                        ->multiple()
+                        ->options(function (callable $get) {
+                            $storeId = $get('store_id');
 
-                        // Auto-select ONLY Engineer / Machine Men
+                            if (! $storeId) {
+                                return [];
+                            }
+
+                            return User::role(['Engineer', 'Machine Men'])
+                                ->where(function ($query) use ($storeId) {
+                                    $query->whereJsonContains('multi_store_id', (int) $storeId)
+                                        ->orWhereJsonContains('multi_store_id', (string) $storeId);
+                                })
+                                ->pluck('name', 'id')
+                                ->toArray();
+                        })
+                        ->multiple()
+                        ->searchable()
                         ->default(function () {
                             $user = Auth::user();
 
@@ -358,22 +404,14 @@ class ComplainResource extends BaseResource
                                 ? [$user->id]
                                 : [];
                         })
-
-                        // Engineer/Machine Men cannot change assignment.
-                        // Admin/Manager/Team Leader can select manually.
-                        ->disabled(function () {
-                            return Auth::user()?->hasAnyRole(['Engineer', 'Machine Men']);
-                        })
-
-                        // Important: disabled fields must still be saved
+                        ->disabled(fn() => Auth::user()?->hasAnyRole(['Engineer', 'Machine Men']))
                         ->dehydrated(true)
-
-                        ->dehydrateStateUsing(function ($state) {
-                            return collect($state ?? [])
+                        ->dehydrateStateUsing(
+                            fn($state) => collect($state ?? [])
                                 ->map(fn($id) => (int) $id)
                                 ->values()
-                                ->toArray();
-                        })
+                                ->toArray()
+                        ),
                 ])
                 ->columns(3),
         ]);

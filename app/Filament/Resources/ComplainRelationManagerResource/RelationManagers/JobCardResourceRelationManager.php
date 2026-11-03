@@ -139,11 +139,36 @@ class JobCardResourceRelationManager extends RelationManager
                             ->default(fn() => Auth::id())
                             ->disabled(fn() => !auth()->user()->isAdmin() && !auth()->user()->isStoreManager()),
 
+                        // Forms\Components\MultiSelect::make('assigned_engineers')
+                        //     ->label('Assigned Engineers')
+                        //     ->dehydrated(true)
+                        //     ->options(fn() => User::role(['Engineer', 'Machine Men'])->pluck('name', 'id')->toArray())
+                        //     ->disabled(fn() => !auth()->user()->isAdmin() && !auth()->user()->isStoreManager()),
+
                         Forms\Components\MultiSelect::make('assigned_engineers')
                             ->label('Assigned Engineers')
+                            ->options(function () {
+                                $owner = $this->getOwnerRecord();
+
+                                // Get branch from the parent complaint or JobCard's complaint.
+                                $storeId = $owner->getAttribute('store_id')
+                                    ?? $owner->complain?->store_id;
+
+                                if (! $storeId) {
+                                    return [];
+                                }
+
+                                return User::role(['Engineer', 'Machine Men'])
+                                    ->where(function ($query) use ($storeId) {
+                                        $query->whereJsonContains('multi_store_id', (int) $storeId)
+                                            ->orWhereJsonContains('multi_store_id', (string) $storeId);
+                                    })
+                                    ->pluck('name', 'id')
+                                    ->toArray();
+                            })
+                            ->searchable()
                             ->dehydrated(true)
-                            ->options(fn() => User::role(['Engineer', 'Machine Men'])->pluck('name', 'id')->toArray())
-                            ->disabled(fn() => !auth()->user()->isAdmin() && !auth()->user()->isStoreManager()),
+                            ->disabled(fn() => ! Auth::user()->isAdmin() && ! Auth::user()->isStoreManager()),
 
                         Forms\Components\Select::make('status')
                             ->label('Status')
@@ -217,8 +242,8 @@ class JobCardResourceRelationManager extends RelationManager
                         ->url(
                             fn($record) =>
                             str_starts_with($record->google_map_location, 'http')
-                            ? $record->google_map_location
-                            : 'https://' . $record->google_map_location
+                                ? $record->google_map_location
+                                : 'https://' . $record->google_map_location
                         )
                         ->openUrlInNewTab(),
                     Tables\Actions\ViewAction::make()
