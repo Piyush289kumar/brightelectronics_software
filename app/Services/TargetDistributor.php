@@ -6,6 +6,7 @@ use App\Models\Store;
 use App\Models\StoreTarget;
 use App\Models\UserTarget;
 use Illuminate\Support\Facades\DB;
+use App\Models\User;
 
 class TargetDistributor
 {
@@ -28,17 +29,17 @@ class TargetDistributor
             // =============================
             $previousRemainingSum = $includePrevious
                 ? DB::table('store_targets')
-                    ->join('user_targets', 'store_targets.id', '=', 'user_targets.store_target_id')
-                    ->where('store_targets.store_id', $store->id)
-                    ->where(function ($q) use ($year, $month) {
-                        $q->where('store_targets.year', '<', $year)
-                            ->orWhere(function ($q2) use ($year, $month) {
-                                $q2->where('store_targets.year', $year)
-                                    ->where('store_targets.month', '<', $month);
-                            });
-                    })
-                    ->where('user_targets.remaining_amount', '>', 0)
-                    ->sum('user_targets.remaining_amount')
+                ->join('user_targets', 'store_targets.id', '=', 'user_targets.store_target_id')
+                ->where('store_targets.store_id', $store->id)
+                ->where(function ($q) use ($year, $month) {
+                    $q->where('store_targets.year', '<', $year)
+                        ->orWhere(function ($q2) use ($year, $month) {
+                            $q2->where('store_targets.year', $year)
+                                ->where('store_targets.month', '<', $month);
+                        });
+                })
+                ->where('user_targets.remaining_amount', '>', 0)
+                ->sum('user_targets.remaining_amount')
                 : 0;
 
             $totalAmount = round($amount + $previousRemainingSum, 2);
@@ -65,7 +66,6 @@ class TargetDistributor
                     'previous_remaining_sum' => $previousRemainingSum,
                     'created_by' => optional($createdBy)->id,
                 ]);
-
             } else {
 
                 // ✅ Create new
@@ -89,12 +89,24 @@ class TargetDistributor
             // =============================
             // ✅ FETCH MEMBERS (Engineer + Machine Men)
             // =============================
-            $members = $store->users()
+            $members = User::query()
+                ->where(function ($q) use ($store) {
+                    $q->whereJsonContains('multi_store_id', (int) $store->id)
+                        ->orWhereJsonContains('multi_store_id', (string) $store->id);
+                })
                 ->whereHas('roles', function ($q) {
                     $q->whereIn('name', ['Engineer', 'Machine Men']);
                 })
                 ->whereDoesntHave('roles', function ($q) {
-                    $q->whereIn('name', ['Manager', 'Team Lead', 'Administrator', 'admin']);
+                    $q->whereIn('name', [
+                        'Manager',
+                        'Store Manager',
+                        'Team Lead',
+                        'Team Leader',
+                        'Administrator',
+                        'Developer',
+                        'admin',
+                    ]);
                 })
                 ->get();
 
@@ -129,7 +141,11 @@ class TargetDistributor
             // =============================
             // Manager & Team Lead Target
             // =============================
-            $leaders = $store->users()
+            $leaders = User::query()
+                ->where(function ($q) use ($store) {
+                    $q->whereJsonContains('multi_store_id', (int) $store->id)
+                        ->orWhereJsonContains('multi_store_id', (string) $store->id);
+                })
                 ->whereHas('roles', function ($q) {
                     $q->whereIn('name', [
                         'Manager',
