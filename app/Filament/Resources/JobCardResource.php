@@ -259,15 +259,88 @@ class JobCardResource extends BaseResource
                                 ->icon('heroicon-o-users')
                                 ->schema([
 
+                                    // Forms\Components\Repeater::make('incentive_percentages')
+                                    //     ->dehydrated(true)
+                                    //     ->label('Engineers')
+                                    //     ->schema([
+                                    //         Forms\Components\Select::make('user_id')
+                                    //             ->label('Engineer')
+                                    //             ->options(function ($get) {
+
+                                    //                 $complainId = $get('../../complain_id');
+
+                                    //                 $assigned = [];
+
+                                    //                 if ($complainId) {
+                                    //                     $complain = \App\Models\Complain::find($complainId);
+                                    //                     $assigned = $complain?->assigned_engineers ?? [];
+                                    //                 }
+
+                                    //                 return \App\Models\User::role(['Engineer', 'Machine Men'])
+                                    //                     ->get()
+                                    //                     ->sortByDesc(fn($u) => in_array($u->id, $assigned)) // assigned first
+                                    //                     ->mapWithKeys(fn($u) => [
+                                    //                         $u->id => in_array($u->id, $assigned)
+                                    //                             ? "⭐ {$u->name}"
+                                    //                             : $u->name
+                                    //                     ])
+                                    //                     ->toArray();
+                                    //             })
+                                    //             ->searchable()
+                                    //             ->required()
+                                    //             ->disabled()
+                                    //             ->dehydrated(true)
+                                    //             ->disableOptionsWhenSelectedInSiblingRepeaterItems(), // 🔥 prevent duplicate
+
+                                    //         // Forms\Components\TextInput::make('percent')
+                                    //         //     ->label('Incentive %')
+                                    //         //     ->numeric()
+                                    //         //     ->suffix('%')
+                                    //         //     ->required()
+                                    //         //     ->reactive()
+                                    //         //     ->afterStateUpdated(
+                                    //         //         fn($set, $get) =>
+                                    //         //         \App\Filament\Resources\JobCardResource::recalculateAll($set, $get)
+                                    //         //     ),
+
+                                    //         Forms\Components\TextInput::make('percent')
+                                    //             ->label('Incentive %')
+                                    //             ->dehydrated(true),
+
+                                    //         // ✅ SAVE होने वाला field
+                                    //         Forms\Components\Hidden::make('amount')
+                                    //             ->dehydrated(true),
+
+                                    //         // ✅ UI display
+                                    //         Forms\Components\Placeholder::make('amount_display')
+                                    //             ->label('Amount')
+                                    //             ->content(fn($get) => "₹ " . ($get('amount') ?? 0)),
+
+                                    //     ])
+                                    //     ->columns(3)
+                                    //     ->addActionLabel('Add Engineer')
+                                    //     ->reorderable(false)
+                                    //     ->addable(false)
+                                    //     ->deletable(false)                                        
+                                    //     ->reactive()
+                                    //     ->afterStateUpdated(
+                                    //         fn($set, $get) =>
+                                    //         \App\Filament\Resources\JobCardResource::recalculateAll($set, $get)
+                                    //     ),
+
+
                                     Forms\Components\Repeater::make('incentive_percentages')
                                         ->dehydrated(true)
+                                        ->dehydratedWhenHidden()
                                         ->label('Engineers')
+                                        ->visible(
+                                            fn() =>
+                                            ! Auth::user()?->hasAnyRole(['Engineer', 'Machine Men'])
+                                        )
                                         ->schema([
-
                                             Forms\Components\Select::make('user_id')
                                                 ->label('Engineer')
                                                 ->options(function ($get) {
-
                                                     $complainId = $get('../../complain_id');
 
                                                     $assigned = [];
@@ -279,11 +352,11 @@ class JobCardResource extends BaseResource
 
                                                     return \App\Models\User::role(['Engineer', 'Machine Men'])
                                                         ->get()
-                                                        ->sortByDesc(fn($u) => in_array($u->id, $assigned)) // assigned first
+                                                        ->sortByDesc(fn($u) => in_array($u->id, $assigned))
                                                         ->mapWithKeys(fn($u) => [
                                                             $u->id => in_array($u->id, $assigned)
                                                                 ? "⭐ {$u->name}"
-                                                                : $u->name
+                                                                : $u->name,
                                                         ])
                                                         ->toArray();
                                                 })
@@ -291,43 +364,51 @@ class JobCardResource extends BaseResource
                                                 ->required()
                                                 ->disabled()
                                                 ->dehydrated(true)
-                                                ->disableOptionsWhenSelectedInSiblingRepeaterItems(), // 🔥 prevent duplicate
-
-                                            // Forms\Components\TextInput::make('percent')
-                                            //     ->label('Incentive %')
-                                            //     ->numeric()
-                                            //     ->suffix('%')
-                                            //     ->required()
-                                            //     ->reactive()
-                                            //     ->afterStateUpdated(
-                                            //         fn($set, $get) =>
-                                            //         \App\Filament\Resources\JobCardResource::recalculateAll($set, $get)
-                                            //     ),
+                                                ->disableOptionsWhenSelectedInSiblingRepeaterItems(),
 
                                             Forms\Components\TextInput::make('percent')
                                                 ->label('Incentive %')
                                                 ->dehydrated(true),
 
-                                            // ✅ SAVE होने वाला field
                                             Forms\Components\Hidden::make('amount')
                                                 ->dehydrated(true),
 
-                                            // ✅ UI display
                                             Forms\Components\Placeholder::make('amount_display')
                                                 ->label('Amount')
-                                                ->content(fn($get) => "₹ " . ($get('amount') ?? 0)),
-
+                                                ->content(fn($get) => '₹ ' . ($get('amount') ?? 0)),
                                         ])
                                         ->columns(3)
                                         ->addActionLabel('Add Engineer')
                                         ->reorderable(false)
                                         ->addable(false)
-                                        ->deletable(false)                                        
+                                        ->deletable(false)
                                         ->reactive()
                                         ->afterStateUpdated(
                                             fn($set, $get) =>
                                             \App\Filament\Resources\JobCardResource::recalculateAll($set, $get)
                                         ),
+
+                                    // Engineer / Machine Men: show only their own row.
+                                    Forms\Components\Placeholder::make('my_incentive_record')
+                                        ->label('My Engineer Incentive')
+                                        ->visible(
+                                            fn() =>
+                                            Auth::user()?->hasAnyRole(['Engineer', 'Machine Men'])
+                                        )
+                                        ->content(function ($get) {
+                                            $rows = collect($get('incentive_percentages') ?? []);
+
+                                            $myRecord = $rows->first(
+                                                fn($row) => (int) ($row['user_id'] ?? 0) === (int) Auth::id()
+                                            );
+
+                                            if (! $myRecord) {
+                                                return 'No incentive record found.';
+                                            }
+
+                                            return 'Incentive: ' . ($myRecord['percent'] ?? 0)
+                                                . '% | Amount: ₹ ' . ($myRecord['amount'] ?? 0);
+                                        }),
 
                                 ])
                                 ->disabled(fn() => !static::canEditFinancials())
