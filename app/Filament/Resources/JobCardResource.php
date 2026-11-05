@@ -859,7 +859,48 @@ class JobCardResource extends BaseResource
 
                 Tables\Columns\TextColumn::make('incentive_percentages_text')
                     ->label('Engineer Incentives')
-                    ->state(fn($record) => static::incentiveBreakdown($record->incentive_percentages ?? []))
+                    ->visible(fn() => Auth::user()?->hasAnyRole([
+                        'Engineer',
+                        'Machine Men',
+                        'Team Leader',
+                        'Team Lead',
+                        'Administrator',
+                        'Developer',
+                        'admin',
+                    ]) ?? false)
+                    ->state(function ($record) {
+                        $user = Auth::user();
+
+                        $incentives = $record->incentive_percentages ?? [];
+
+                        // Admin and Team Leader: show all records.
+                        if ($user->hasAnyRole([
+                            'Team Leader',
+                            'Team Lead',
+                            'Administrator',
+                            'Developer',
+                            'admin',
+                        ])) {
+                            return static::incentiveBreakdown($incentives);
+                        }
+
+                        // Engineer / Machine Men: show only their own record.
+                        if ($user->hasAnyRole(['Engineer', 'Machine Men'])) {
+                            $myIncentive = collect($incentives)
+                                ->filter(
+                                    fn($item) =>
+                                    (int) ($item['user_id'] ?? 0) === (int) $user->id
+                                )
+                                ->values()
+                                ->all();
+
+                            return $myIncentive
+                                ? static::incentiveBreakdown($myIncentive)
+                                : '—';
+                        }
+
+                        return '—';
+                    })
                     ->wrap()
                     ->toggleable(),
 
