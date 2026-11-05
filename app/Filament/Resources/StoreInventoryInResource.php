@@ -54,39 +54,72 @@ class StoreInventoryInResource extends BaseResource
                         Grid::make(3)->schema([
 
 
-                            Select::make('store_id')
-                                ->label('Branch')
+                            // Select::make('store_id')
+                            //     ->label('Branch')
+                            //     ->relationship(
+                            //         name: 'store',
+                            //         titleAttribute: 'name',
+                            //         modifyQueryUsing: function ($query) {
+
+                            //             $user = Auth::user();
+
+                            //             if (
+                            //                 !$user->hasAnyRole([
+                            //                     'Administrator',
+                            //                     'Developer',
+                            //                     'admin',
+                            //                 ])
+                            //             ) {
+                            //                 $query->where('id', $user->store_id);
+                            //             }
+
+                            //             return $query;
+                            //         }
+                            //     )
+                            //     ->required()
+                            //     ->searchable()
+                            //     ->preload()
+                            //     ->default(fn() => Auth::user()?->store_id)
+                            //     ->disabled(fn() => !Auth::user()?->hasAnyRole([
+                            //         'Administrator',
+                            //         'Developer',
+                            //         'admin',
+                            //     ]))
+                            //     ->live()
+                            //     ->dehydrated(),
+
+                            Forms\Components\Select::make('store_id')
                                 ->relationship(
                                     name: 'store',
-                                    titleAttribute: 'name',
-                                    modifyQueryUsing: function ($query) {
-
+                                    titleAttribute: 'code',
+                                    modifyQueryUsing: function (Builder $query) {
                                         $user = Auth::user();
-
-                                        if (
-                                            !$user->hasAnyRole([
-                                                'Administrator',
-                                                'Developer',
-                                                'admin',
-                                            ])
-                                        ) {
-                                            $query->where('id', $user->store_id);
+                                        if (! $user) {
+                                            return $query->whereRaw('1 = 0');
                                         }
+                                        if ($user->hasAnyRole(['Administrator', 'Developer', 'admin'])) {
+                                            return $query;
+                                        }
+                                        $storeIds = $user->multi_store_id ?? [];
 
-                                        return $query;
+                                        return $query->whereIn('id', is_array($storeIds) ? $storeIds : []);
                                     }
                                 )
-                                ->required()
-                                ->searchable()
                                 ->preload()
-                                ->default(fn() => Auth::user()?->store_id)
-                                ->disabled(fn() => !Auth::user()?->hasAnyRole([
-                                    'Administrator',
-                                    'Developer',
-                                    'admin',
-                                ]))
+                                ->required()
+                                ->label('Branch')
+                                ->default(fn() => collect(Auth::user()?->multi_store_id ?? [])->first())
                                 ->live()
-                                ->dehydrated(),
+                                ->afterStateUpdated(fn(callable $set) => $set('assigned_engineers', []))
+                                ->dehydrated(true)
+                                ->options(
+                                    fn() => Store::query()
+                                        ->get()
+                                        ->mapWithKeys(fn($store) => [
+                                            $store->id => "{$store->name} ({$store->code})",
+                                        ])
+                                        ->toArray()
+                                ),
 
                             Select::make('received_by')
                                 ->label('Received By')
