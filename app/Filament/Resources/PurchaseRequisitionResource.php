@@ -55,21 +55,55 @@ class PurchaseRequisitionResource extends Resource
         return $form
             ->schema([
                 Grid::make(3)->schema([
-                    Select::make('store_id')
-                        ->label('Branch (Requesting)')
+                    // Select::make('store_id')
+                    //     ->label('Branch (Requesting)')
+                    //     ->options(
+                    //         Store::orderBy('name')
+                    //             ->get()
+                    //             ->mapWithKeys(fn($store) => [
+                    //                 $store->id => "{$store->name} ({$store->code})",
+                    //             ])
+                    //     )
+                    //     ->searchable()
+                    //     ->preload()
+                    //     ->default(fn() => Auth::user()->store_id)
+                    //     ->required()
+                    //     ->disabled(fn() => Auth::user()?->isStoreManager())
+                    //     ->dehydrated(true),
+
+                    Forms\Components\Select::make('store_id')
+                        ->relationship(
+                            name: 'store',
+                            titleAttribute: 'code',
+                            modifyQueryUsing: function (Builder $query) {
+                                $user = Auth::user();
+                                if (! $user) {
+                                    return $query->whereRaw('1 = 0');
+                                }
+                                if ($user->hasAnyRole(['Administrator', 'Developer', 'admin'])) {
+                                    return $query;
+                                }
+                                $storeIds = $user->multi_store_id ?? [];
+
+                                return $query->whereIn('id', is_array($storeIds) ? $storeIds : []);
+                            }
+                        )
+                        ->preload()
+                        ->required()
+                        ->label('Branch')
+                        ->default(fn() => collect(Auth::user()?->multi_store_id ?? [])->first())
+                        ->live()
+                        ->afterStateUpdated(fn(callable $set) => $set('assigned_engineers', []))
+                        ->dehydrated(true)
                         ->options(
-                            Store::orderBy('name')
+                            fn() => Store::query()
                                 ->get()
                                 ->mapWithKeys(fn($store) => [
                                     $store->id => "{$store->name} ({$store->code})",
                                 ])
-                        )
-                        ->searchable()
-                        ->preload()
-                        ->default(fn() => Auth::user()->store_id)
-                        ->required()
-                        ->disabled(fn() => Auth::user()?->isStoreManager())
-                        ->dehydrated(true),
+                                ->toArray()
+                        ),
+
                     TextInput::make('reference')->label('Reference'),
                     Select::make('priority')
                         ->label('Priority')
