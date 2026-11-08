@@ -13,6 +13,7 @@ class PurchaseRequisition extends Model
 
     protected $fillable = [
         'store_id',
+        'job_card_id',
         'requested_by',
         'reference',
         'notes',
@@ -21,10 +22,10 @@ class PurchaseRequisition extends Model
         'priority',
         'approved_by',
         'approved_at',
-        'meta',        
+        'meta',
     ];
 
-    protected $casts = [        
+    protected $casts = [
         'meta' => 'array',
         'approved_at' => 'datetime',
     ];
@@ -38,6 +39,11 @@ class PurchaseRequisition extends Model
     public function store()
     {
         return $this->belongsTo(Store::class);
+    }
+
+    public function jobCard()
+    {
+        return $this->belongsTo(JobCard::class);
     }
 
     public function requester()
@@ -60,5 +66,4 @@ class PurchaseRequisition extends Model
             }
         });
     }
-
 }
