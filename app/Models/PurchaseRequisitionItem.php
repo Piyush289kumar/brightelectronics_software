@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -17,7 +18,7 @@ class PurchaseRequisitionItem extends Model
         'approved_quantity',
         'purchase_price',
         'approved_price',
-        'total_price',        
+        'total_price',
         'note',
     ];
 
@@ -36,5 +37,9 @@ class PurchaseRequisitionItem extends Model
     public function product()
     {
         return $this->belongsTo(Product::class);
+    }
+    public function fulfillments()
+    {
+        return $this->hasMany(PurchaseRequisitionItemFulfillment::class);
     }
 }

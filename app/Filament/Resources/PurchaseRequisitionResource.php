@@ -104,6 +104,17 @@ class PurchaseRequisitionResource extends Resource
                                 ->toArray()
                         ),
 
+                    Select::make('job_card_id')
+                        ->label('Link Job Card')
+                        ->relationship(
+                            name: 'jobCard',
+                            titleAttribute: 'job_id',
+                            modifyQueryUsing: fn(Builder $query) => $query->orderByDesc('id')
+                        )
+                        ->searchable()
+                        ->preload()
+                        ->nullable(),
+
                     TextInput::make('reference')->label('Reference'),
                     Select::make('priority')
                         ->label('Priority')
@@ -291,6 +302,7 @@ class PurchaseRequisitionResource extends Resource
             ->columns([
                 Tables\Columns\TextColumn::make('id')->label('ID')->sortable(),
                 Tables\Columns\TextColumn::make('store.name')->label('Branch')->sortable(),
+                Tables\Columns\TextColumn::make('jobCard.job_id')->label('Job Card')->searchable()->toggleable(),
                 Tables\Columns\TextColumn::make('requester.name')->label('Requested By'),
                 Tables\Columns\TextColumn::make('status')->sortable(),
                 Tables\Columns\TextColumn::make('priority')->sortable(),
@@ -439,6 +451,34 @@ class PurchaseRequisitionResource extends Resource
                                             ->numeric()
                                             ->default(0),
                                     ]),
+
+
+                                    Forms\Components\Placeholder::make('linked_products')
+                                        ->label('Available Linked Products')
+                                        ->content(function (callable $get) {
+                                            $productId = $get('product_id');
+
+                                            if (! $productId) {
+                                                return 'Select a product first.';
+                                            }
+
+                                            $product = Product::find($productId);
+
+                                            if (! $product) {
+                                                return 'Product not found.';
+                                            }
+
+                                            $linkedProducts = $product->allLinkedProducts();
+
+                                            if ($linkedProducts->isEmpty()) {
+                                                return 'No linked products available.';
+                                            }
+
+                                            return $linkedProducts
+                                                ->map(fn($item) => "{$item->name} ({$item->barcode})")
+                                                ->implode(', ');
+                                        })
+                                        ->columnSpanFull(),
                                 ])
                                 ->columns('full')
                                 ->default(function ($record, $get) {
