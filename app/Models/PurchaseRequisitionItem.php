@@ -40,6 +40,6 @@ class PurchaseRequisitionItem extends Model
     }
     public function fulfillments()
     {
-        return $this->hasMany(PurchaseRequisitionItemFulfillment::class);
+        return $this->hasMany(PurchaseRequisitionItemFulfillment::class,'purchase_requisition_item_id')->with('product');
     }
 }

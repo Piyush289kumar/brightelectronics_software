@@ -14,12 +14,19 @@ class PurchaseRequisitionItemFulfillment extends Model
     protected $fillable = [
         'purchase_requisition_item_id',
         'product_id',
-        'quantity',
+        'quantity',        
+    ];
+
+    protected $casts = [
+        'quantity' => 'decimal:2',
     ];
 
     public function requisitionItem()
     {
-        return $this->belongsTo(PurchaseRequisitionItem::class);
+        return $this->belongsTo(
+            PurchaseRequisitionItem::class,
+            'purchase_requisition_item_id'
+        );
     }
 
     public function product()
