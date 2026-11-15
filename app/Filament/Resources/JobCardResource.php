@@ -820,8 +820,7 @@ class JobCardResource extends BaseResource
 
                 Tables\Columns\TextColumn::make('complain.store.name')
                     ->label('Branch')
-                    ->searchable()
-                    ->sortable()
+                    ->formatStateUsing(fn ($state, $record) => $record->complain->store ? "{$record->complain->store->name} ({$record->complain->store->code})" : '-')->searchable(['store.name', 'store.code'])->sortable()
                     ->badge()
                     ->color('success')
                     ->toggleable(),
@@ -1252,22 +1251,22 @@ class JobCardResource extends BaseResource
                             $appUrl = config('app.url');
                             $fontBase = rtrim($appUrl, '/') . '/fonts';
                             $html = <<<HTML
-<!DOCTYPE html>
-<html lang="en">
-<head><meta charset="UTF-8">
-<style>
-@font-face { font-family:'Devanagari'; src:url('{$fontBase}/NotoSansDevanagari-Regular.ttf') format('truetype'); }
-@font-face { font-family:'Lexend'; src:url('{$fontBase}/Lexend-Regular.ttf') format('truetype'); }
-html,body { margin:0;padding:0;width:100%;font-family:'Devanagari','Lexend',Arial,sans-serif;font-size:14px;line-height:1.35; }
-@page { margin:0; }
-.pdf-header { margin:0;padding:0;width:100%;text-align:center; }
-.pdf-body { width:100%;padding-left:15px;padding-right:15px;margin:0;box-sizing:border-box;max-width:950px;overflow:hidden;transform-origin:top left;transform:scale(0.96);margin-top:-100px; }
-</style></head>
-<body>
-<div class="pdf-header">{$header}</div>
-<div class="pdf-body">{$body}</div>
-</body></html>
-HTML;
+                            <!DOCTYPE html>
+                            <html lang="en">
+                            <head><meta charset="UTF-8">
+                            <style>
+                            @font-face { font-family:'Devanagari'; src:url('{$fontBase}/NotoSansDevanagari-Regular.ttf') format('truetype'); }
+                            @font-face { font-family:'Lexend'; src:url('{$fontBase}/Lexend-Regular.ttf') format('truetype'); }
+                            html,body { margin:0;padding:0;width:100%;font-family:'Devanagari','Lexend',Arial,sans-serif;font-size:14px;line-height:1.35; }
+                            @page { margin:0; }
+                            .pdf-header { margin:0;padding:0;width:100%;text-align:center; }
+                            .pdf-body { width:100%;padding-left:15px;padding-right:15px;margin:0;box-sizing:border-box;max-width:950px;overflow:hidden;transform-origin:top left;transform:scale(0.96);margin-top:-100px; }
+                            </style></head>
+                            <body>
+                            <div class="pdf-header">{$header}</div>
+                            <div class="pdf-body">{$body}</div>
+                            </body></html>
+                            HTML;
                             $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadHTML($html)->setPaper('A4');
                             $pdf->getDomPDF()->set_option('isRemoteEnabled', true);
                             $pdf->getDomPDF()->set_option('isHtml5ParserEnabled', true);

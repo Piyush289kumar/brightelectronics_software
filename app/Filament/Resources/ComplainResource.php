@@ -56,7 +56,15 @@ class ComplainResource extends BaseResource
                             ->default(fn() => collect(Auth::user()?->multi_store_id ?? [])->first())
                             ->live()
                             ->afterStateUpdated(fn(callable $set) => $set('assigned_engineers', []))
-                            ->dehydrated(true),
+                            ->dehydrated(true)
+                            ->options(
+                                fn() => Store::query()
+                                    ->get()
+                                    ->mapWithKeys(fn($store) => [
+                                        $store->id => "{$store->name} ({$store->code})",
+                                    ])
+                                    ->toArray()
+                            ),
 
                         Forms\Components\TextInput::make('complain_id')
                             ->label('Complain ID')
@@ -421,7 +429,17 @@ class ComplainResource extends BaseResource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('store.code')->label('Branch')->searchable()->sortable()->toggleable(),
+                Tables\Columns\TextColumn::make('store.name')
+                    ->label('Branch')
+                    ->formatStateUsing(
+                        fn($state, $record) =>
+                        $record->store
+                            ? "{$record->store->name} ({$record->store->code})"
+                            : '-'
+                    )
+                    ->searchable(['store.name', 'store.code'])
+                    ->sortable()
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('complain_id')->label('Complain ID')->sortable()->toggleable(),
                 Tables\Columns\TextColumn::make('name')->label('Customer Name')->sortable()->toggleable(),
                 Tables\Columns\TextColumn::make('mobile')->label('Phone')->sortable()->toggleable(),
