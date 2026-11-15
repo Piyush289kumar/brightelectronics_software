@@ -196,15 +196,18 @@ class JobCardResourceRelationManager extends RelationManager
                 // Tables\Columns\TextColumn::make('customer_email')->label('Email')->sortable(),
                 // Tables\Columns\TextColumn::make('address')->label('Address')->sortable(),
                 Tables\Columns\TextColumn::make('leadSource.lead_name')->label('Lead Source')->sortable(),
-                // Tables\Columns\TextColumn::make('device')
-                //     ->label('Device')
-                //     ->formatStateUsing(fn($state) => is_array($state) ? implode(', ', $state) : $state)
-                //     ->sortable(),
+                Tables\Columns\TextColumn::make('device')
+                    ->label('Device')
+                    ->formatStateUsing(fn($state) => is_array($state) ? implode(', ', $state) : $state)
+                    ->sortable(),
 
-                // Tables\Columns\TextColumn::make('service_type')
-                //     ->label('Service Type')
-                //     ->formatStateUsing(fn($state) => is_array($state) ? implode(', ', $state) : $state)
-                //     ->sortable(),
+                Tables\Columns\TextColumn::make('service_type')
+                    ->label('Service Type')
+                    ->formatStateUsing(fn($state) => is_array($state) ? implode(', ', $state) : $state)
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make('unit.name')->label('Unit')->sortable(),
+                Tables\Columns\TextColumn::make('brand.name')->label('Brand')->sortable(),
 
                 Tables\Columns\TextColumn::make('first_action_code')->label('First Action Code')->sortable(),
                 // Tables\Columns\TextColumn::make('rsd_time')->label('RSD Time')->sortable(),
