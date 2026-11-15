@@ -190,54 +190,122 @@ class PurchaseResource extends BaseResource
                             ->reactive()
                             ->afterStateUpdated(function ($state, callable $set, callable $get) {
 
-                                if (!$state) {
+                                if (! $state) {
+                                    $set('purchase_order_to_purchase_invoice_no', null);
+                                    $set('billable_id', null);
+                                    $set('gst_type', 'inclusive');
+                                    $set('items', []);
+                                    $set('taxable_value', 0);
+                                    $set('discount_amount', 0);
+                                    $set('gst_amount', 0);
+                                    $set('total_amount', 0);
+
                                     return;
                                 }
 
-                                $po = Invoice::with('items')->find($state);
+                                $po = Invoice::with('items')
+                                    ->where('document_type', 'purchase_order')
+                                    ->find($state);
 
-                                if (!$po) {
+                                if (! $po) {
                                     return;
                                 }
 
-                                // ✅ 1️⃣ Save purchase order number
+                                // 1. Purchase Order reference
                                 $set('purchase_order_to_purchase_invoice_no', $po->number);
 
-                                /*
-                                |--------------------------------------------------------------------------
-                                | 2️⃣ Auto-fill Vendor
-                                |--------------------------------------------------------------------------
-                                */
-                                if ($po->billable_type && $po->billable_id) {
-                                    $set('billable_type', $po->billable_type);
-                                    $set('billable_id', $po->billable_id);
-                                }
+                                // 2. Vendor
+                                $set('billable_type', $po->billable_type);
+                                $set('billable_id', $po->billable_id);
 
-                                /*
-                                |--------------------------------------------------------------------------
-                                | 3️⃣ Copy PO Items
-                                |--------------------------------------------------------------------------
-                                */
+                                // 3. Copy dates
+                                $set('document_date', $po->document_date);
+                                $set('due_date', $po->due_date);
+
+                                // 4. IMPORTANT: Copy original GST type
+                                $set('gst_type', $po->gst_type ?? 'inclusive');
+
+                                // 5. Copy PO items
                                 $items = $po->items->map(fn($item) => [
                                     'product_id' => $item->product_id,
                                     'quantity' => $item->quantity,
                                     'unit_price' => $item->unit_price,
                                     'discount' => $item->discount ?? 0,
-                                    'discount_amount_per_item' => 0,
+                                    'discount_amount_per_item' => $item->discount_amount_per_item ?? 0,
                                     'gst_rate' => $item->gst_rate ?? 0,
-                                    'gst_amount' => 0,
-                                    'total_amount' => 0,
-                                ])->toArray();
+                                    'gst_amount' => $item->gst_amount ?? 0,
+                                    'total_amount' => $item->total_amount ?? 0,
+                                ])->values()->toArray();
 
                                 $set('items', $items);
 
-                                /*
-                                |--------------------------------------------------------------------------
-                                | 4️⃣ Recalculate Totals
-                                |--------------------------------------------------------------------------
-                                */
-                                \App\Filament\Resources\InvoiceResource::recalculateInvoiceTotals($set, $get);
+                                // 6. Recalculate using Purchase Order GST logic
+                                PurchaseResource::recalculateInvoiceTotals($set, $get);
+
+                                // 7. Notes
+                                $set('notes', 'Converted from Purchase Order: ' . $po->number);
                             }),
+                        // ->afterStateUpdated(function ($state, callable $set, callable $get) {
+
+                        //     if (!$state) {
+                        //         return;
+                        //     }
+
+                        //     $po = Invoice::with('items')->find($state);
+
+                        //     if (!$po) {
+                        //         return;
+                        //     }
+
+                        //     // ✅ 1️⃣ Save purchase order number
+                        //     $set('purchase_order_to_purchase_invoice_no', $po->number);
+
+                        //     /*
+                        //     |--------------------------------------------------------------------------
+                        //     | 2️⃣ Auto-fill Vendor
+                        //     |--------------------------------------------------------------------------
+                        //     */
+                        //     if ($po->billable_type && $po->billable_id) {
+                        //         $set('billable_type', $po->billable_type);
+                        //         $set('billable_id', $po->billable_id);
+                        //     }
+
+                        //     /*
+                        //     |--------------------------------------------------------------------------
+                        //     | 3️⃣ Copy PO Items
+                        //     |--------------------------------------------------------------------------
+                        //     */
+                        //     $items = $po->items->map(fn($item) => [
+                        //         'product_id' => $item->product_id,
+                        //         'quantity' => $item->quantity,
+                        //         'unit_price' => $item->unit_price,
+                        //         'discount' => $item->discount ?? 0,
+                        //         'discount_amount_per_item' => 0,
+                        //         'gst_rate' => $item->gst_rate ?? 0,
+                        //         'gst_amount' => 0,
+                        //         'total_amount' => 0,
+                        //     ])->toArray();
+
+                        //     $set('items', $items);
+
+                        //     /*
+                        //     |--------------------------------------------------------------------------
+                        //     | 4️⃣ Recalculate Totals
+                        //     |--------------------------------------------------------------------------
+                        //     */
+                        //     \App\Filament\Resources\InvoiceResource::recalculateInvoiceTotals($set, $get);
+                        // }),
+
+                        Forms\Components\ToggleButtons::make('gst_type')
+                            ->label('GST Type')
+                            ->options([
+                                'exclusive' => 'Exclude GST',
+                                'inclusive' => 'Include GST',
+                            ])
+                            ->inline()
+                            ->default('inclusive')
+                            ->disabled()
+                            ->dehydrated(true),
 
                         Forms\Components\TextInput::make('purchase_order_to_purchase_invoice_no')
                             ->label('Purchase Order No.')
@@ -427,61 +495,100 @@ class PurchaseResource extends BaseResource
     public static function recalculateInvoiceTotals(callable $set, callable $get): void
     {
         $items = $get('items') ?? [];
+
         $taxableValue = 0;
         $totalGstAmount = 0;
         $totalDiscount = 0;
         $totalAmount = 0;
+
         foreach ($items as $index => $item) {
+
             $quantity = (float) ($item['quantity'] ?? 0);
             $unitPrice = (float) ($item['unit_price'] ?? 0);
-            $discountPercent = (float) ($item['discount'] ?? 0); // <- renamed
+            $discountPercent = (float) ($item['discount'] ?? 0);
             $gstRate = (float) ($item['gst_rate'] ?? 0);
+
             // Subtotal before discount
             $subtotal = $quantity * $unitPrice;
-            // Discount per item
+
+            // Discount
             $discountAmount = ($subtotal * $discountPercent) / 100;
-            // After discount
+
+            // Amount after discount
             $amountAfterDiscount = $subtotal - $discountAmount;
-            // GST amount per item
-            $gstAmount = ($amountAfterDiscount * $gstRate) / 100;
-            // Final total per item
-            $itemTotal = $amountAfterDiscount + $gstAmount;
-            // Save calculated values into item array
+
+            // Same GST logic as PurchaseOrderResource
+            $isInclusive = $get('gst_type') === 'inclusive';
+
+            if ($isInclusive) {
+
+                $taxable = $amountAfterDiscount / (1 + ($gstRate / 100));
+
+                $gstAmount = $amountAfterDiscount - $taxable;
+
+                $itemTotal = $amountAfterDiscount;
+            } else {
+
+                $taxable = $amountAfterDiscount;
+
+                $gstAmount = ($taxable * $gstRate) / 100;
+
+                $itemTotal = $taxable + $gstAmount;
+            }
+
+            // Save item values
             $items[$index]['discount_amount_per_item'] = round($discountAmount, 2);
             $items[$index]['gst_amount'] = round($gstAmount, 2);
             $items[$index]['total_amount'] = round($itemTotal, 2);
-            // Sum totals
-            $taxableValue += $amountAfterDiscount;
+
+            // Summary
+            $taxableValue += $taxable;
             $totalGstAmount += $gstAmount;
             $totalDiscount += $discountAmount;
             $totalAmount += $itemTotal;
         }
-        // Update repeater and summary fields
+
         $set('items', $items);
+
         $set('taxable_value', round($taxableValue, 2));
-        $set('gst_amount', round($totalGstAmount, 2));      // total GST
-        $set('discount_amount', round($totalDiscount, 2));  // total discount
-        $set('total_amount', round($totalAmount, 2));       // grand total
+        $set('gst_amount', round($totalGstAmount, 2));
+        $set('discount_amount', round($totalDiscount, 2));
+        $set('total_amount', round($totalAmount, 2));
     }
     public static function recalculateItem(callable $set, callable $get)
     {
         $quantity = (float) ($get('quantity') ?? 0);
         $unitPrice = (float) ($get('unit_price') ?? 0);
-        $discountPercent = (float) ($get('discount') ?? 0); // <- renamed
+        $discountPercent = (float) ($get('discount') ?? 0);
         $gstRate = (float) ($get('gst_rate') ?? 0);
-        // Subtotal before discount
+
         $subtotal = $quantity * $unitPrice;
-        // Discount amount per item
+
         $discountAmount = ($subtotal * $discountPercent) / 100;
-        $set('discount_amount_per_item', round($discountAmount, 2));
-        // Amount after discount
+
         $amountAfterDiscount = $subtotal - $discountAmount;
-        // GST amount
-        $gstAmount = ($amountAfterDiscount * $gstRate) / 100;
+
+        $isInclusive = $get('../../gst_type') === 'inclusive';
+
+        if ($isInclusive) {
+
+            $taxable = $amountAfterDiscount / (1 + ($gstRate / 100));
+
+            $gstAmount = $amountAfterDiscount - $taxable;
+
+            $total = $amountAfterDiscount;
+        } else {
+
+            $taxable = $amountAfterDiscount;
+
+            $gstAmount = ($taxable * $gstRate) / 100;
+
+            $total = $taxable + $gstAmount;
+        }
+
         $set('gst_amount', round($gstAmount, 2));
-        // Final total
-        $total = $amountAfterDiscount + $gstAmount;
         $set('total_amount', round($total, 2));
+        $set('discount_amount_per_item', round($discountAmount, 2));
     }
     public static function mutateFormDataBeforeSave(array $data): array
     {
