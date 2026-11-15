@@ -1539,146 +1539,334 @@ class PurchaseRequisitionResource extends Resource
                     Tables\Actions\DeleteAction::make()->label('Reject'),
                 ])->dropdown()->tooltip('More actions')
             ])
+
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
+
                     Tables\Actions\BulkAction::make('bulkFulfill')
-                        ->label('Bulk Fulfill')
-                        ->icon('heroicon-o-truck')
-                        ->modalWidth('7xl') // 👈 makes modal wider (xl, 2xl, 3xl, 4xl)
-                        ->requiresConfirmation()
+                        ->label('Bulk Approve & Create PO')
+                        ->icon('heroicon-o-shopping-cart')
+                        ->color('success')
+                        ->modalHeading('Bulk Approve Requisitions & Create Purchase Order')
+                        ->modalWidth('7xl')
+                        ->deselectRecordsAfterCompletion()
+
+                        // Validate selected requisitions and prepare combined products.
                         ->form(function (Collection $records) {
-                            // 👇 Collect & merge all requisition items by product
-                            $allItems = $records->flatMap(fn($req) => $req->items);
 
-                            $merged = $allItems->groupBy('product_id')->map(function ($items) {
-                                $qty = $items->sum(fn($i) => $i->approved_quantity ?? $i->quantity ?? 0);
-                                $unitPrice = $items->first()->approved_price ?? $items->first()->purchase_price ?? 0;
+                            $records->loadMissing(['items.product']);
 
-                                return [
-                                    'product_id' => $items->first()->product_id,
-                                    'product_name' => $items->first()->product?->name,
-                                    'quantity' => $qty,
-                                    'unit_price' => $unitPrice,
-                                    'total_amount' => $qty * $unitPrice,
-                                    'vendor_id' => $items->first()->vendor_id, // prefill if set
-                                ];
-                            })->values()->all();
+                            if ($records->isEmpty()) {
+                                throw ValidationException::withMessages([
+                                    'vendor_id' => 'Please select at least one requisition.',
+                                ]);
+                            }
+
+                            // All selected requisitions must belong to one branch.
+                            if ($records->pluck('store_id')->unique()->count() !== 1) {
+                                throw ValidationException::withMessages([
+                                    'vendor_id' => 'Please select requisitions from the same branch only.',
+                                ]);
+                            }
+
+                            // Only pending requisitions can be approved.
+                            if ($records->contains(fn($req) => $req->status !== 'pending')) {
+                                throw ValidationException::withMessages([
+                                    'vendor_id' => 'Only pending requisitions can be bulk approved.',
+                                ]);
+                            }
+
+                            // Merge requested quantities for identical products.
+                            $mergedProducts = $records
+                                ->flatMap(fn($req) => $req->items)
+                                ->groupBy('product_id')
+                                ->map(function ($items) {
+
+                                    $product = $items->first()->product;
+
+                                    return [
+                                        'product_id' => $items->first()->product_id,
+                                        'product_name' => $product?->name
+                                            . ' (' . $product?->barcode . ')',
+
+                                        'quantity' => $items->sum(
+                                            fn($item) => (float) $item->quantity
+                                        ),
+
+                                        'unit_price' => (float) (
+                                            $items->first()->purchase_price ?? 0
+                                        ),
+
+                                        'total_amount' => $items->sum(
+                                            fn($item) =>
+                                            (float) $item->quantity *
+                                            (float) ($item->purchase_price ?? 0)
+                                        ),
+                                    ];
+                                })
+                                ->values()
+                                ->toArray();
 
                             return [
-                                Select::make('method')
-                                    ->label('Fulfillment Method')
-                                    ->options([
-                                        'purchase' => 'Purchase from Vendor (multi-vendor)',
-                                        'transfer' => 'Transfer from Another Store',
-                                        'consume' => 'Consume Available Stock (Original / Linked Products)',
-                                    ])
-                                    ->required()
-                                    ->reactive(),
 
-                                Select::make('source_store_id')
-                                    ->label('Source Store (for transfer)')
-                                    ->options(Store::pluck('name', 'id'))
-                                    ->visible(fn($get) => $get('method') === 'transfer')
-                                    ->required(fn($get) => $get('method') === 'transfer'),
+                                Forms\Components\Placeholder::make('branch_info')
+                                    ->label('Selected Branch')
+                                    ->content(fn() => $records->first()->store?->name ?? 'Branch'),
+
+                                Forms\Components\Placeholder::make('requisition_info')
+                                    ->label('Selected Requisitions')
+                                    ->content(
+                                        fn() => $records->count() . ' requisition(s): ' .
+                                            $records->pluck('id')->map(fn($id) => '#' . $id)->implode(', ')
+                                    ),
+
+                                Select::make('vendor_id')
+                                    ->label('Select Vendor')
+                                    ->options(Vendor::pluck('name', 'id'))
+                                    ->searchable()
+                                    ->preload()
+                                    ->required(),
 
                                 Repeater::make('products')
-                                    ->label('Spare Parts to Purchase')
-                                    ->visible(fn($get) => $get('method') === 'purchase')
-                                    ->default($merged) // 👈 load merged products
+                                    ->label('Combined Purchase Order Products')
+                                    ->default($mergedProducts)
+                                    ->addable(false)
+                                    ->deletable(false)
+                                    ->reorderable(false)
                                     ->schema([
-                                        Grid::make(2)->schema([
-                                            TextInput::make('product_name')->disabled()->label('Spare Parts')->dehydrated(true),
-                                            TextInput::make('quantity')->disabled()->label('Total Qty')->dehydrated(true),
-                                            TextInput::make('unit_price')->disabled()->label('Unit Price')->dehydrated(true),
-                                            TextInput::make('total_amount')->disabled()->label('Total')->dehydrated(true),
-                                        ]),
-                                        // Grid::make(4)->schema([]),
 
-                                        Select::make('vendor_id')
-                                            ->label('Vendor')
-                                            ->options(Vendor::pluck('name', 'id'))
-                                            ->searchable()
-                                            ->required(),
+                                        Forms\Components\Hidden::make('product_id')
+                                            ->dehydrated(true),
+
+                                        TextInput::make('product_name')
+                                            ->label('Product')
+                                            ->disabled()
+                                            ->dehydrated(false)
+                                            ->columnSpanFull(),
+
+                                        Grid::make(3)->schema([
+
+                                            TextInput::make('quantity')
+                                                ->label('Total Requested Quantity')
+                                                ->numeric()
+                                                ->disabled()
+                                                ->dehydrated(true),
+
+                                            TextInput::make('unit_price')
+                                                ->label('Unit Purchase Price')
+                                                ->numeric()
+                                                ->minValue(0)
+                                                ->required()
+                                                ->live()
+                                                ->afterStateUpdated(function ($state, callable $get, callable $set) {
+                                                    $quantity = (float) ($get('quantity') ?? 0);
+
+                                                    $set(
+                                                        'total_amount',
+                                                        $quantity * (float) $state
+                                                    );
+                                                }),
+
+                                            TextInput::make('total_amount')
+                                                ->label('Total Amount')
+                                                ->numeric()
+                                                ->disabled()
+                                                ->dehydrated(true)
+                                                ->default(0),
+                                        ]),
                                     ])
-                                    ->columns('full'),
+                                    ->columns(1)
+                                    ->columnSpanFull(),
                             ];
                         })
+
                         ->action(function (Collection $records, array $data) {
-                            $firstReq = $records->first();
 
-                            if ($data['method'] === 'purchase') {
-                                // ✅ User-provided vendor selection per product
-                                $grouped = collect($data['products'])->groupBy('vendor_id');
+                            try {
 
-                                foreach ($grouped as $vendorId => $vendorItems) {
+                                DB::transaction(function () use ($records, $data) {
+
+                                    // Lock all selected requisitions.
+                                    $requisitions = PurchaseRequisition::query()
+                                        ->whereIn('id', $records->pluck('id'))
+                                        ->orderBy('id')
+                                        ->lockForUpdate()
+                                        ->with(['items.product'])
+                                        ->get();
+
+                                    if ($requisitions->count() !== $records->count()) {
+                                        throw ValidationException::withMessages([
+                                            'vendor_id' => 'Some selected requisitions could not be found.',
+                                        ]);
+                                    }
+
+                                    // Same branch validation.
+                                    if ($requisitions->pluck('store_id')->unique()->count() !== 1) {
+                                        throw ValidationException::withMessages([
+                                            'vendor_id' => 'All requisitions must belong to the same branch.',
+                                        ]);
+                                    }
+
+                                    // Prevent duplicate approval.
+                                    if ($requisitions->contains(fn($req) => $req->status !== 'pending')) {
+                                        throw ValidationException::withMessages([
+                                            'vendor_id' => 'One or more requisitions have already been processed.',
+                                        ]);
+                                    }
+
+                                    $vendorId = $data['vendor_id'] ?? null;
+
+                                    if (! $vendorId || ! Vendor::whereKey($vendorId)->exists()) {
+                                        throw ValidationException::withMessages([
+                                            'vendor_id' => 'Please select a valid vendor.',
+                                        ]);
+                                    }
+
+                                    // Submitted prices indexed by product ID.
+                                    $submittedProducts = collect($data['products'] ?? [])
+                                        ->keyBy(fn($row) => (int) ($row['product_id'] ?? 0));
+
+                                    if ($submittedProducts->isEmpty()) {
+                                        throw ValidationException::withMessages([
+                                            'products' => 'No products found for the Purchase Order.',
+                                        ]);
+                                    }
+
+                                    // Build one combined PO item per product.
+                                    $purchaseOrderItems = [];
+
+                                    foreach ($submittedProducts as $productId => $row) {
+
+                                        $product = Product::query()
+                                            ->where('is_active', true)
+                                            ->find($productId);
+
+                                        if (! $product) {
+                                            throw ValidationException::withMessages([
+                                                'products' => "Product ID {$productId} is inactive or unavailable.",
+                                            ]);
+                                        }
+
+                                        $quantity = (float) ($row['quantity'] ?? 0);
+                                        $unitPrice = (float) ($row['unit_price'] ?? 0);
+
+                                        if ($quantity <= 0 || $unitPrice < 0) {
+                                            throw ValidationException::withMessages([
+                                                'products' => "Invalid quantity or price for {$product->name}.",
+                                            ]);
+                                        }
+
+                                        $purchaseOrderItems[] = [
+                                            'product_id' => $product->id,
+                                            'description' => $product->name,
+                                            'quantity' => $quantity,
+                                            'unit_price' => $unitPrice,
+                                            'total_amount' => $quantity * $unitPrice,
+                                        ];
+                                    }
+
+                                    // Save approved quantities, prices and fulfillment history.
+                                    foreach ($requisitions as $requisition) {
+
+                                        foreach ($requisition->items as $item) {
+
+                                            $row = $submittedProducts->get((int) $item->product_id);
+
+                                            if (! $row) {
+                                                throw ValidationException::withMessages([
+                                                    'products' => "Missing price for {$item->product?->name}.",
+                                                ]);
+                                            }
+
+                                            $approvedQty = (float) $item->quantity;
+                                            $approvedPrice = (float) $row['unit_price'];
+
+                                            $item->approved_quantity = $approvedQty;
+                                            $item->approved_price = $approvedPrice;
+                                            $item->total_price = $approvedQty * $approvedPrice;
+                                            $item->vendor_id = $vendorId;
+                                            $item->save();
+
+                                            // Preserve fulfillment history.
+                                            $item->fulfillments()->delete();
+
+                                            $item->fulfillments()->create([
+                                                'product_id' => $item->product_id,
+                                                'quantity' => $approvedQty,
+                                                'created_by' => Auth::id(),
+                                            ]);
+                                        }
+                                    }
+
+                                    // Create ONE Purchase Order for the selected vendor and branch.
+                                    $requisitionIds = $requisitions
+                                        ->pluck('id')
+                                        ->map(fn($id) => '#' . $id)
+                                        ->implode(', ');
+
                                     $invoice = Invoice::create([
                                         'document_type' => 'purchase_order',
-                                        'store_id' => $firstReq->store_id,
+                                        'store_id' => $requisitions->first()->store_id,
                                         'billable_id' => $vendorId,
                                         'billable_type' => Vendor::class,
                                         'document_date' => now(),
                                         'status' => 'pending',
-                                        'notes' => 'Bulk requisition purchase',
+                                        'notes' => "Bulk requisition purchase. Requisitions: {$requisitionIds}",
                                         'created_by' => Auth::id(),
                                     ]);
 
-                                    $invoice->items()->createMany($vendorItems->map(fn($i) => [
-                                        'product_id' => $i['product_id'],
-                                        'description' => $i['product_name'],
-                                        'quantity' => $i['quantity'],
-                                        'unit_price' => $i['unit_price'],
-                                        'total_amount' => $i['total_amount'],
-                                    ])->all());
+                                    $invoice->items()->createMany($purchaseOrderItems);
 
-                                    $invoice->update(['total_amount' => $vendorItems->sum('total_amount')]);
-                                }
-                            } else {
-                                // TRANSFER: single transfer order
-                                $byProduct = $records->flatMap(fn($req) => $req->items)
-                                    ->groupBy('product_id')
-                                    ->map(fn($items) => $items->sum(fn($i) => $i->approved_quantity ?? $i->quantity ?? 0));
+                                    $invoice->update([
+                                        'total_amount' => collect($purchaseOrderItems)->sum('total_amount'),
+                                    ]);
 
-                                $invoice = Invoice::create([
-                                    'document_type' => 'transfer_order',
-                                    'billable_id' => $data['source_store_id'],
-                                    // Source branch
-                                    'store_id' => $data['source_store_id'],
-                                    'billable_type' => Store::class,
-                                    'destination_store_id' => $firstReq?->store_id,
-                                    'document_date' => now(),
-                                    'status' => 'pending',
-                                    'notes' => 'Bulk requisition transfer',
-                                    'created_by' => Auth::id(),
+                                    // Approve all requisitions after PO creation.
+                                    foreach ($requisitions as $requisition) {
+                                        $requisition->update([
+                                            'status' => 'approved',
+                                            'approved_by' => Auth::id(),
+                                            'approved_at' => now(),
+                                        ]);
+                                    }
+
+                                    Log::info('Bulk Purchase Order created', [
+                                        'invoice_id' => $invoice->id,
+                                        'requisition_ids' => $requisitions->pluck('id')->all(),
+                                        'vendor_id' => $vendorId,
+                                        'store_id' => $requisitions->first()->store_id,
+                                        'total_amount' => collect($purchaseOrderItems)->sum('total_amount'),
+                                    ]);
+                                });
+
+                                Notification::make()
+                                    ->title('Bulk approval successful')
+                                    ->body('All selected requisitions were approved and one Purchase Order was created.')
+                                    ->success()
+                                    ->send();
+                            } catch (ValidationException $e) {
+                                throw $e;
+                            } catch (Throwable $e) {
+
+                                Log::error('Bulk requisition approval failed', [
+                                    'message' => $e->getMessage(),
+                                    'file' => $e->getFile(),
+                                    'line' => $e->getLine(),
+                                    'trace' => $e->getTraceAsString(),
                                 ]);
 
-                                $items = $byProduct->map(function ($qty, $productId) {
-                                    $product = Product::find($productId);
-                                    return [
-                                        'product_id' => $productId,
-                                        'description' => $product?->name,
-                                        'quantity' => $qty,
-                                        'unit_price' => 0,
-                                        'total_amount' => 0,
-                                    ];
-                                })->values()->all();
-
-                                $invoice->items()->createMany($items);
-                                $invoice->update(['total_amount' => 0]);
-                            }
-
-                            // Mark requisitions approved
-                            foreach ($records as $requisition) {
-                                $requisition->update([
-                                    'status' => 'approved',
-                                    'approved_by' => Auth::id(),
-                                    'approved_at' => now(),
-                                ]);
+                                Notification::make()
+                                    ->title('Bulk approval failed')
+                                    ->body($e->getMessage())
+                                    ->danger()
+                                    ->persistent()
+                                    ->send();
                             }
                         }),
 
-
                     ExportBulkAction::make(),
                     Tables\Actions\DeleteBulkAction::make(),
+
                 ]),
             ]);
     }
