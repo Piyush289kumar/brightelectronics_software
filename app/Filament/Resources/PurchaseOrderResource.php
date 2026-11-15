@@ -198,6 +198,7 @@ class PurchaseOrderResource extends BaseResource
                                                                 $p->id => "{$p->name} ({$p->barcode})",
                                                             ]);
                                                     })
+                                                    ->disableOptionsWhenSelectedInSiblingRepeaterItems()
                                                     ->getSearchResultsUsing(function (string $query) {
                                                         return Product::query()
                                                             ->where('name', 'like', "%{$query}%")
