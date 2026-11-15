@@ -245,7 +245,7 @@ class ProductResource extends BaseResource
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('selling_price')->money('INR')->sortable()->toggleable(),
                 Tables\Columns\IconColumn::make('is_active')->boolean()->sortable()->toggleable(),
-                Tables\Columns\TextColumn::make('created_at')->date()->sortable()->toggleable(),
+                Tables\Columns\TextColumn::make('created_at')->date('d-m-Y')->sortable()->toggleable(),
             ])
             ->defaultSort('created_at', 'desc')
             ->filters([

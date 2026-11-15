@@ -60,8 +60,8 @@ class DiscountCouponResource extends BaseResource
                 TextColumn::make('value')->sortable(),
                 TextColumn::make('usage_limit')->sortable(),
                 TextColumn::make('used_count')->sortable(),
-                TextColumn::make('valid_from')->date()->sortable(),
-                TextColumn::make('valid_until')->date()->sortable(),
+                TextColumn::make('valid_from')->date('d-m-Y')->sortable(),
+                TextColumn::make('valid_until')->date('d-m-Y')->sortable(),
                 TextColumn::make('status')->sortable(),
             ])->defaultSort('created_at', 'desc')
             ->filters([

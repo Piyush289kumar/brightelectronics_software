@@ -13,6 +13,7 @@ use App\Models\Inventory;
 use App\Observers\StoreInventoryObserver;
 use App\Observers\InventoryObserver;
 use TomatoPHP\FilamentDocs\Facades\FilamentDocs;
+use Filament\Tables\Columns\TextColumn;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -34,7 +35,6 @@ class AppServiceProvider extends ServiceProvider
         Complain::observe(ComplainObserver::class);
         //FilamentDocs::header('filament.header');
         JobCard::observe(JobCardObserver::class);
-        // FilamentDocs::footer('filament.footer');
+        // FilamentDocs::footer('filament.footer');        
     }
-
 }

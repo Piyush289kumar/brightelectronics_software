@@ -504,8 +504,8 @@ class PurchaseOrderResource extends BaseResource
                 Tables\Columns\TextColumn::make('number')->sortable()->searchable()->label('PON'),
                 Tables\Columns\TextColumn::make('purchase_req_to_purchase_order_no')->sortable()->searchable()->label('Purchase req. No.')->default('--'),
                 Tables\Columns\TextColumn::make('billable.name')->label('Billed To')->searchable()->toggleable(),
-                Tables\Columns\TextColumn::make('document_date')->date()->sortable()->label('PON Date'),
-                Tables\Columns\TextColumn::make('due_date')->date()->sortable()->label('Due Date')->toggleable(),
+                Tables\Columns\TextColumn::make('document_date')->date('d-m-Y')->sortable()->label('PON Date'),
+                Tables\Columns\TextColumn::make('due_date')->date('d-m-Y')->sortable()->label('Due Date')->toggleable(),
 
                 Tables\Columns\TextColumn::make('total_amount')->money('INR')->sortable()->weight('bold'),
                 Tables\Columns\TextColumn::make('amount_received')->label('Amount Received')->money('INR')->color('success')->sortable(),

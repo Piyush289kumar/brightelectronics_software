@@ -43,7 +43,7 @@ class JournalEntryResource extends BaseResource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('reference')->sortable()->searchable(),
-                Tables\Columns\TextColumn::make('date')->date()->sortable(),
+                Tables\Columns\TextColumn::make('date')->date('d-m-Y')->sortable(),
                 Tables\Columns\TextColumn::make('description')->limit(50),
             ])
             ->filters([])

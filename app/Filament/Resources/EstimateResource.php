@@ -449,8 +449,8 @@ class EstimateResource extends BaseResource
             ->columns([
                 Tables\Columns\TextColumn::make('number')->sortable()->searchable(),
                 Tables\Columns\TextColumn::make('billable.name')->label('Billed To')->sortable()->searchable(),
-                Tables\Columns\TextColumn::make('document_date')->date()->sortable(),
-                Tables\Columns\TextColumn::make('due_date')->date()->sortable(),
+                Tables\Columns\TextColumn::make('document_date')->date('d-m-Y')->sortable(),
+                Tables\Columns\TextColumn::make('due_date')->date('d-m-Y')->sortable(),
                 Tables\Columns\TextColumn::make('total_amount')->money('INR')->sortable(),
                 Tables\Columns\TextColumn::make('status')->sortable(),
             ])->defaultSort('created_at', 'desc')

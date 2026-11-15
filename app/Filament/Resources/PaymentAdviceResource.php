@@ -147,9 +147,9 @@ class PaymentAdviceResource extends BaseResource
             ->columns([
                 Tables\Columns\TextColumn::make("vendor.name")
                 ->label('Vendor')->formatStateUsing(fn ($state, $record) => $record->vendor ? "{$record->vendor->name} [{$record->vendor->code}]" : '-')->searchable(['vendor.name'])->sortable()->toggleable(),
-                Tables\Columns\TextColumn::make("date")->label('Payment Date')->date()->searchable()->sortable(),
-                Tables\Columns\TextColumn::make("payment_advice_start_date")->label('Start Date')->date()->searchable()->sortable()->toggleable(),
-                Tables\Columns\TextColumn::make("payment_advice_end_date")->label('End Date')->date()->searchable()->sortable()->toggleable(),
+                Tables\Columns\TextColumn::make("date")->label('Payment Date')->date('d-m-Y')->searchable()->sortable(),
+                Tables\Columns\TextColumn::make("payment_advice_start_date")->label('Start Date')->date('d-m-Y')->searchable()->sortable()->toggleable(),
+                Tables\Columns\TextColumn::make("payment_advice_end_date")->label('End Date')->date('d-m-Y')->searchable()->sortable()->toggleable(),
             ])
             ->defaultSort('created_at', 'desc')
             ->filters([

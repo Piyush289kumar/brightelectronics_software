@@ -658,8 +658,8 @@ class PurchaseResource extends BaseResource
                 Tables\Columns\TextColumn::make('place_of_supply')->label('Vendor Invoice No.')->sortable()->searchable()->toggleable(),
                 Tables\Columns\TextColumn::make('purchase_order_to_purchase_invoice_no')->label('Purchase Order')->searchable()->sortable()->default('--'),
                 Tables\Columns\TextColumn::make('billable.name')->label('Billed To')->sortable()->searchable()->toggleable(),
-                Tables\Columns\TextColumn::make('document_date')->date()->sortable()->toggleable(),
-                Tables\Columns\TextColumn::make('due_date')->date()->sortable()->toggleable(),
+                Tables\Columns\TextColumn::make('document_date')->date('d-m-Y')->sortable()->toggleable(),
+                Tables\Columns\TextColumn::make('due_date')->date('d-m-Y')->sortable()->toggleable(),
                 Tables\Columns\TextColumn::make('total_amount')->money('INR')->sortable()->toggleable(),
                 Tables\Columns\TextColumn::make('amount_paid')
                     ->label('Paid')
