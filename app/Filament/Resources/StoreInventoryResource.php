@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\StoreInventoryResource\Pages;
 use App\Filament\Resources\StoreInventoryResource\RelationManagers;
+use App\Models\Store;
 use App\Models\StoreInventory;
 use Filament\Forms;
 use Filament\Forms\Components\Grid;
@@ -14,6 +15,7 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Filament\Tables\Filters\SelectFilter;
+use Illuminate\Support\Facades\Auth;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 
 class StoreInventoryResource extends BaseResource
@@ -36,10 +38,39 @@ class StoreInventoryResource extends BaseResource
         return $form
             ->schema([
 
+
                 Forms\Components\Select::make('store_id')
+                    ->relationship(
+                        name: 'store',
+                        titleAttribute: 'code',
+                        modifyQueryUsing: function (Builder $query) {
+                            $user = Auth::user();
+                            if (! $user) {
+                                return $query->whereRaw('1 = 0');
+                            }
+                            if ($user->hasAnyRole(['Administrator', 'Developer', 'admin'])) {
+                                return $query;
+                            }
+                            $storeIds = $user->multi_store_id ?? [];
+
+                            return $query->whereIn('id', is_array($storeIds) ? $storeIds : []);
+                        }
+                    )
+                    ->preload()
+                    ->required()
                     ->label('Branch')
-                    ->relationship('store', 'name')
-                    ->required(),
+                    ->default(fn() => collect(Auth::user()?->multi_store_id ?? [])->first())
+                    ->live()
+                    ->afterStateUpdated(fn(callable $set) => $set('assigned_engineers', []))
+                    ->dehydrated(true)
+                    ->options(
+                        fn() => Store::query()
+                            ->get()
+                            ->mapWithKeys(fn($store) => [
+                                $store->id => "{$store->name} ({$store->code})",
+                            ])
+                            ->toArray()
+                    ),
 
                 Forms\Components\Select::make('product_id')
                     ->label('Spare Parts')
@@ -145,7 +176,7 @@ class StoreInventoryResource extends BaseResource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('store.name')->sortable()->searchable(),
+                Tables\Columns\TextColumn::make('store.name')->label('Branch')->formatStateUsing(fn($state, $record) => $record->store ? "{$record->store->name} ({$record->store->code})" : '-')->searchable(['store.name', 'store.code'])->sortable()->toggleable(),
                 Tables\Columns\TextColumn::make('product.barcode')->label('Part No.')->sortable()->searchable(),
                 Tables\Columns\TextColumn::make('product.name')->sortable()->searchable(),
                 Tables\Columns\TextColumn::make('quantity')->sortable(),

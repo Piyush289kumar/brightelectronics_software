@@ -6,6 +6,7 @@ use App\Filament\Resources\AttendanceReportResource\Pages;
 use App\Filament\Resources\AttendanceReportResource\RelationManagers;
 use App\Filament\Resources\Concerns\HasRoleBasedDataScope;
 use App\Models\AttendanceReport;
+use App\Models\Store;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -46,12 +47,20 @@ class AttendanceReportResource extends BaseResource
 
                         Forms\Components\Select::make('store_id')
                             ->relationship('store', 'name')
+                            ->getOptionLabelFromRecordUsing(
+                                fn(Store $record) => "{$record->name} ({$record->code})"
+                            )
+                            ->label('Branch')
                             ->searchable()
                             ->preload()
                             ->required(),
 
                         Forms\Components\Select::make('user_id')
                             ->relationship('user', 'name')
+                            ->getOptionLabelFromRecordUsing(
+                                fn(\App\Models\User $record) => "{$record->name} ({$record->user_code})"
+                            )
+                            ->label('Employee')
                             ->searchable()
                             ->preload()
                             ->required(),
@@ -177,14 +186,11 @@ class AttendanceReportResource extends BaseResource
             ->columns([
 
                 Tables\Columns\TextColumn::make('store.name')
-                    ->label('Branch')
-                    ->searchable()
-                    ->sortable(),
+                    ->label('Branch')->formatStateUsing(fn ($state, $record) => $record->store ? "{$record->store->name} ({$record->store->code})" : '-')->searchable(['store.name', 'store.code'])->sortable()->toggleable(),
 
                 Tables\Columns\TextColumn::make('user.name')
                     ->label('Employee')
-                    ->searchable()
-                    ->sortable(),
+                    ->formatStateUsing(fn ($state, $record) => $record->user ? "{$record->user->name} ({$record->user->user_code})" : '-')->searchable(['user.name', 'user.user_code'])->sortable()->toggleable(),
 
                 Tables\Columns\TextColumn::make('month')
                     ->label('Month')

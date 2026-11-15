@@ -18,6 +18,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 use Filament\Forms\Get;
 
@@ -31,7 +32,7 @@ class StoreTargetResource extends BaseResource
     protected static function permission(string $action): string
     {
         return "{$action}_store::target";
-    }    
+    }
 
     public static function shouldRegisterNavigation(): bool
     {
@@ -40,11 +41,39 @@ class StoreTargetResource extends BaseResource
     public static function form(Form $form): Form
     {
         return $form->schema([
-            Select::make('store_id')
+            Forms\Components\Select::make('store_id')
+                ->relationship(
+                    name: 'store',
+                    titleAttribute: 'code',
+                    modifyQueryUsing: function (Builder $query) {
+                        $user = Auth::user();
+                        if (! $user) {
+                            return $query->whereRaw('1 = 0');
+                        }
+                        if ($user->hasAnyRole(['Administrator', 'Developer', 'admin'])) {
+                            return $query;
+                        }
+                        $storeIds = $user->multi_store_id ?? [];
+
+                        return $query->whereIn('id', is_array($storeIds) ? $storeIds : []);
+                    }
+                )
+                ->preload()
+                ->required()
                 ->label('Branch')
-                ->options(fn() => Store::pluck('name', 'id'))
-                ->searchable()
-                ->required(),
+                ->default(fn() => collect(Auth::user()?->multi_store_id ?? [])->first())
+                ->live()
+                ->afterStateUpdated(fn(callable $set) => $set('assigned_engineers', []))
+                ->dehydrated(true)
+                ->options(
+                    fn() => Store::query()
+                        ->get()
+                        ->mapWithKeys(fn($store) => [
+                            $store->id => "{$store->name} ({$store->code})",
+                        ])
+                        ->toArray()
+                ),
+
 
             TextInput::make('year')
                 ->label('Year')
@@ -104,7 +133,7 @@ class StoreTargetResource extends BaseResource
     {
         return $table->columns([
             TextColumn::make('id')->sortable(),
-            TextColumn::make('store.name')->label('Store')->sortable()->searchable(),
+            TextColumn::make('store.name')->label('Branch')->formatStateUsing(fn($state, $record) => $record->store ? "{$record->store->name} ({$record->store->code})" : '-')->searchable(['store.name', 'store.code'])->sortable()->toggleable(),
             TextColumn::make('year')->sortable(),
             TextColumn::make('month')
                 ->label('Month')

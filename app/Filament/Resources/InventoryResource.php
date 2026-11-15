@@ -50,30 +50,30 @@ class InventoryResource extends BaseResource
                             ->disabled(),
 
                         Placeholder::make('store_inventories_data')
-                            ->label('Store-wise Quantity')
+                            ->label('Branch wise Quantity')
                             ->content(function ($get) {
                                 $productId = $get('product_id');
                                 if (!$productId) {
-                                    return new HtmlString('<p style="font-style: italic; color: #6b7280;">Select a product to view store inventory.</p>');
+                                    return new HtmlString('<p style="font-style: italic; color: #6b7280;">Select a product to view branch inventory.</p>');
                                 }
 
                                 $storeInventories = StoreInventory::where('product_id', $productId)->with('store')->get();
 
                                 if ($storeInventories->isEmpty()) {
-                                    return new HtmlString('<p style="font-style: italic; color: #6b7280;">No store inventory found for this product.</p>');
+                                    return new HtmlString('<p style="font-style: italic; color: #6b7280;">No branch inventory found for this product.</p>');
                                 }
 
                                 $html = '<table style="width:100%; border-collapse: collapse; font-family: Arial, sans-serif;">';
                                 $html .= '<thead>';
                                 $html .= '<tr style="background-color: none;">';
-                                $html .= '<th style="text-align:left; padding: 8px; border-bottom: 2px solid #d1d5db; color: #fff;">Store</th>';
+                                $html .= '<th style="text-align:left; padding: 8px; border-bottom: 2px solid #d1d5db; color: #fff;">Branch</th>';
                                 $html .= '<th style="text-align:right; padding: 8px; border-bottom: 2px solid #d1d5db; color: #fff;">Quantity</th>';
                                 $html .= '</tr>';
                                 $html .= '</thead><tbody>';
 
                                 foreach ($storeInventories as $inv) {
                                     $html .= '<tr>';
-                                    $html .= '<td style="text-align:left; padding: 8px; border-bottom: 1px solid #e5e7eb;">' . e($inv->store->name) . '</td>';
+                                    $html .= '<td style="text-align:left; padding: 8px; border-bottom: 1px solid #e5e7eb;">' . e($inv->store->name) . ' (' . e($inv->store->code) . ')' . '</td>';
                                     $html .= '<td style="text-align:right; padding: 8px; border-bottom: 1px solid #e5e7eb; font-weight: 600;">' . number_format($inv->quantity) . '</td>';
                                     $html .= '</tr>';
                                 }

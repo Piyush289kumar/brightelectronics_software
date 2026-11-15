@@ -54,17 +54,11 @@ class SalaryReportResource extends BaseResource
 
                 // ==========================================
                 // EMPLOYEE
-                // ==========================================
-
-                Tables\Columns\TextColumn::make('user_code')
-                    ->label('Emp Code')
-                    ->searchable()
-                    ->sortable(),
+                // ==========================================              
 
                 Tables\Columns\TextColumn::make('name')
                     ->label('Employee')
-                    ->searchable()
-                    ->sortable(),
+                    ->formatStateUsing(fn ($state, $record) => $record ? "{$record->name} [{$record->user_code}]" : '-')->searchable(['user.name', 'user.user_code'])->sortable()->toggleable(),
 
                 Tables\Columns\TextColumn::make('email')
                     ->searchable()

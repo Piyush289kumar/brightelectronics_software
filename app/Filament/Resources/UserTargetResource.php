@@ -22,7 +22,7 @@ class UserTargetResource extends BaseResource
     protected static ?string $model = UserTarget::class;
     protected static ?string $navigationGroup = 'Targets';
     protected static ?string $navigationIcon = 'heroicon-o-user-group';
-    protected static ?string $navigationLabel = 'Member Targets';
+    protected static ?string $navigationLabel = 'Employee Targets';
     protected static function permission(string $action): string
     {
         return "{$action}_user::target";
@@ -64,9 +64,13 @@ class UserTargetResource extends BaseResource
             ->columns([
                 Tables\Columns\TextColumn::make('id')->label('ID')->sortable(),
 
-                Tables\Columns\TextColumn::make('user.name')->label('Member'),
+                Tables\Columns\TextColumn::make('user.name')
+                 ->label('Employee')
+                    ->formatStateUsing(fn ($state, $record) => $record->user ? "{$record->user->name} ({$record->user->user_code})" : '-')->searchable(['user.name', 'user.user_code'])->sortable()->toggleable(),
 
-                Tables\Columns\TextColumn::make('storeTarget.store.name')->label('Branch'),
+                Tables\Columns\TextColumn::make('storeTarget.store.name')
+                    ->label('Branch')
+                    ->formatStateUsing(fn ($state, $record) => $record->storeTarget->store ? "{$record->storeTarget->store->name} ({$record->storeTarget->store->code})" : '-')->searchable(['store.name', 'store.code'])->sortable()->toggleable(),
 
                 Tables\Columns\TextColumn::make('storeTarget.month')
                     ->label('Month')
