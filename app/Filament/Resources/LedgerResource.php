@@ -240,9 +240,7 @@ class LedgerResource extends BaseResource
                     ->toggleable(),
 
                 Tables\Columns\TextColumn::make('store.name')
-                    ->label('Branch')
-                    ->searchable()
-                    ->sortable(),
+                    ->label('Branch')->formatStateUsing(fn($state, $record) => $record->store ? "{$record->store->name} ({$record->store->code})" : '-')->searchable(['store.name', 'store.code'])->sortable()->toggleable(),
 
                 Tables\Columns\TextColumn::make('account.account_name')
                     ->label('Account')

@@ -454,9 +454,7 @@ class StoreInventoryInResource extends BaseResource
                     ->searchable(),
 
                 Tables\Columns\TextColumn::make('store.name')
-                    ->label('Branch')
-                    ->sortable()
-                    ->searchable(),
+                    ->label('Branch')->formatStateUsing(fn($state, $record) => $record->store ? "{$record->store->name} ({$record->store->code})" : '-')->searchable(['store.name', 'store.code'])->sortable()->toggleable(),
 
                 Tables\Columns\TextColumn::make('receiver_display')
                     ->label('Received By')

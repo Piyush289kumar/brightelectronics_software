@@ -358,7 +358,7 @@ class SiteInventoryIssueResource extends BaseResource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('store.name')->label('Branch')->sortable()->searchable(),
+                Tables\Columns\TextColumn::make('store.name')->label('Branch')->formatStateUsing(fn ($state, $record) => $record->store ? "{$record->store->name} ({$record->store->code})" : '-')->searchable(['store.name', 'store.code'])->sortable()->toggleable(),
                 Tables\Columns\TextColumn::make('jobCard.job_id')
                     ->label('Job Card')
                     ->description(fn($record) => $record->jobCard?->complain?->complain_id)

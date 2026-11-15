@@ -121,12 +121,21 @@ class UserResource extends BaseResource
                 ->formatStateUsing(function ($state, User $record): string {
                     $storeIds = $record->multi_store_id ?? [];
 
+                    if (is_string($storeIds)) {
+                        $storeIds = json_decode($storeIds, true) ?? [];
+                    }
+
                     if (! is_array($storeIds) || empty($storeIds)) {
                         return '-';
                     }
 
-                    return Store::whereIn('id', $storeIds)->pluck('name')->implode(', ') ?: '-';
-                }),
+                    return Store::whereIn('id', $storeIds)
+                        ->get(['name', 'code'])
+                        ->map(fn($store) => "{$store->name} ({$store->code})")
+                        ->implode(', ') ?: '-';
+                })
+                ->wrap()
+                ->toggleable(),
             Tables\Columns\BadgeColumn::make('roles.name')
                 ->label('Roles')
                 ->separator(', ')
