@@ -32,6 +32,7 @@ use TomatoPHP\FilamentDocs\Filament\Resources\DocumentResource\Pages\PrintDocume
 use TomatoPHP\FilamentDocs\Models\Document;
 use TomatoPHP\FilamentDocs\Models\DocumentTemplate;
 use Filament\Tables\Filters\Filter;
+
 class PurchaseOrderResource extends BaseResource
 {
     protected static ?string $model = Invoice::class;
@@ -380,7 +381,6 @@ class PurchaseOrderResource extends BaseResource
                 $gstAmount = $amountAfterDiscount - $taxable;
 
                 $itemTotal = $amountAfterDiscount;
-
             } else {
 
                 $taxable = $amountAfterDiscount;
@@ -427,7 +427,6 @@ class PurchaseOrderResource extends BaseResource
             $gstAmount = $amountAfterDiscount - $taxable;
 
             $total = $amountAfterDiscount;
-
         } else {
 
             $taxable = $amountAfterDiscount;
@@ -493,7 +492,7 @@ class PurchaseOrderResource extends BaseResource
 
         $query = parent::getEloquentQuery()
             ->where('document_type', 'purchase_order'); // Show only 'invoice' documents
-        
+
         return $query;
     }
 
@@ -502,6 +501,17 @@ class PurchaseOrderResource extends BaseResource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('number')->sortable()->searchable()->label('PON'),
+                Tables\Columns\TextColumn::make('store.name')
+                    ->label('Branch')
+                    ->formatStateUsing(
+                        fn($state, $record) =>
+                        $record->store
+                            ? "{$record->store->name} [{$record->store->code}]"
+                            : '-'
+                    )
+                    ->searchable(['store.name', 'store.code'])
+                    ->sortable()
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('purchase_req_to_purchase_order_no')->sortable()->searchable()->label('Purchase req. No.')->default('--'),
                 Tables\Columns\TextColumn::make('billable.name')->label('Billed To')->searchable()->toggleable(),
                 Tables\Columns\TextColumn::make('document_date')->date('d-m-Y')->sortable()->label('PON Date'),
@@ -583,7 +593,7 @@ class PurchaseOrderResource extends BaseResource
                             )->setPaper('a4', 'portrait');
 
                             return response()->streamDownload(
-                                fn() => print ($pdf->output()),
+                                fn() => print($pdf->output()),
                                 "purchase-order-{$record->number}.pdf"
                             );
                         }),
@@ -623,7 +633,7 @@ class PurchaseOrderResource extends BaseResource
                                 $discountAmount = $item->discount_amount_per_item ?? 0; // discount ₹
                                 $gstRate = $item->gst_rate ?? 0; // GST %
                                 $gstAmount = $item->gst_amount ?? 0; // GST ₹
-                
+
                                 return "<tr style='border-bottom: 1px solid #000;'>
                 <td style='padding:6px; text-align:center; font-weight: 900;'>" . ($index + 1) . "</td>
                 <td style='padding:6px;'>{$item->product->name}</td>
@@ -694,7 +704,7 @@ class PurchaseOrderResource extends BaseResource
                                 $discountAmount = $item->discount_amount_per_item ?? 0; // discount ₹
                                 $gstRate = $item->gst_rate ?? 0; // GST %
                                 $gstAmount = $item->gst_amount ?? 0; // GST ₹
-                
+
                                 return "<tr style='border-bottom: 1px solid #000;'>
                 <td style='padding:6px; text-align:center; font-weight: 900;'>" . ($index + 1) . "</td>
                 <td style='padding:6px;'>{$item->product->name}</td>
