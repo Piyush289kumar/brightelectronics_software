@@ -466,8 +466,9 @@ class TransferOrderResource extends BaseResource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('number')->sortable()->searchable(),
-                Tables\Columns\TextColumn::make('billable.name')->label('Source Store')->sortable()->searchable(),
-                Tables\Columns\TextColumn::make('destinationStore.name')->label('Destination Store')->sortable()->searchable(),
+                Tables\Columns\TextColumn::make('billable.name')->label('Source Store')
+                ->label('Branch')->formatStateUsing(fn ($state, $record) => $record->billable ? "{$record->billable->name} ({$record->billable->code})" : '-')->searchable(['store.name', 'store.code'])->sortable()->toggleable(),
+                Tables\Columns\TextColumn::make('destinationStore.name')->label('Destination Store')->formatStateUsing(fn ($state, $record) => $record->destinationStore ? "{$record->destinationStore->name} ({$record->destinationStore->code})" : '-')->searchable(['store.name', 'store.code'])->sortable()->toggleable(),
                 Tables\Columns\TextColumn::make('document_date')->date()->sortable(),
                 Tables\Columns\TextColumn::make('status')->sortable(),
             ])->defaultSort('created_at', 'desc')

@@ -413,7 +413,7 @@ class PurchaseRequisitionResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('id')->label('ID')->sortable(),
-                Tables\Columns\TextColumn::make('store.name')->label('Branch')->sortable(),
+                Tables\Columns\TextColumn::make('store.name')->label('Branch')->formatStateUsing(fn ($state, $record) => $record->store ? "{$record->store->name} ({$record->store->code})" : '-')->searchable(['store.name', 'store.code'])->sortable()->toggleable(),
                 Tables\Columns\TextColumn::make('jobCard.job_id')->label('Job Card')->searchable()->toggleable(),
                 Tables\Columns\TextColumn::make('items.fulfillments.product.name')
                     ->label('Selected Purchase Products')
