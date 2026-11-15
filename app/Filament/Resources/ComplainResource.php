@@ -19,6 +19,8 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
+use App\Models\Unit;
+use App\Models\Brand;
 
 class ComplainResource extends BaseResource
 {
@@ -315,6 +317,34 @@ class ComplainResource extends BaseResource
                             )
                         )
                         ->required(),
+
+                    Forms\Components\Select::make('unit_id')
+                        ->label('Unit')
+                        ->relationship(
+                            name: 'unit',
+                            titleAttribute: 'name',
+                            modifyQueryUsing: fn($query) => $query->orderBy('name')
+                        )
+                        ->getOptionLabelFromRecordUsing(
+                            fn($record) => "{$record->name} ({$record->symbol})"
+                        )
+                        ->searchable(['name', 'symbol'])
+                        ->preload()
+                        ->required(),
+
+                    Forms\Components\Select::make('brand_id')
+                        ->label('Brand')
+                        ->relationship(
+                            name: 'brand',
+                            titleAttribute: 'name',
+                            modifyQueryUsing: fn($query) => $query
+                                ->where('is_active', true)
+                                ->orderBy('name')
+                        )
+                        ->searchable()
+                        ->preload()
+                        ->required(),
+
                     Forms\Components\Select::make('first_action_code')
                         ->label('First Action Code')
                         ->options([
@@ -421,7 +451,7 @@ class ComplainResource extends BaseResource
                                 ->toArray()
                         ),
                 ])
-                ->columns(3),
+                ->columns(5),
         ]);
     }
 
@@ -443,7 +473,23 @@ class ComplainResource extends BaseResource
                 Tables\Columns\TextColumn::make('complain_id')->label('Complain ID')->sortable()->toggleable(),
                 Tables\Columns\TextColumn::make('name')->label('Customer Name')->sortable()->toggleable(),
                 Tables\Columns\TextColumn::make('mobile')->label('Phone')->sortable()->toggleable(),
+                Tables\Columns\TextColumn::make('unit.name')
+                    ->label('Unit')
+                    ->formatStateUsing(
+                        fn($state, $record) =>
+                        $record->unit
+                            ? "{$record->unit->name} ({$record->unit->symbol})"
+                            : '-'
+                    )
+                    ->searchable()
+                    ->sortable()
+                    ->toggleable(),
 
+                Tables\Columns\TextColumn::make('brand.name')
+                    ->label('Brand')
+                    ->searchable()
+                    ->sortable()
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('first_action_code')->label('Action Code')->sortable()->toggleable(),
                 Tables\Columns\TextColumn::make('assigned_engineers')
                     ->label('Assigned Engineers')

@@ -28,6 +28,8 @@ class Complain extends Model
         'product_id',
         'device',
         'size',
+        'unit_id',
+        'brand_id',
         'service_type',
         'first_action_code',
         'rsd_time',
@@ -76,6 +78,16 @@ class Complain extends Model
     public function assigner()
     {
         return $this->belongsTo(User::class, 'assigned_by');
+    }
+
+    public function unit()
+    {
+        return $this->belongsTo(Unit::class);
+    }
+
+    public function brand()
+    {
+        return $this->belongsTo(Brand::class);
     }
 
     /*
