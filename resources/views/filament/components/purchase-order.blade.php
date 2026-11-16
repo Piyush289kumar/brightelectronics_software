@@ -1,4 +1,4 @@
-// resources/views/filament/components/purchase-order.blade.php
+<!-- resources/views/filament/components/purchase-order.blade.php -->
 
 <!DOCTYPE html>
 <html>
@@ -190,22 +190,153 @@
 
 <body>
 
+
     @php
-        $copies = ['OFFICE COPY', 'VENDOR COPY'];
+    $copies = ['OFFICE COPY', 'VENDOR COPY'];
 
-        $subTotal = $record->items->sum(fn($i) => (float) $i->unit_price * (float) $i->quantity);
-        $totalDiscount = $record->discount_amount ?? 0;
-        $totalGst = $record->gst_amount ?? 0;
-        $grandTotal = $record->total_amount ?? 0;
-        $amountReceived = $record->amount_received ?? 0;
-        $amountBalance = $grandTotal - $amountReceived;
+    $subTotal = $record->items->sum(
+    fn($i) => (float) $i->unit_price * (float) $i->quantity
+    );
 
-        $amountInWords = $grandTotal
-            ? \NumberFormatter::create('en_IN', \NumberFormatter::SPELLOUT)->format($grandTotal)
-            : '';
-    @endphp
+    $totalDiscount = $record->discount_amount ?? 0;
+    $totalGst = $record->gst_amount ?? 0;
+    $grandTotal = $record->total_amount ?? 0;
+    $amountReceived = $record->amount_received ?? 0;
+    $amountBalance = $grandTotal - $amountReceived;
 
-    @foreach ($copies as $i => $copyLabel)
+    $amountInWords = $grandTotal
+    ? \NumberFormatter::create('en_IN', \NumberFormatter::SPELLOUT)->format($grandTotal)
+    : '';
+
+    // Load PO invoice items.
+    $record->loadMissing('items.product');
+
+    // Find requisition IDs from the existing invoice fields.
+    $requisitionIds = [];
+
+    if (!empty($record->purchase_req_to_purchase_order_no)) {
+    preg_match_all(
+    '/\d+/',
+    (string) $record->purchase_req_to_purchase_order_no,
+    $matches
+    );
+
+    $requisitionIds = array_merge($requisitionIds, $matches[0]);
+    }
+
+    // Bulk PO stores IDs in notes, e.g. Requisitions: #12, #13
+    if (!empty($record->notes)) {
+    preg_match_all('/#(\d+)/', $record->notes, $matches);
+    $requisitionIds = array_merge($requisitionIds, $matches[1]);
+    }
+
+    $requisitionIds = array_values(array_unique($requisitionIds));
+
+    // Load requisitions and their original/linked products.
+    $requisitions = \App\Models\PurchaseRequisition::with([
+    'items.product',
+    'items.fulfillments.product',
+    ])
+    ->whereIn('id', $requisitionIds)
+    ->get()
+    ->keyBy('id');
+
+    // Keep invoice lines available for matching against fulfillment lines.
+    $availableInvoiceItems = $record->items
+    ->sortBy('id')
+    ->values();
+
+    $poDisplayRows = [];
+
+    foreach ($requisitionIds as $requisitionId) {
+    $requisition = $requisitions->get($requisitionId);
+
+    if (!$requisition) {
+    continue;
+    }
+
+    foreach ($requisition->items as $requisitionItem) {
+    $originalProduct = $requisitionItem->product;
+    $fulfillments = $requisitionItem->fulfillments;
+
+    $partNumbers = [];
+    $totalQty = 0;
+    $totalAmount = 0;
+
+    $originalQty = $fulfillments
+    ->where('product_id', $requisitionItem->product_id)
+    ->sum('quantity');
+
+    // Original requested product always comes first.
+    if ($originalProduct) {
+    $partNumbers[] = $originalProduct->barcode . ' [' . number_format((float) $originalQty, 0) . ']';
+    }
+
+    foreach ($fulfillments as $fulfillment) {
+    $totalQty += (float) $fulfillment->quantity;
+
+    // Add linked products after the original product.
+    if ($fulfillment->product_id != $requisitionItem->product_id) {
+    $linkedProduct = $fulfillment->product;
+
+    if ($linkedProduct) {
+    $partNumbers[] = $linkedProduct->barcode
+    . ' [' . number_format((float) $fulfillment->quantity, 0) . ']';
+    }
+    }
+
+    // Match the PO invoice line using product and quantity.
+    $lineIndex = $availableInvoiceItems->search(
+    function ($line) use ($fulfillment) {
+    return $line->product_id == $fulfillment->product_id
+    && abs(
+    (float) $line->quantity - (float) $fulfillment->quantity
+    ) < 0.0001;
+        }
+        );
+
+        // Fallback: match by product ID.
+        if ($lineIndex===false) {
+        $lineIndex=$availableInvoiceItems->search(
+        fn($line) => $line->product_id == $fulfillment->product_id
+        );
+        }
+
+        if ($lineIndex !== false) {
+        $invoiceLine = $availableInvoiceItems->get($lineIndex);
+
+        $totalAmount += (float) $invoiceLine->total_amount;
+
+        // Consume the matched line so it isn't counted twice.
+        $availableInvoiceItems->forget($lineIndex);
+        }
+        }
+
+        $poDisplayRows[] = [
+        'part_numbers' => implode(' / ', $partNumbers),
+        'quantity' => $totalQty,
+        'unit_price' => $totalQty > 0 ? $totalAmount / $totalQty : 0,
+        'total_amount' => $totalAmount,
+        ];
+        }
+        }
+
+        // Fallback for old POs without a matching requisition reference.
+        if (empty($poDisplayRows)) {
+        foreach ($record->items as $invoiceItem) {
+        $poDisplayRows[] = [
+        'part_numbers' => ($invoiceItem->product?->barcode ?? 'N/A')
+        . ' [' . $invoiceItem->quantity . ']',
+        'quantity' => $invoiceItem->quantity,
+        'unit_price' => $invoiceItem->unit_price,
+        'total_amount' => $invoiceItem->total_amount ?? 0,
+        ];
+        }
+        }
+        @endphp
+
+
+        @foreach ($copies as $i => $copyLabel)
         <div class="half-copy">
 
             <span class="copy-badge">{{ $copyLabel }}</span>
@@ -238,16 +369,16 @@
                         Vendor: <b>
                             {{ strtoupper($record->billable->name ?? '') }}
                             @if (!empty($record->billable->code))
-                                ({{ $record->billable->code }})
+                            ({{ $record->billable->code }})
                             @endif
                         </b><br>
                         <span class="muted">{{ $record->billable->address ?? '' }}</span><br>
                         <span class="muted">
                             @if (!empty($record->billable->phone))
-                                Ph: {{ $record->billable->phone }} &nbsp;
+                            Ph: {{ $record->billable->phone }} &nbsp;
                             @endif
                             @if (!empty($record->billable->gst_number))
-                                GSTIN: {{ $record->billable->gst_number }}
+                            GSTIN: {{ $record->billable->gst_number }}
                             @endif
                         </span>
                     </td>
@@ -265,34 +396,48 @@
             </table>
 
             {{-- Items --}}
+
+
+            {{-- Items --}}
             <table class="items-table">
                 <thead>
                     <tr>
                         <th style="width: 6%;">Sr</th>
-                        <th style="width: 30%;">Item</th>
+                        <th style="width: 44%;">Part Number / Linked Products</th>
                         <th style="width: 8%;">Qty</th>
                         <th style="width: 14%;">Unit Price</th>
                         <th style="width: 14%;">Total Amount</th>
                     </tr>
                 </thead>
+
                 <tbody>
-                    @foreach ($record->items as $index => $item)
-                        @php
-                            $discountPercent = $item->discount ?? 0;
-                            $discountAmount = $item->discount_amount_per_item ?? 0;
-                            $gstRate = $item->gst_rate ?? 0;
-                            $gstAmount = $item->gst_amount ?? 0;
-                        @endphp
-                        <tr>
-                            <td class="text-center">{{ $index + 1 }}</td>
-                            <td>{{ $item->product->name . ' - ' . ($item->product->barcode ?? '') ?? '' }}</td>
-                            <td class="text-center">{{ $item->quantity }}</td>
-                            <td class="text-right">Rs.{{ number_format($item->unit_price, 2) }}</td>
-                            <td class="text-right"><b>Rs.{{ number_format($item->total_amount ?? 0, 2) }}</b></td>
-                        </tr>
+                    @foreach ($poDisplayRows as $index => $row)
+                    <tr>
+                        <td class="text-center">
+                            {{ $index + 1 }}
+                        </td>
+
+                        <td>
+                            {{ $row['part_numbers'] }}
+                        </td>
+
+                        <td class="text-center">
+                            {{ number_format((float) $row['quantity'], 0) }}
+                        </td>
+
+                        <td class="text-right">
+                            Rs.{{ number_format($row['unit_price'], 2) }}
+                        </td>
+
+                        <td class="text-right">
+                            <b>Rs.{{ number_format($row['total_amount'], 2) }}</b>
+                        </td>
+                    </tr>
                     @endforeach
                 </tbody>
             </table>
+
+
             {{-- Signature --}}
             <table class="no-border signature-block">
                 <tr>
@@ -305,11 +450,11 @@
         </div>
 
         @if ($i === 0)
-            <div class="cut-line-wrapper">
-                <span class="cut-line-label">&#9986; cut here &#9986;</span>
-            </div>
+        <div class="cut-line-wrapper">
+            <span class="cut-line-label">&#9986; cut here &#9986;</span>
+        </div>
         @endif
-    @endforeach
+        @endforeach
 
 </body>
 
