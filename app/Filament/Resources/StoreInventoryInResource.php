@@ -156,10 +156,18 @@ class StoreInventoryInResource extends BaseResource
                             Select::make('vendor_id')
                                 ->label('Vendor')
                                 ->relationship('vendor', 'name')
-                                ->searchable(),
+                                ->searchable()
+                                ->preload()
+                                ->disabled(fn($get) => filled($get('purchase_order_id')))
+                                ->dehydrated(true),
 
-                            TextInput::make('invoice_no')->label('Invoice No'),
-                            DatePicker::make('invoice_date')->label('Invoice Date')->default(now()),
+                            TextInput::make('invoice_no')->label('Invoice No')
+                                ->disabled(fn($get) => filled($get('purchase_order_id')))
+                                ->dehydrated(true),
+
+                            DatePicker::make('invoice_date')->label('Invoice Date')->default(now())
+                                ->disabled(fn($get) => filled($get('purchase_order_id')))
+                                ->dehydrated(true),
                         ])
                     ]),
 
@@ -297,12 +305,15 @@ class StoreInventoryInResource extends BaseResource
                                         if (!$state) {
                                             $set('items', []);
                                             $set('notes', null);
+                                            $set('invoice_no', null);
+                                            $set('vendor_id', null);
+                                            $set('invoice_date', null);
 
                                             return;
                                         }
 
                                         $purchase = Invoice::query()
-                                            ->with('items')
+                                            ->with(['items', 'billable'])
                                             ->where('document_type', 'purchase')
                                             ->whereKey($state)
                                             ->first();
@@ -312,6 +323,11 @@ class StoreInventoryInResource extends BaseResource
 
                                             return;
                                         }
+
+                                        // Auto-fill invoice information
+                                        $set('invoice_no', $purchase->number);
+                                        $set('vendor_id', $purchase->billable_id);
+                                        $set('invoice_date', $purchase->document_date);
 
                                         $set(
                                             'notes',
