@@ -707,6 +707,7 @@ class PurchaseRequisitionResource extends Resource
                                                 })
                                                 ->live()
                                                 ->distinct()
+                                                ->disableOptionsWhenSelectedInSiblingRepeaterItems()
                                                 ->afterStateUpdated(function ($state, callable $get, callable $set) {
                                                     $product = Product::find($state);
 
@@ -1305,6 +1306,8 @@ class PurchaseRequisitionResource extends Resource
                                                         )->toArray();
                                                     })
                                                     ->live()
+                                                    ->distinct()
+                                                    ->disableOptionsWhenSelectedInSiblingRepeaterItems()
                                                     ->afterStateUpdated(function (
                                                         $state,
                                                         callable $get,
