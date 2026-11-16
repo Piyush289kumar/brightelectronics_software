@@ -117,7 +117,9 @@ class PurchaseRequisitionResource extends Resource
                         ->relationship(
                             name: 'jobCard',
                             titleAttribute: 'job_id',
-                            modifyQueryUsing: fn(Builder $query) => $query->orderByDesc('id')
+                            modifyQueryUsing: fn(Builder $query) => $query
+                                ->where('status', 'Pending')
+                                ->orderByDesc('id')
                         )
                         ->searchable()
                         ->preload()
@@ -413,7 +415,7 @@ class PurchaseRequisitionResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('id')->label('ID')->sortable(),
-                Tables\Columns\TextColumn::make('store.name')->label('Branch')->formatStateUsing(fn ($state, $record) => $record->store ? "{$record->store->name} ({$record->store->code})" : '-')->searchable(['store.name', 'store.code'])->sortable()->toggleable(),
+                Tables\Columns\TextColumn::make('store.name')->label('Branch')->formatStateUsing(fn($state, $record) => $record->store ? "{$record->store->name} ({$record->store->code})" : '-')->searchable(['store.name', 'store.code'])->sortable()->toggleable(),
                 Tables\Columns\TextColumn::make('jobCard.job_id')->label('Job Card')->searchable()->toggleable(),
                 Tables\Columns\TextColumn::make('items.fulfillments.product.name')
                     ->label('Selected Purchase Products')
@@ -423,500 +425,26 @@ class PurchaseRequisitionResource extends Resource
                 Tables\Columns\TextColumn::make('status')->sortable(),
                 Tables\Columns\TextColumn::make('priority')->sortable(),
                 Tables\Columns\TextColumn::make('created_at')->dateTime()->sortable(),
-            ])->defaultSort('created_at', 'desc')
+            ])
+            ->defaultSort('created_at', 'desc')
             ->filters([
-                //
+                Tables\Filters\SelectFilter::make('store_id')
+                    ->label('Branch')
+                    ->relationship(
+                        name: 'store',
+                        titleAttribute: 'name',
+                        modifyQueryUsing: fn($query) => $query->orderBy('name')
+                    )
+                    ->getOptionLabelFromRecordUsing(
+                        fn($record) => "{$record->name} ({$record->code})"
+                    )
+                    ->searchable(['name', 'code'])
+                    ->preload(),
             ])
             ->actions([
 
                 Tables\Actions\ActionGroup::make([
                     Tables\Actions\ViewAction::make(),
-
-                    // Action::make('approve')
-                    //     ->label('Approve')
-                    //     ->icon('heroicon-o-check-circle') // ✅ Add icon
-                    //     ->color('success') // ✅ green color
-                    //     // 👇 DISABLE if not pending
-                    //     ->disabled(fn($record) => $record->status !== 'pending')
-
-                    //     // (optional but recommended)
-                    //     ->tooltip(
-                    //         fn($record) =>
-                    //         $record->status !== 'pending'
-                    //             ? 'This requisition is already approved'
-                    //             : null
-                    //     )
-                    //     ->modalHeading('Approve / Fulfill Requisition')
-                    //     ->visible(fn($record) => Auth::user()?->isAdmin() ?? false)
-                    //     ->form(fn(PurchaseRequisition $record) => [
-                    //         Select::make('method')
-                    //             ->label('Fulfillment Method')
-                    //             ->options([
-                    //                 'purchase' => 'Purchase from Vendor',
-                    //                 'transfer' => 'Transfer from Another Branch',
-                    //                 'consume' => 'Consume Available Stock (Original / Linked Products)',
-                    //             ])
-                    //             ->reactive()
-                    //             ->required(),
-                    //         Select::make('vendor_id')
-                    //             ->label('Vendor')
-                    //             ->options(Vendor::pluck('name', 'id'))
-                    //             ->visible(fn($get) => $get('method') === 'purchase')
-                    //             ->reactive() // 👈 make it reactive
-                    //             ->afterStateUpdated(function ($state, callable $get, callable $set) {
-                    //                 // loop through repeater rows
-                    //                 $items = $get('items') ?? [];
-                    //                 foreach ($items as $index => $item) {
-                    //                     // only set vendor if not already chosen in row
-                    //                     if (empty($item['vendor_id'])) {
-                    //                         $items[$index]['vendor_id'] = $state;
-                    //                     }
-                    //                 }
-                    //                 $set('items', $items);
-                    //             }),
-                    //         Select::make('destination_store_id')
-                    //             ->label('Source Branch')
-                    //             ->options(function (callable $get, $record) {
-                    //                 // fall back to requisition's store_id if not inside the modal
-                    //                 $storeId = $get('store_id') ?? $record?->store_id;
-                    //                 return Store::query()
-                    //                     ->where('id', '!=', $storeId)
-                    //                     ->pluck('name', 'id');
-                    //             })
-                    //             ->visible(fn($get) => $get('method') === 'transfer')
-                    //             ->required(fn($get) => $get('method') === 'transfer'),
-                    //         Repeater::make('items')
-                    //             ->label('Approve quantities (per item)')
-                    //             // ✅ REMOVE ADD BUTTON
-                    //             ->addable(false)
-
-                    //             // ✅ REMOVE DELETE BUTTON
-                    //             ->deletable(false)
-
-                    //             // ✅ REMOVE REORDER
-                    //             ->reorderable(false)
-
-                    //             ->schema([
-                    //                 Grid::make(4)->schema([
-                    //                     TextInput::make('id')->hidden()->dehydrated(),
-                    //                     TextInput::make('product_id')->hidden()->dehydrated(),
-
-                    //                     TextInput::make('product_name')
-                    //                         ->label('Spare Parts')
-                    //                         ->disabled()
-                    //                         ->dehydrated(false)
-                    //                         ->columnSpanFull()
-                    //                         ->afterStateHydrated(function ($component, $state, $record) {
-
-                    //                             if (!$record?->product_id) {
-                    //                                 return;
-                    //                             }
-
-                    //                             $product = Product::find($record->product_id);
-
-                    //                             if (!$product) {
-                    //                                 return;
-                    //                             }
-
-                    //                             $component->state(
-                    //                                 $product->name . ' (' . $product->barcode . ')'
-                    //                             );
-                    //                         }),
-
-                    //                     TextInput::make('quantity')
-                    //                         ->label('Requested Qty')
-                    //                         ->disabled(),
-
-                    //                     Select::make('vendor_id')
-                    //                         ->label('Vendor')
-                    //                         ->options(Vendor::pluck('name', 'id'))
-                    //                         ->searchable()
-                    //                         ->reactive()
-                    //                         ->visible(
-                    //                             fn($get) =>
-                    //                             $get('../../method') === 'purchase'
-                    //                         )
-                    //                         ->required(
-                    //                             fn($get) =>
-                    //                             $get('../../method') === 'purchase'
-                    //                         ),
-
-                    //                     TextInput::make('approved_quantity')
-                    //                         ->label('Approved Qty')
-                    //                         ->numeric()
-                    //                         ->required()
-                    //                         ->default(0)
-                    //                         ->lazy()
-                    //                         ->afterStateUpdated(function ($state, callable $get, callable $set) {
-                    //                             $price = (float) ($get('approved_price') ?? 0);
-                    //                             $set('approved_total', (float) $state * $price);
-                    //                         }),
-
-                    //                     TextInput::make('approved_price')
-                    //                         ->label('Approved Price')
-                    //                         ->numeric()
-                    //                         ->required()
-                    //                         ->default(0)
-                    //                         ->lazy()
-                    //                         ->afterStateUpdated(function ($state, callable $get, callable $set) {
-                    //                             $qty = (float) ($get('approved_quantity') ?? 0);
-                    //                             $set('approved_total', $qty * (float) $state);
-                    //                         }),
-
-                    //                     TextInput::make('approved_total')
-                    //                         ->label('Approved Total')
-                    //                         ->disabled()
-                    //                         ->dehydrated(true)
-                    //                         ->numeric()
-                    //                         ->default(0),
-                    //                 ]),
-
-
-                    //                 Forms\Components\Placeholder::make('linked_products')
-                    //                     ->label('Original Product & Linked Products')
-                    //                     ->content(function (Get $get, PurchaseRequisition $record) {
-                    //                         $productId = $get('product_id');
-
-                    //                         if (! $productId) {
-                    //                             return 'Product not found.';
-                    //                         }
-
-                    //                         $product = Product::find($productId);
-
-                    //                         if (! $product) {
-                    //                             return 'Product not found.';
-                    //                         }
-
-                    //                         $products = $product->allLinkedProducts()
-                    //                             ->push($product)
-                    //                             ->unique('id');
-
-                    //                         $stock = StoreInventory::query()
-                    //                             ->where('store_id', $record->store_id)
-                    //                             ->whereIn('product_id', $products->pluck('id'))
-                    //                             ->pluck('quantity', 'product_id');
-
-                    //                         return new \Illuminate\Support\HtmlString(
-                    //                             '<div class="space-y-2">' .
-                    //                                 $products->map(function ($item) use ($stock) {
-                    //                                     $available = (int) ($stock[$item->id] ?? 0);
-
-                    //                                     return '<div class="flex justify-between border-b py-2">' .
-                    //                                         '<span>' . e($item->name) . ' (' . e($item->barcode) . ')</span>' .
-                    //                                         '<strong>Stock: ' . $available . '</strong>' .
-                    //                                         '</div>';
-                    //                                 })->implode('') .
-                    //                                 '</div>'
-                    //                         );
-                    //                     })
-                    //                     ->columnSpanFull(),
-                    //             ])
-                    //             ->columns('full')
-                    //             ->default(function ($record, $get) {
-
-                    //                 $globalVendor = $get('vendor_id');
-
-                    //                 return $record?->items?->map(fn($i) => [
-
-                    //                     'id' => $i->id,
-
-                    //                     // ✅ IMPORTANT
-                    //                     'product_id' => $i->product_id,
-
-                    //                     // ✅ SHOW NAME + BARCODE
-                    //                     'product_name' =>
-                    //                     $i->product?->name .
-                    //                         ' (' .
-                    //                         $i->product?->barcode .
-                    //                         ')',
-
-                    //                     'quantity' => $i->quantity,
-
-                    //                     'purchase_price' => $i->purchase_price,
-
-                    //                     'approved_quantity' =>
-                    //                     $i->approved_quantity ?? $i->quantity,
-
-                    //                     'approved_price' =>
-                    //                     $i->approved_price ?? $i->purchase_price,
-
-                    //                     'approved_total' => ($i->approved_quantity ?? $i->quantity)
-                    //                         *
-                    //                         ($i->approved_price ?? $i->purchase_price),
-
-                    //                     'vendor_id' =>
-                    //                     $i->vendor_id ?? $globalVendor,
-
-                    //                 ])->toArray() ?? [];
-                    //             })
-                    //             ->columns('full'),
-                    //     ])
-                    //     ->action(function (PurchaseRequisition $record, array $data) {
-                    //         $globalVendor = $data['vendor_id'] ?? null;
-
-                    //         // Check inactive products
-                    //         $inactiveProducts = $record->items
-                    //             ->filter(fn($item) => !$item->product || !$item->product->is_active);
-
-                    //         if ($inactiveProducts->isNotEmpty()) {
-
-                    //             $productNames = $inactiveProducts
-                    //                 ->map(fn($item) => $item->product?->name)
-                    //                 ->implode(', ');
-
-                    //             throw \Illuminate\Validation\ValidationException::withMessages([
-                    //                 'method' => "Approval failed. Please activate these product(s) first: {$productNames}",
-                    //             ]);
-                    //         }
-
-
-                    //         // CONSUME EXISTING BRANCH STOCK
-                    //         if ($data['method'] === 'consume') {
-
-                    //             DB::transaction(function () use ($record, $data) {
-
-                    //                 // Lock requisition to prevent duplicate approval
-                    //                 $requisition = PurchaseRequisition::query()
-                    //                     ->lockForUpdate()
-                    //                     ->findOrFail($record->id);
-
-                    //                 if ($requisition->status !== 'pending') {
-                    //                     throw ValidationException::withMessages([
-                    //                         'method' => 'This requisition has already been processed.',
-                    //                     ]);
-                    //                 }
-
-                    //                 $items = $requisition->items()->with('product')->get();
-
-                    //                 // Match submitted repeater data using the hidden item ID
-                    //                 $submittedItems = collect($data['items'] ?? [])
-                    //                     ->keyBy(fn($row) => $row['id'] ?? null);
-
-                    //                 foreach ($items as $item) {
-
-                    //                     $itemData = $submittedItems->get($item->id);
-
-                    //                     if (! $itemData) {
-                    //                         throw ValidationException::withMessages([
-                    //                             'method' => "Missing approval details for {$item->product?->name}.",
-                    //                         ]);
-                    //                     }
-
-                    //                     $approvedQuantity = (int) (
-                    //                         $itemData['approved_quantity'] ?? $item->quantity
-                    //                     );
-
-                    //                     if ($approvedQuantity <= 0) {
-                    //                         throw ValidationException::withMessages([
-                    //                             'method' => "Approved quantity must be greater than zero for {$item->product?->name}.",
-                    //                         ]);
-                    //                     }
-
-                    //                     // Original product plus linked products from both directions
-                    //                     $allowedProductIds = $item->product
-                    //                         ->allLinkedProducts()
-                    //                         ->pluck('id')
-                    //                         ->push($item->product_id)
-                    //                         ->unique()
-                    //                         ->map(fn($id) => (int) $id)
-                    //                         ->values()
-                    //                         ->all();
-
-                    //                     $allocations = collect($itemData['allocations'] ?? []);
-
-                    //                     if ($allocations->isEmpty()) {
-                    //                         throw ValidationException::withMessages([
-                    //                             'method' => "Select at least one product for {$item->product?->name}.",
-                    //                         ]);
-                    //                     }
-
-                    //                     // Aggregate repeated product selections
-                    //                     $allocations = $allocations
-                    //                         ->groupBy(fn($allocation) => (int) ($allocation['product_id'] ?? 0))
-                    //                         ->map(fn($rows, $productId) => [
-                    //                             'product_id' => (int) $productId,
-                    //                             'quantity' => $rows->sum(
-                    //                                 fn($row) => (int) ($row['quantity'] ?? 0)
-                    //                             ),
-                    //                         ])
-                    //                         ->values();
-
-                    //                     $totalAllocated = $allocations->sum('quantity');
-
-                    //                     if ($totalAllocated !== $approvedQuantity) {
-                    //                         throw ValidationException::withMessages([
-                    //                             'method' => "For {$item->product?->name}, allocated quantity ({$totalAllocated}) must equal approved quantity ({$approvedQuantity}).",
-                    //                         ]);
-                    //                     }
-
-                    //                     foreach ($allocations as $allocation) {
-
-                    //                         $productId = $allocation['product_id'];
-                    //                         $quantity = (int) $allocation['quantity'];
-
-                    //                         if (! in_array($productId, $allowedProductIds, true)) {
-                    //                             throw ValidationException::withMessages([
-                    //                                 'method' => "Selected product is not linked to {$item->product?->name}.",
-                    //                             ]);
-                    //                         }
-
-                    //                         if ($quantity <= 0) {
-                    //                             throw ValidationException::withMessages([
-                    //                                 'method' => 'Allocation quantity must be greater than zero.',
-                    //                             ]);
-                    //                         }
-
-                    //                         // Lock the actual branch stock row
-                    //                         $inventory = StoreInventory::query()
-                    //                             ->where('store_id', $requisition->store_id)
-                    //                             ->where('product_id', $productId)
-                    //                             ->lockForUpdate()
-                    //                             ->first();
-
-                    //                         if (! $inventory || $inventory->quantity < $quantity) {
-                    //                             $productName = Product::find($productId)?->name ?? 'Selected product';
-                    //                             $available = $inventory?->quantity ?? 0;
-
-                    //                             throw ValidationException::withMessages([
-                    //                                 'method' => "{$productName}: requested {$quantity}, but only {$available} available in this branch.",
-                    //                             ]);
-                    //                         }
-
-                    //                         // Deduct actual selected product stock
-                    //                         $inventory->quantity -= $quantity;
-                    //                         $inventory->save();
-
-                    //                         // Preserve allocation history against original requested item
-                    //                         PurchaseRequisitionItemFulfillment::create([
-                    //                             'purchase_requisition_item_id' => $item->id,
-                    //                             'product_id' => $productId,
-                    //                             'quantity' => $quantity,
-                    //                             'created_by' => Auth::id(),
-                    //                         ]);
-                    //                     }
-
-                    //                     // Save approval quantity without changing original product_id
-                    //                     $item->approved_quantity = $approvedQuantity;
-                    //                     $item->approved_price = $item->purchase_price ?? 0;
-                    //                     $item->total_price = $approvedQuantity * ($item->approved_price ?? 0);
-                    //                     $item->save();
-                    //                 }
-
-                    //                 // Mark approved only after all stock deductions succeed
-                    //                 $requisition->update([
-                    //                     'status' => 'approved',
-                    //                     'approved_by' => Auth::id(),
-                    //                     'approved_at' => now(),
-                    //                 ]);
-                    //             });
-
-                    //             return;
-                    //         }
-
-                    //         // 1. Save approved quantities + vendor
-                    //         foreach ($record->items as $index => $item) {
-                    //             $approvedQuantity = $data['items'][$index]['approved_quantity'] ?? null;
-                    //             $approvedPrice = $data['items'][$index]['approved_price'] ?? $item->purchase_price ?? 0;
-
-                    //             // 👇 If no vendor chosen per line, fallback to global vendor
-                    //             $vendorId = $data['items'][$index]['vendor_id'] ?? $globalVendor;
-
-                    //             if ($approvedQuantity !== null) {
-                    //                 $item->approved_quantity = (int) $approvedQuantity;
-                    //                 $item->approved_price = $approvedPrice;
-                    //                 $item->total_price = $approvedQuantity * $approvedPrice;
-                    //                 $item->vendor_id = $vendorId;
-                    //                 $item->save();
-                    //             }
-                    //         }
-
-                    //         // 2. Handle fulfillment
-                    //         if ($data['method'] === 'purchase') {
-                    //             $allItems = $record->items;
-
-                    //             // Ensure every line has vendor
-                    //             $missingVendorCount = $allItems->whereNull('vendor_id')->count();
-                    //             if ($missingVendorCount > 0) {
-                    //                 throw \Illuminate\Validation\ValidationException::withMessages([
-                    //                     'method' => "{$missingVendorCount} item(s) don't have a vendor selected.",
-                    //                 ]);
-                    //             }
-
-                    //             // ✅ FIX: group by vendor_id properly
-                    //             $byVendor = $allItems->groupBy(fn($i) => (int) $i->vendor_id);
-
-                    //             foreach ($byVendor as $vendorId => $vendorItems) {
-                    //                 $invoice = Invoice::create([
-                    //                     'document_type' => 'purchase_order',
-                    //                     'store_id' => $record->store_id,
-                    //                     'billable_id' => $vendorId,
-                    //                     'billable_type' => Vendor::class,
-                    //                     'document_date' => now(),
-                    //                     'status' => 'pending',
-                    //                     'notes' => $record->notes,
-                    //                     'created_by' => Auth::id(),
-                    //                     // ✅ LINK TO PURCHASE REQUISITION
-                    //                     'purchase_req_to_purchase_order_no' => $record->id,
-                    //                 ]);
-
-                    //                 $invoiceItems = $vendorItems->map(function ($i) {
-                    //                     $qty = $i->approved_quantity ?? $i->quantity ?? 0;
-                    //                     $unitPrice = $i->approved_price ?? $i->purchase_price ?? 0;
-
-                    //                     return [
-                    //                         'product_id' => $i->product_id,
-                    //                         'description' => $i->product?->name,
-                    //                         'quantity' => $qty,
-                    //                         'unit_price' => $unitPrice,
-                    //                         'total_amount' => $qty * $unitPrice,
-                    //                     ];
-                    //                 })->values()->all();
-
-                    //                 $invoice->items()->createMany($invoiceItems);
-                    //                 $invoice->update(['total_amount' => collect($invoiceItems)->sum('total_amount')]);
-                    //             }
-                    //         } elseif ($data['method'] === 'transfer') {
-                    //             // TRANSFER: single transfer order
-                    //             $fromStoreId = $data['destination_store_id'] ?? null;
-                    //             $toStoreId = $record->store_id;
-
-                    //             $invoice = Invoice::create([
-                    //                 'document_type' => 'transfer_order',
-                    //                 'store_id' => $record->store_id,
-                    //                 'billable_id' => $fromStoreId,
-                    //                 'billable_type' => Store::class,
-                    //                 'destination_store_id' => $toStoreId,
-                    //                 'document_date' => now(),
-                    //                 'status' => 'pending',
-                    //                 'notes' => $record->notes,
-                    //                 'created_by' => Auth::id(),
-                    //                 // ✅ LINK TO PURCHASE REQUISITION
-                    //                 'purchase_req_to_purchase_order_no' => $record->id,
-                    //             ]);
-
-                    //             $items = $record->items->map(function ($item) {
-                    //                 return [
-                    //                     'product_id' => $item->product_id,
-                    //                     'description' => $item->product?->name,
-                    //                     'quantity' => $item->approved_quantity ?? $item->quantity,
-                    //                     'unit_price' => 0,
-                    //                     'total_amount' => 0,
-                    //                 ];
-                    //             })->values()->all();
-
-                    //             $invoice->items()->createMany($items);
-                    //             $invoice->update(['total_amount' => 0]);
-                    //         }
-
-                    //         // 3. Mark requisition approved
-                    //         $record->update([
-                    //             'status' => 'approved',
-                    //             'approved_by' => Auth::id(),
-                    //             'approved_at' => now(),
-                    //         ]);
-                    //     }),
-
-
 
                     Action::make('approve')
                         ->label('Approve')
@@ -1545,13 +1073,17 @@ class PurchaseRequisitionResource extends Resource
 
 
                     Tables\Actions\BulkAction::make('bulkFulfill')
-                        ->label('Bulk Approve & Create PO')
+                        ->label('Bulk Approve')
                         ->icon('heroicon-o-shopping-cart')
                         ->color('success')
+                        ->disabled(function ($livewire): bool {
+                            $records = $livewire->getSelectedTableRecords();
+
+                            return $records->pluck('store_id')->unique()->count() > 1;
+                        })
                         ->modalHeading('Bulk Approve Requisitions & Create Purchase Order')
                         ->modalWidth('7xl')
-                        ->deselectRecordsAfterCompletion()
-
+                        ->modalCancelActionLabel('Cancel')
                         ->form(function (Collection $records) {
 
                             $records->loadMissing(['items.product', 'store']);
@@ -1562,16 +1094,15 @@ class PurchaseRequisitionResource extends Resource
                                 ]);
                             }
 
-                            if ($records->pluck('store_id')->unique()->count() !== 1) {
-                                throw ValidationException::withMessages([
-                                    'vendor_id' => 'Select requisitions from the same branch only.',
-                                ]);
-                            }
-
                             if ($records->contains(fn($req) => $req->status !== 'pending')) {
-                                throw ValidationException::withMessages([
-                                    'vendor_id' => 'Only pending requisitions can be approved.',
-                                ]);
+                                Notification::make()
+                                    ->title('Invalid Requisition Status')
+                                    ->body('Only pending requisitions can be approved.')
+                                    ->danger()
+                                    ->persistent()
+                                    ->send();
+
+                                return [];
                             }
 
                             $storeId = $records->first()->store_id;
@@ -1858,6 +1389,32 @@ class PurchaseRequisitionResource extends Resource
 
                         ->action(function (Collection $records, array $data) {
 
+                            // 1. Check that all selected requisitions belong to one branch.
+                            $storeIds = $records->pluck('store_id')->unique();
+
+                            if ($storeIds->count() !== 1) {
+                                Notification::make()
+                                    ->title('Multiple Branches Selected')
+                                    ->body('Please select requisitions from one branch only.')
+                                    ->danger()
+                                    ->persistent()
+                                    ->send();
+
+                                return;
+                            }
+
+                            // 2. Check pending status.
+                            if ($records->contains(fn($req) => $req->status !== 'pending')) {
+                                Notification::make()
+                                    ->title('Invalid Requisition Status')
+                                    ->body('Only pending requisitions can be approved.')
+                                    ->danger()
+                                    ->persistent()
+                                    ->send();
+
+                                return;
+                            }
+
                             try {
 
                                 DB::transaction(function () use ($records, $data) {
@@ -1943,10 +1500,10 @@ class PurchaseRequisitionResource extends Resource
                                             $totalAmount = 0;
 
                                             /*
-                         * CASE 1:
-                         * No allocations selected.
-                         * Purchase the originally requested product.
-                         */
+                                            * CASE 1:
+                                            * No allocations selected.
+                                            * Purchase the originally requested product.
+                                            */
                                             if ($allocations->isEmpty()) {
 
                                                 $approvedQty = (float) (
@@ -1997,9 +1554,9 @@ class PurchaseRequisitionResource extends Resource
                                             } else {
 
                                                 /*
-                             * CASE 2:
-                             * Original + linked product allocations.
-                             */
+                                                * CASE 2:
+                                                * Original + linked product allocations.
+                                                */
 
                                                 if (! $item->product) {
                                                     throw ValidationException::withMessages([
@@ -2156,7 +1713,12 @@ class PurchaseRequisitionResource extends Resource
                                     ->send();
                             } catch (ValidationException $e) {
 
-                                throw $e;
+                                Notification::make()
+                                    ->title('Approval Failed')
+                                    ->body($e->getMessage())
+                                    ->danger()
+                                    ->persistent()
+                                    ->send();
                             } catch (Throwable $e) {
 
                                 Log::error('Bulk requisition approval failed', [
@@ -2167,8 +1729,8 @@ class PurchaseRequisitionResource extends Resource
                                 ]);
 
                                 Notification::make()
-                                    ->title('Bulk approval failed')
-                                    ->body($e->getMessage())
+                                    ->title('Something Went Wrong')
+                                    ->body('Unable to complete bulk approval. Please try again.')
                                     ->danger()
                                     ->persistent()
                                     ->send();

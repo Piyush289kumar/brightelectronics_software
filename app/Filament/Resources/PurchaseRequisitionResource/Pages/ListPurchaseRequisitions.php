@@ -16,4 +16,9 @@ class ListPurchaseRequisitions extends ListRecords
             Actions\CreateAction::make(),
         ];
     }
+
+    public function updatedSelectedTableRecords(): void
+    {
+        $this->dispatch('$refresh');
+    }
 }
