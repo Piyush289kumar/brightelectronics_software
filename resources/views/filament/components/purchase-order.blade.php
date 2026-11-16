@@ -434,6 +434,19 @@
                         </td>
                     </tr>
                     @endforeach
+                    
+                    <tr>
+                        <td colspan="2" class="text-right">
+                            <b>GRAND TOTAL</b>
+                        </td>
+                        <td class="text-center">
+                            <b>{{ number_format((float) collect($poDisplayRows)->sum('quantity'), 0) }}</b>
+                        </td>
+                        <td></td>
+                        <td class="text-right">
+                            <b>Rs.{{ number_format((float) collect($poDisplayRows)->sum('total_amount'), 2) }}</b>
+                        </td>
+                    </tr>
                 </tbody>
             </table>
 
