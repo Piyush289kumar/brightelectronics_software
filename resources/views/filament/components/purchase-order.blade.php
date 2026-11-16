@@ -255,37 +255,34 @@
     continue;
     }
 
+
     foreach ($requisition->items as $requisitionItem) {
     $originalProduct = $requisitionItem->product;
     $fulfillments = $requisitionItem->fulfillments;
 
     $partNumbers = [];
+    $unitPrices = [];
+
     $totalQty = 0;
     $totalAmount = 0;
+    $originalQty = 0;
+    $originalAmount = 0;
 
-    $originalQty = $fulfillments
+    // Original product quantity.
+    $originalQty = (float) $fulfillments
     ->where('product_id', $requisitionItem->product_id)
     ->sum('quantity');
 
-    // Original requested product always comes first.
+    // Original product comes first.
     if ($originalProduct) {
-    $partNumbers[] = $originalProduct->barcode . ' [' . number_format((float) $originalQty, 0) . ']';
+    $partNumbers[] = ($originalProduct->barcode ?? 'N/A')
+    . ' [' . number_format($originalQty, 0) . ']';
     }
 
     foreach ($fulfillments as $fulfillment) {
-    $totalQty += (float) $fulfillment->quantity;
+    $quantity = (float) $fulfillment->quantity;
+    $totalQty += $quantity;
 
-    // Add linked products after the original product.
-    if ($fulfillment->product_id != $requisitionItem->product_id) {
-    $linkedProduct = $fulfillment->product;
-
-    if ($linkedProduct) {
-    $partNumbers[] = $linkedProduct->barcode
-    . ' [' . number_format((float) $fulfillment->quantity, 0) . ']';
-    }
-    }
-
-    // Match the PO invoice line using product and quantity.
     $lineIndex = $availableInvoiceItems->search(
     function ($line) use ($fulfillment) {
     return $line->product_id == $fulfillment->product_id
@@ -302,33 +299,82 @@
         );
         }
 
+        $invoiceLine = null;
+
         if ($lineIndex !== false) {
         $invoiceLine = $availableInvoiceItems->get($lineIndex);
 
-        $totalAmount += (float) $invoiceLine->total_amount;
+        $lineAmount = (float) (
+        $invoiceLine->total_amount
+        ?? ((float) $invoiceLine->unit_price * $quantity)
+        );
 
-        // Consume the matched line so it isn't counted twice.
+        $totalAmount += $lineAmount;
+
+        // Consume matched invoice line.
         $availableInvoiceItems->forget($lineIndex);
+        } else {
+        $lineAmount = 0;
+        }
+
+        $productUnitPrice = $quantity > 0
+        ? $lineAmount / $quantity
+        : 0;
+
+        // Original product price.
+        if ($fulfillment->product_id == $requisitionItem->product_id) {
+        $originalAmount += $lineAmount;
+        continue;
+        }
+
+        // Linked product and its individual unit price.
+        $linkedProduct = $fulfillment->product;
+
+        if ($linkedProduct) {
+        $partNumbers[] = ($linkedProduct->barcode ?? 'N/A')
+        . ' [' . number_format($quantity, 0) . ']';
+
+        $unitPrices[] = number_format($productUnitPrice, 2);
         }
         }
 
+        // Original product unit price comes first.
+        $originalUnitPrice = $originalQty > 0
+        ? $originalAmount / $originalQty
+        : 0;
+
+        array_unshift(
+        $unitPrices,
+        number_format($originalUnitPrice, 2)
+        );
+        
+        // Correct requisition row
         $poDisplayRows[] = [
-        'part_numbers' => implode(' / ', $partNumbers),
-        'quantity' => $totalQty,
-        'unit_price' => $totalQty > 0 ? $totalAmount / $totalQty : 0,
-        'total_amount' => $totalAmount,
+            'part_numbers' => implode(' / ', $partNumbers),
+            'unit_prices' => implode(' / ', $unitPrices),
+            'quantity' => $totalQty,
+            'total_amount' => $totalAmount,
         ];
-        }
+
         }
 
+        }
+
+        // Fallback for old POs without a matching requisition reference.
         // Fallback for old POs without a matching requisition reference.
         if (empty($poDisplayRows)) {
         foreach ($record->items as $invoiceItem) {
         $poDisplayRows[] = [
         'part_numbers' => ($invoiceItem->product?->barcode ?? 'N/A')
-        . ' [' . $invoiceItem->quantity . ']',
+        . ' [' . number_format((float) $invoiceItem->quantity, 0) . ']',
+
+        'unit_prices' => number_format(
+        (float) $invoiceItem->unit_price,
+        2
+        ),
+
         'quantity' => $invoiceItem->quantity,
-        'unit_price' => $invoiceItem->unit_price,
+
         'total_amount' => $invoiceItem->total_amount ?? 0,
         ];
         }
@@ -426,7 +472,7 @@
                         </td>
 
                         <td class="text-right">
-                            Rs.{{ number_format($row['unit_price'], 2) }}
+                            Rs.{{ $row['unit_prices'] }}
                         </td>
 
                         <td class="text-right">
@@ -434,7 +480,7 @@
                         </td>
                     </tr>
                     @endforeach
-                    
+
                     <tr>
                         <td colspan="2" class="text-right">
                             <b>GRAND TOTAL</b>

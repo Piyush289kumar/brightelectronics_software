@@ -441,6 +441,252 @@ class PurchaseOrderResource extends BaseResource
         $set('total_amount', round($total, 2));
         $set('discount_amount_per_item', round($discountAmount, 2));
     }
+
+
+    protected static function buildPurchaseOrderTemplateBody($record): string
+    {
+        $record->loadMissing(['items.product', 'billable']);
+
+        $template = DocumentTemplate::findOrFail(6);
+        $templateBody = (string) $template->body;
+
+        // Get requisition IDs from the PO reference and bulk PO notes.
+        $requisitionIds = [];
+
+        if (!empty($record->purchase_req_to_purchase_order_no)) {
+            preg_match_all(
+                '/\d+/',
+                (string) $record->purchase_req_to_purchase_order_no,
+                $matches
+            );
+
+            $requisitionIds = array_merge($requisitionIds, $matches[0]);
+        }
+
+        if (!empty($record->notes)) {
+            preg_match_all('/#(\d+)/', $record->notes, $matches);
+            $requisitionIds = array_merge($requisitionIds, $matches[1]);
+        }
+
+        $requisitionIds = array_values(array_unique($requisitionIds));
+
+        $requisitions = \App\Models\PurchaseRequisition::with([
+            'items.product',
+            'items.fulfillments.product',
+        ])
+            ->whereIn('id', $requisitionIds)
+            ->get()
+            ->keyBy('id');
+
+        // Invoice lines available for matching with fulfillment products.
+        $availableInvoiceItems = $record->items
+            ->sortBy('id')
+            ->values();
+
+        /*
+     * Match an invoice line against a fulfillment.
+     * A matched line is consumed to prevent duplicate amounts.
+     */
+        $matchInvoiceLine = function ($fulfillment) use (&$availableInvoiceItems) {
+            $lineIndex = $availableInvoiceItems->search(
+                function ($line) use ($fulfillment) {
+                    return $line->product_id == $fulfillment->product_id
+                        && abs(
+                            (float) $line->quantity - (float) $fulfillment->quantity
+                        ) < 0.0001;
+                }
+            );
+
+            if ($lineIndex === false) {
+                $lineIndex = $availableInvoiceItems->search(
+                    fn($line) => $line->product_id == $fulfillment->product_id
+                );
+            }
+
+            if ($lineIndex === false) {
+                return null;
+            }
+
+            $invoiceLine = $availableInvoiceItems->get($lineIndex);
+            $availableInvoiceItems->forget($lineIndex);
+
+            return $invoiceLine;
+        };
+
+        $poDisplayRows = [];
+
+        foreach ($requisitionIds as $requisitionId) {
+            $requisition = $requisitions->get($requisitionId);
+
+            if (!$requisition) {
+                continue;
+            }
+
+            foreach ($requisition->items as $requisitionItem) {
+                $originalProduct = $requisitionItem->product;
+                $fulfillments = $requisitionItem->fulfillments;
+
+                $originalQty = (float) $fulfillments
+                    ->where('product_id', $requisitionItem->product_id)
+                    ->sum('quantity');
+
+                $totalQty = 0;
+                $totalAmount = 0;
+                $originalAmount = 0;
+
+                $partNumbers = [];
+                $unitPrices = [];
+
+                // Original product always appears first.
+                if ($originalProduct) {
+                    $partNumbers[] = ($originalProduct->barcode ?? 'N/A')
+                        . ' [' . number_format($originalQty, 0) . ']';
+                }
+
+                // Process every fulfilled product.
+                foreach ($fulfillments as $fulfillment) {
+                    $quantity = (float) $fulfillment->quantity;
+                    $totalQty += $quantity;
+
+                    $invoiceLine = null;
+
+                    if ($quantity > 0) {
+                        $invoiceLine = $matchInvoiceLine($fulfillment);
+                    }
+
+                    $lineAmount = $invoiceLine
+                        ? (float) ($invoiceLine->total_amount
+                            ?? ((float) $invoiceLine->unit_price * $quantity))
+                        : 0;
+
+                    $totalAmount += $lineAmount;
+
+                    // Original product price is calculated separately.
+                    if ($fulfillment->product_id == $requisitionItem->product_id) {
+                        $originalAmount += $lineAmount;
+                        continue;
+                    }
+
+                    // Linked product comes after the original product.
+                    $linkedProduct = $fulfillment->product;
+
+                    if ($linkedProduct) {
+                        $partNumbers[] = ($linkedProduct->barcode ?? 'N/A')
+                            . ' [' . number_format($quantity, 0) . ']';
+
+                        $linkedUnitPrice = $invoiceLine
+                            ? ($quantity > 0
+                                ? $lineAmount / $quantity
+                                : (float) $invoiceLine->unit_price)
+                            : 0;
+
+                        $unitPrices[] = number_format($linkedUnitPrice, 2);
+                    }
+                }
+
+                // Original product's unit price is always the first price.
+                $originalUnitPrice = $originalQty > 0
+                    ? $originalAmount / $originalQty
+                    : 0;
+
+                array_unshift(
+                    $unitPrices,
+                    number_format($originalUnitPrice, 2)
+                );
+
+                $poDisplayRows[] = [
+                    'part_numbers' => implode(' / ', $partNumbers),
+                    'unit_prices' => implode(' / ', $unitPrices),
+                    'quantity' => $totalQty,
+                    'total_amount' => $totalAmount,
+                ];
+            }
+        }
+
+        // Fallback for older POs without requisition references.
+        if (empty($poDisplayRows)) {
+            foreach ($record->items as $invoiceItem) {
+                $quantity = (float) $invoiceItem->quantity;
+
+                $poDisplayRows[] = [
+                    'part_numbers' => ($invoiceItem->product?->barcode ?? 'N/A')
+                        . ' [' . number_format($quantity, 0) . ']',
+                    'unit_prices' => number_format(
+                        (float) $invoiceItem->unit_price,
+                        2
+                    ),
+                    'quantity' => $quantity,
+                    'total_amount' => (float) (
+                        $invoiceItem->total_amount
+                        ?? ($invoiceItem->unit_price * $quantity)
+                    ),
+                ];
+            }
+        }
+
+        // Generate item rows for the saved HTML template.
+        $itemsHtml = collect($poDisplayRows)
+            ->values()
+            ->map(function ($row, $index) {
+                return '
+                <tr>
+                    <td style="border:1px solid #000; padding:5px; text-align:center;">
+                        ' . ($index + 1) . '
+                    </td>
+
+                    <td style="border:1px solid #000; padding:5px;">
+                        ' . e($row['part_numbers']) . '
+                    </td>
+
+                    <td style="border:1px solid #000; padding:5px; text-align:center;">
+                        ' . number_format((float) $row['quantity'], 0) . '
+                    </td>
+
+                    <td style="border:1px solid #000; padding:5px; text-align:right;">
+                        Rs. ' . e($row['unit_prices']) . '
+                    </td>
+
+                    <td style="border:1px solid #000; padding:5px; text-align:right;">
+                        Rs. ' . number_format((float) $row['total_amount'], 2) . '
+                    </td>
+                </tr>
+            ';
+            })
+            ->implode('');
+
+        $map = [
+            '$PURCHAS_REQ_NUMBER' => (string) ($record->purchase_req_to_purchase_order_no ?? '--'),
+            '$NUMBER' => (string) $record->number,
+            '$DOCUMENT_DATE' => $record->document_date
+                ? Carbon::parse($record->document_date)->format('d-m-Y')
+                : '',
+            '$PLACE_OF_SUPPLY' => e((string) ($record->place_of_supply ?? '')),
+            '$ACCOUNT_NAME' => e((string) ($record->billable->name ?? '')),
+            '$ACCOUNT_ADDRESS' => e((string) ($record->billable->address ?? '')),
+            '$ACCOUNT_PHONE' => e((string) ($record->billable->phone ?? '')),
+            '$ACCOUNT_GSTIN' => e((string) ($record->billable->gst_number ?? '')),
+            '$ACCOUNT_STATE' => e((string) ($record->billable->state ?? '')),
+
+            '$ITEMS' => $itemsHtml,
+
+            '$TOTAL_QTY' => number_format(
+                (float) collect($poDisplayRows)->sum('quantity'),
+                0
+            ),
+
+            '$TOTAL_AMOUNT' => number_format(
+                (float) collect($poDisplayRows)->sum('total_amount'),
+                2
+            ),
+        ];
+
+        foreach ($map as $key => $value) {
+            $templateBody = str_replace($key, (string) $value, $templateBody);
+        }
+
+        return $templateBody;
+    }
+
     public static function mutateFormDataBeforeSave(array $data): array
     {
         $taxableValue = 0;
@@ -624,69 +870,29 @@ class PurchaseOrderResource extends BaseResource
                                     };
                                 JS);
                         })
-                        ->modalContent(function ($record) {
-                            // 1) Fetch template
-                            $template = DocumentTemplate::find(6);
-                            $templateBody = (string) ($template->body ?? '');
-                            // 2) Build replacements
-                            $itemsHtml = $record->items->map(function ($item, $index) {
-                                $discountPercent = $item->discount ?? 0; // discount %
-                                $discountAmount = $item->discount_amount_per_item ?? 0; // discount ₹
-                                $gstRate = $item->gst_rate ?? 0; // GST %
-                                $gstAmount = $item->gst_amount ?? 0; // GST ₹
 
-                                return "<tr style='border-bottom: 1px solid #000;'>
-                <td style='padding:6px; text-align:center; font-weight: 900;'>" . ($index + 1) . "</td>
-                <td style='padding:6px;'>{$item->product->name}</td>
-                <td style='padding:6px; text-align:center;'>{$item->quantity}</td>
-                <td style='padding:2px; text-align:center;'>₹ " . number_format($item->unit_price, 2) . "</td>
-                <td style='padding:2px; text-align:center;'>₹ " . number_format($discountAmount, 2) . "<br><small>(" . number_format($discountPercent, 0) . "%)</small></td>
-                <td style='padding:2px; text-align:center;'>₹ " . number_format($gstAmount, 2) . "<br><small>(" . number_format($gstRate, 0) . "%)</small></td>
-                <td style='padding:2px; text-align:center;'>₹ " . number_format($item->total_amount, 2) . "</td>
-            </tr>";
-                            })->implode('');
-                            $map = [
-                                '$PURCHAS_REQ_NUMBER' => (string) ($record->purchase_req_to_purchase_order_no ?? "--"),
-                                '$NUMBER' => (string) $record->number,
-                                '$DOCUMENT_DATE' => Carbon::parse($record->document_date)->format('d-m-Y'),
-                                '$PLACE_OF_SUPPLY' => (string) ($record->place_of_supply ?? ''),
-                                '$ACCOUNT_NAME' => (string) ($record->billable->name ?? ''),
-                                '$ACCOUNT_ADDRESS' => (string) ($record->billable->address ?? ''),
-                                '$ACCOUNT_PHONE' => (string) ($record->billable->phone ?? ''),
-                                '$ACCOUNT_GSTIN' => (string) ($record->billable->gst_number ?? ''),
-                                '$ACCOUNT_STATE' => (string) ($record->billable->state ?? ''),
-                                '$SUB_TOTAL' => number_format($record->items->sum(fn($i) => (float) $i->unit_price * (float) $i->quantity), 2),
-                                '$DISCOUNT' => number_format($record->discount_amount, 2),
-                                '$GST_AMOUNT' => number_format($record->gst_amount, 2),
-                                '$TOTAL_AMOUNT' => number_format($record->total_amount, 2),
-                                '$AMOUNT_RECEIVED' => number_format($record->amount_received, 2),
-                                '$AMOUNT_BALANCE' => number_format($record->total_amount - $record->amount_received, 2),
-                                '$YOU_SAVED' => number_format($record->discount_amount, 2),
-                                '$AMOUNT_IN_WORDS' => \NumberFormatter::create('en_IN', \NumberFormatter::SPELLOUT)->format($record->total_amount),
-                                '$ITEMS' => $itemsHtml,
-                            ];
-                            // 3) Replace vars inside template HTML
-                            $body = $templateBody;
-                            foreach ($map as $key => $value) {
-                                $body = str_replace($key, (string) $value, $body);
-                            }
-                            // 4) Delete old document if exists
+                        ->modalContent(function ($record) {
+                            $body = static::buildPurchaseOrderTemplateBody($record);
+
                             if (!empty($record->document_id)) {
                                 Document::where('id', $record->document_id)->delete();
                             }
-                            // 5) Create new document
+
                             $document = Document::create([
                                 'document_template_id' => 6,
                                 'model_type' => Invoice::class,
                                 'model_id' => $record->id,
                                 'body' => $body,
                             ]);
-                            // 6) Update invoice with new document_id
+
                             $record->document_id = $document->id;
                             $record->save();
-                            // 7) Show document preview inside modal
-                            return view('filament-docs::print', ['record' => $document]);
+
+                            return view('filament-docs::print', [
+                                'record' => $document,
+                            ]);
                         })
+
                         ->tooltip('Preview'),
 
                     // ✅ Generate and then Print (with print preview)
@@ -695,82 +901,44 @@ class PurchaseOrderResource extends BaseResource
                         ->color('warning')
                         ->icon('heroicon-s-printer')
                         ->tooltip('Print Document')
-                        ->action(function ($record, $livewire) {
-                            // 1) Fetch template
-                            $template = DocumentTemplate::find(6);
-                            $templateBody = (string) ($template->body ?? '');
-                            // 2) Build replacements
-                            $itemsHtml = $record->items->map(function ($item, $index) {
-                                $discountPercent = $item->discount ?? 0; // discount %
-                                $discountAmount = $item->discount_amount_per_item ?? 0; // discount ₹
-                                $gstRate = $item->gst_rate ?? 0; // GST %
-                                $gstAmount = $item->gst_amount ?? 0; // GST ₹
 
-                                return "<tr style='border-bottom: 1px solid #000;'>
-                <td style='padding:6px; text-align:center; font-weight: 900;'>" . ($index + 1) . "</td>
-                <td style='padding:6px;'>{$item->product->name}</td>
-                <td style='padding:6px; text-align:center;'>{$item->quantity}</td>
-                <td style='padding:2px; text-align:center;'>₹ " . number_format($item->unit_price, 2) . "</td>
-                <td style='padding:2px; text-align:center;'>₹ " . number_format($discountAmount, 2) . "<br><small>(" . number_format($discountPercent, 0) . "%)</small></td>
-                <td style='padding:2px; text-align:center;'>₹ " . number_format($gstAmount, 2) . "<br><small>(" . number_format($gstRate, 0) . "%)</small></td>
-                <td style='padding:2px; text-align:center;'>₹ " . number_format($item->total_amount, 2) . "</td>
-            </tr>";
-                            })->implode('');
-                            $map = [
-                                '$PURCHAS_REQ_NUMBER' => (string) ($record->purchase_req_to_purchase_order_no ?? "--"),
-                                '$NUMBER' => (string) $record->number,
-                                '$DOCUMENT_DATE' => Carbon::parse($record->document_date)->format('d-m-Y'),
-                                '$PLACE_OF_SUPPLY' => (string) ($record->place_of_supply ?? ''),
-                                '$ACCOUNT_NAME' => (string) ($record->billable->name ?? ''),
-                                '$ACCOUNT_ADDRESS' => (string) ($record->billable->address ?? ''),
-                                '$ACCOUNT_PHONE' => (string) ($record->billable->phone ?? ''),
-                                '$ACCOUNT_GSTIN' => (string) ($record->billable->gst_number ?? ''),
-                                '$ACCOUNT_STATE' => (string) ($record->billable->state ?? ''),
-                                '$SUB_TOTAL' => number_format($record->items->sum(fn($i) => (float) $i->unit_price * (float) $i->quantity), 2),
-                                '$DISCOUNT' => number_format($record->discount_amount, 2),
-                                '$GST_AMOUNT' => number_format($record->gst_amount, 2),
-                                '$TOTAL_AMOUNT' => number_format($record->total_amount, 2),
-                                '$AMOUNT_RECEIVED' => number_format($record->amount_received, 2),
-                                '$AMOUNT_BALANCE' => number_format($record->total_amount - $record->amount_received, 2),
-                                '$YOU_SAVED' => number_format($record->discount, 2),
-                                '$AMOUNT_IN_WORDS' => \NumberFormatter::create('en_IN', \NumberFormatter::SPELLOUT)->format($record->total_amount),
-                                '$ITEMS' => $itemsHtml,
-                            ];
-                            // 3) Replace vars inside template HTML
-                            $body = $templateBody;
-                            foreach ($map as $key => $value) {
-                                $body = str_replace($key, (string) $value, $body);
-                            }
-                            // 4) Delete old document if exists
+                        ->action(function ($record, $livewire) {
+                            $body = static::buildPurchaseOrderTemplateBody($record);
+
                             if (!empty($record->document_id)) {
                                 Document::where('id', $record->document_id)->delete();
                             }
-                            // 5) Create new document
+
                             $document = Document::create([
                                 'document_template_id' => 6,
                                 'model_type' => Invoice::class,
                                 'model_id' => $record->id,
                                 'body' => $body,
                             ]);
-                            // 6) Update invoice with new document_id
+
                             $record->document_id = $document->id;
                             $record->save();
-                            // 7) Trigger print preview with hidden iframe
-                            $url = PrintDocument::getUrl(['record' => $document->id]);
+
+                            $url = PrintDocument::getUrl([
+                                'record' => $document->id,
+                            ]);
+
                             $livewire->js(<<<JS
-            const iframe = document.createElement('iframe');
-            iframe.style.position = 'absolute';
-            iframe.style.width = '0';
-            iframe.style.height = '0';
-            iframe.style.border = '0';
-            iframe.src = "{$url}";
-            document.body.appendChild(iframe);
-            iframe.onload = function() {
-                iframe.contentWindow.focus();
-                iframe.contentWindow.print();
-            };
-        JS);
+                        const iframe = document.createElement('iframe');
+                        iframe.style.position = 'absolute';
+                        iframe.style.width = '0';
+                        iframe.style.height = '0';
+                        iframe.style.border = '0';
+                        iframe.src = "{$url}";
+                        document.body.appendChild(iframe);
+
+                        iframe.onload = function() {
+                            iframe.contentWindow.focus();
+                            iframe.contentWindow.print();
+                        };
+                    JS);
                         })
+
                         ->tooltip('Print'),
 
                     Tables\Actions\EditAction::make(),
