@@ -460,7 +460,7 @@ class PurchaseOrderResource extends BaseResource
 
     protected static function buildPurchaseOrderTemplateBody($record): string
     {
-        $record->loadMissing(['items.product', 'billable']);
+        $record->loadMissing(['items.product', 'billable', 'store']);
 
         $template = DocumentTemplate::findOrFail(6);
         $templateBody = (string) $template->body;
@@ -676,6 +676,9 @@ class PurchaseOrderResource extends BaseResource
                 ? Carbon::parse($record->document_date)->format('d-m-Y')
                 : '',
             '$PLACE_OF_SUPPLY' => e((string) ($record->place_of_supply ?? '')),
+            '$VENDOR_CODE' => e((string) ($record->billable->code ?? '')),
+            '$BRANCH_NAME' => e((string) ($record->store->name ?? '')),
+            '$BRANCH_CODE' => e((string) ($record->store->code ?? '')),
             '$ACCOUNT_NAME' => e((string) ($record->billable->name ?? '')),
             '$ACCOUNT_ADDRESS' => e((string) ($record->billable->address ?? '')),
             '$ACCOUNT_PHONE' => e((string) ($record->billable->phone ?? '')),
