@@ -17,6 +17,10 @@ class Account extends Model
         'bank_name',
         'account_number',
         'ifsc_code',
+        'branch_name',
+        'branch_address',
+        'branch_code',
+        'swift_code',
         'upi_id',
         'opening_balance',
         'balance_type',
@@ -24,7 +28,12 @@ class Account extends Model
         'is_active',
     ];
 
-    // Example: link to ledgers
+    protected $casts = [
+        'opening_balance' => 'decimal:2',
+        'current_balance' => 'decimal:2',
+        'is_active' => 'boolean',
+    ];
+
     public function ledgers()
     {
         return $this->hasMany(Ledger::class);

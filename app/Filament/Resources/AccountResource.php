@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+
 use App\Filament\Resources\AccountResource\Pages;
 use App\Models\Account;
 use Filament\Forms;
@@ -24,34 +25,34 @@ class AccountResource extends BaseResource
     {
         return $form->schema([
 
-            // 🔹 General Info
             Forms\Components\Section::make('General Information')
                 ->description('Basic details about this account.')
                 ->schema([
                     Grid::make(2)->schema([
                         Forms\Components\TextInput::make('account_name')
-                            ->required()
                             ->label('Account Name')
-                            ->placeholder('e.g. Primary Bank, Cash, UPI Wallet'),
+                            ->placeholder('e.g. Primary Bank, Cash, UPI Wallet')
+                            ->required()
+                            ->maxLength(191),
 
                         Forms\Components\Select::make('account_type')
+                            ->label('Account Type')
                             ->options([
-                                'current' => 'Current',
                                 'cash' => 'Cash',
                                 'bank' => 'Bank',
                                 'upi' => 'UPI',
                                 'credit_card' => 'Credit Card',
                                 'other' => 'Other',
                             ])
+                            ->default('bank')
                             ->required()
-                            ->default('current')
-                            ->label('Account Type'),
+                            ->live(),
                     ]),
-                ])->collapsible(),
+                ])
+                ->collapsible(),
 
-            // 🔹 Bank / Branch Details
             Forms\Components\Section::make('Bank Details')
-                ->description('Fill this only for Bank Accounts.')
+                ->description('Fill these details for bank accounts.')
                 ->schema([
                     Grid::make(2)->schema([
                         Forms\Components\TextInput::make('bank_name')
@@ -59,28 +60,35 @@ class AccountResource extends BaseResource
                             ->placeholder('e.g. HDFC, SBI, ICICI')
                             ->maxLength(191),
 
-                        Forms\Components\TextInput::make('branch')
+                        Forms\Components\TextInput::make('branch_name')
                             ->label('Branch Name')
                             ->maxLength(191),
-                    ]),
 
-                    Grid::make(2)->schema([
-                        Forms\Components\TextInput::make('account_number')
-                            ->label('Account Number')
+                        Forms\Components\TextInput::make('branch_code')
+                            ->label('Branch Code')
                             ->maxLength(191),
 
                         Forms\Components\TextInput::make('ifsc_code')
                             ->label('IFSC Code')
+                            ->maxLength(191),
+
+                        Forms\Components\TextInput::make('swift_code')
+                            ->label('SWIFT Code')
+                            ->maxLength(191),
+
+                        Forms\Components\TextInput::make('account_number')
+                            ->label('Account Number')
                             ->maxLength(191),
                     ]),
 
                     Forms\Components\Textarea::make('branch_address')
                         ->label('Branch Address')
                         ->rows(2)
-                        ->maxLength(255),
-                ])->collapsible(),
+                        ->maxLength(255)
+                        ->columnSpanFull(),
+                ])
+                ->collapsible(),
 
-            // 🔹 Digital Payment Info
             Forms\Components\Section::make('UPI / Digital Payment')
                 ->description('Optional for UPI accounts.')
                 ->schema([
@@ -88,9 +96,9 @@ class AccountResource extends BaseResource
                         ->label('UPI ID')
                         ->placeholder('example@upi')
                         ->maxLength(191),
-                ])->collapsible(),
+                ])
+                ->collapsible(),
 
-            // 🔹 Balances & Status
             Forms\Components\Section::make('Balance & Status')
                 ->schema([
                     Grid::make(2)->schema([
@@ -98,57 +106,90 @@ class AccountResource extends BaseResource
                             ->numeric()
                             ->default(0)
                             ->prefix('₹')
-                            ->label('Opening Balance'),
+                            ->label('Opening Balance')
+                            ->required(),
+
+                        Forms\Components\Select::make('balance_type')
+                            ->label('Opening Balance Type')
+                            ->options([
+                                'debit' => 'Debit',
+                                'credit' => 'Credit',
+                            ])
+                            ->default('debit')
+                            ->required(),
 
                         Forms\Components\TextInput::make('current_balance')
                             ->numeric()
                             ->default(0)
                             ->prefix('₹')
-                            ->label('Current Balance'),
+                            ->label('Current Balance')
+                            ->required(),
                     ]),
 
                     Forms\Components\Toggle::make('is_active')
                         ->default(true)
                         ->label('Active Account?'),
-                ]),
+                ])
+                ->collapsible(),
         ]);
     }
-
 
     public static function table(Table $table): Table
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('account_name')->label('Account Name')->searchable(),
-                Tables\Columns\BadgeColumn::make('account_type')->colors([
-                    'success' => 'credit',
-                    'danger' => 'debit',
-                    'primary' => 'deposit',
-                    'warning' => 'withdrawal',
-                    'info' => 'bank_transfer',
-                    'gray' => 'upi',
-                ]),
-                Tables\Columns\TextColumn::make('bank_name')->sortable()->searchable(),
-                Tables\Columns\TextColumn::make('account_number'),
+                Tables\Columns\TextColumn::make('account_name')
+                    ->label('Account Name')
+                    ->searchable()
+                    ->sortable(),
+
+                Tables\Columns\BadgeColumn::make('account_type')
+                    ->label('Account Type')
+                    ->colors([
+                        'success' => 'bank',
+                        'warning' => 'cash',
+                        'info' => 'upi',
+                        'danger' => 'credit_card',
+                        'gray' => 'other',
+                    ]),
+
+                Tables\Columns\TextColumn::make('bank_name')
+                    ->label('Bank Name')
+                    ->searchable()
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make('branch_name')->label('Branch Name'),
+                Tables\Columns\TextColumn::make('branch_code')->label('Branch Code'),
+
+                Tables\Columns\TextColumn::make('account_number')
+                    ->label('Account Number'),
 
                 Tables\Columns\TextColumn::make('current_balance')
                     ->money('INR')
                     ->sortable()
                     ->label('Current Balance'),
 
-
                 Tables\Columns\TextColumn::make('opening_balance')
                     ->money('INR')
                     ->sortable()
                     ->label('Opening Balance'),
 
+                Tables\Columns\IconColumn::make('is_active')
+                    ->boolean()
+                    ->label('Active'),
 
-                Tables\Columns\IconColumn::make('is_active')->boolean(),
-                Tables\Columns\TextColumn::make('created_at')->dateTime('d M Y'),
+                Tables\Columns\TextColumn::make('created_at')
+                    ->dateTime('d M Y')
+                    ->sortable(),
             ])
             ->filters([])
-            ->actions([Tables\Actions\EditAction::make(), Tables\Actions\DeleteAction::make()])
-            ->bulkActions([Tables\Actions\DeleteBulkAction::make()]);
+            ->actions([
+                Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make(),
+            ])
+            ->bulkActions([
+                Tables\Actions\DeleteBulkAction::make(),
+            ]);
     }
 
     public static function getRelations(): array
@@ -160,8 +201,8 @@ class AccountResource extends BaseResource
     {
         return [
             'index' => Pages\ListAccounts::route('/'),
-            // 'create' => Pages\CreateAccount::route('/create'),
-            // 'edit' => Pages\EditAccount::route('/{record}/edit'),
+            'create' => Pages\CreateAccount::route('/create'),
+            'edit' => Pages\EditAccount::route('/{record}/edit'),
         ];
     }
 }
