@@ -278,7 +278,8 @@ class StoreInventoryInResource extends BaseResource
                 Forms\Components\Tabs::make('Load Source')
                     ->tabs([
 
-                        Forms\Components\Tabs\Tab::make('Purchase Order')
+                    
+                        Forms\Components\Tabs\Tab::make('Purchase Invoice')
                             ->schema([
 
                                 Select::make('purchase_order_id')
