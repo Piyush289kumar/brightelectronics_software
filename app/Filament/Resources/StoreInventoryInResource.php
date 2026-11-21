@@ -238,51 +238,74 @@ class StoreInventoryInResource extends BaseResource
 
                 // ----------------------------
                 // Inventory Items
-                // ----------------------------
-                // Select::make('purchase_order_id')
-                //     ->label('Load from Purchase Order')
-                //     ->options(
-                //         Invoice::where('document_type', 'purchase_order')
-                //             ->whereNotIn(
-                //                 'id',
-                //                 StoreInventoryIn::whereNotNull('purchase_order_id')
-                //                     ->pluck('purchase_order_id')
-                //             )
-                //             ->latest('id')
-                //             ->pluck('number', 'id')
-                //     )
-                //     ->searchable()
-                //     ->reactive()
-                //     ->afterStateUpdated(function ($state, callable $set) {
-                //         if (!$state) {
-                //             return;
-                //         }
-
-                //         $po = Invoice::with('items')->find($state);
-
-                //         if (!$po) {
-                //             return;
-                //         }
-
-                //         $items = $po->items->map(fn($item) => [
-                //             'product_id' => $item->product_id,
-                //             'quantity' => $item->quantity,
-                //             'note' => 'Imported from PO',
-                //         ])->toArray();
-
-                //         $set('items', $items);
-                //     })
-                //     ->columns(1),
-
-
+                // ----------------------------                
                 Forms\Components\Tabs::make('Load Source')
                     ->tabs([
 
-                    
+                        Forms\Components\Tabs\Tab::make('Purchase Order')
+                            ->schema([
+                                Select::make('purchase_order_source_id')
+                                    ->label('Load from Purchase Order (PON)')
+                                    ->options(function () {
+                                        $usedPurchaseOrders = StoreInventoryIn::query()
+                                            ->whereNotNull('purchase_order_id')
+                                            ->pluck('purchase_order_id')
+                                            ->toArray();
+
+                                        return Invoice::query()
+                                            ->where('document_type', 'purchase_order')
+                                            ->whereNotIn('id', $usedPurchaseOrders)
+                                            ->latest('id')
+                                            ->pluck('number', 'id')
+                                            ->toArray();
+                                    })
+                                    ->searchable()
+                                    ->preload()
+                                    ->live()
+                                    ->afterStateUpdated(function ($state, callable $set) {
+
+                                        if (!$state) {
+                                            $set('items', []);
+                                            $set('notes', null);
+                                            $set('invoice_no', null);
+                                            $set('vendor_id', null);
+                                            $set('invoice_date', null);
+                                            return;
+                                        }
+
+                                        $purchase = Invoice::with(['items', 'billable'])
+                                            ->where('document_type', 'purchase_order')
+                                            ->find($state);
+
+                                        if (!$purchase) {
+                                            $set('items', []);
+                                            return;
+                                        }
+
+                                        $set('invoice_no', $purchase->number);
+                                        $set('vendor_id', $purchase->billable_id);
+                                        $set('invoice_date', $purchase->document_date);
+
+                                        $set(
+                                            'notes',
+                                            'Stock received from Purchase Order: ' . $purchase->number
+                                        );
+
+                                        $set(
+                                            'items',
+                                            $purchase->items->map(fn($item) => [
+                                                'product_id' => $item->product_id,
+                                                'quantity' => $item->quantity,
+                                                'note' => 'Imported from Purchase Order ' . $purchase->number,
+                                            ])->values()->toArray()
+                                        );
+                                    }),
+                            ]),
+
                         Forms\Components\Tabs\Tab::make('Purchase Invoice')
                             ->schema([
 
-                                Select::make('purchase_order_id')
+                                Select::make('purchase_invoice_source_id')
                                     ->label('Load from Purchase Invoice')
                                     ->options(function (callable $get) {
 

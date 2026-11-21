@@ -14,4 +14,20 @@ class CreateStoreInventoryIn extends CreateRecord
     {
         return $this->getResource()::getUrl('index');
     }
+
+    protected function mutateFormDataBeforeCreate(array $data): array
+    {
+        if (!empty($data['purchase_order_source_id'])) {
+            $data['purchase_order_id'] = $data['purchase_order_source_id'];
+        } elseif (!empty($data['purchase_invoice_source_id'])) {
+            $data['purchase_order_id'] = $data['purchase_invoice_source_id'];
+        }
+
+        unset(
+            $data['purchase_order_source_id'],
+            $data['purchase_invoice_source_id']
+        );
+
+        return $data;
+    }
 }
