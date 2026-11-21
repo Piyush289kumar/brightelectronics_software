@@ -65,8 +65,22 @@ class PurchaseOrderResource extends BaseResource
     {
         return $form
             ->schema([
-                Grid::make(3)
+                Grid::make(4)
                     ->schema([
+                        Select::make('store_id')
+                            ->label('Branch')
+                            ->relationship(
+                                name: 'store',
+                                titleAttribute: 'name',
+                                modifyQueryUsing: fn(Builder $query) => $query->orderBy('name')
+                            )
+                            ->getOptionLabelFromRecordUsing(
+                                fn($record) => "{$record->name} [{$record->code}]"
+                            )
+                            ->searchable(['name', 'code'])
+                            ->preload()
+                            ->required(),
+
                         TextInput::make('number')
                             ->label(fn(callable $get) => match ($get('document_type')) {
                                 'purchase_order' => 'PO Number',
@@ -95,6 +109,7 @@ class PurchaseOrderResource extends BaseResource
                             ->required()
                             ->dehydrated(true) // 👈 Force saving to DB
                             ->reactive(),
+
                         Select::make('billable_id')
                             ->label('Select Vendor')
                             ->options(function (callable $get) {
