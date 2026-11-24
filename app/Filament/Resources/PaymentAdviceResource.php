@@ -8,6 +8,7 @@ use App\Filament\Resources\PaymentAdviceResource\RelationManagers;
 use App\Models\Invoice;
 use App\Models\Payment;
 use App\Models\PaymentAdvice;
+use App\Models\Store;
 use App\Models\Vendor;
 use Filament\Forms;
 use Filament\Forms\Form;
@@ -16,7 +17,7 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
-
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Carbon;
 use TomatoPHP\FilamentDocs\Filament\Resources\DocumentResource\Pages\PrintDocument;
 use TomatoPHP\FilamentDocs\Models\Document;
@@ -43,6 +44,40 @@ class PaymentAdviceResource extends BaseResource
 
             Forms\Components\Section::make('Payment Advice')
                 ->schema([
+
+                    Forms\Components\Select::make('store_id')
+                        ->relationship(
+                            name: 'store',
+                            titleAttribute: 'code',
+                            modifyQueryUsing: function (Builder $query) {
+                                $user = Auth::user();
+                                if (!$user) {
+                                    return $query->whereRaw('1 = 0');
+                                }
+                                if ($user->hasAnyRole(['Administrator', 'Developer', 'admin'])) {
+                                    return $query;
+                                }
+                                $storeIds = $user->multi_store_id ?? [];
+
+                                return $query->whereIn('id', is_array($storeIds) ? $storeIds : []);
+                            }
+                        )
+                        ->preload()
+                        ->required()
+                        ->label('Branch')
+                        ->default(fn() => collect(Auth::user()?->multi_store_id ?? [])->first())
+                        ->live()
+                        ->afterStateUpdated(fn(callable $set) => $set('assigned_engineers', []))
+                        ->dehydrated(true)
+                        ->options(
+                            fn() => Store::query()
+                                ->get()
+                                ->mapWithKeys(fn($store) => [
+                                    $store->id => "{$store->name} ({$store->code})",
+                                ])
+                                ->toArray()
+                        ),
+
                     Forms\Components\DatePicker::make('date')
                         ->label('Payment Date')
                         ->required()
@@ -145,12 +180,27 @@ class PaymentAdviceResource extends BaseResource
     {
         return $table
             ->columns([
+                Tables\Columns\TextColumn::make('store.name')->label('Branch')->formatStateUsing(
+                    fn($state, $record) => $record->store ? "{$record->store->name} ({$record->store->code})" : '-'
+                )
+                    ->searchable(['store.name', 'store.code'])->sortable()->toggleable(),
                 Tables\Columns\TextColumn::make("payment_advice_number")->label('Payment Advice Number')->searchable()->sortable()->toggleable(),
-                Tables\Columns\TextColumn::make("vendor.name")
-                ->label('Vendor')->formatStateUsing(fn ($state, $record) => $record->vendor ? "{$record->vendor->name} [{$record->vendor->code}]" : '-')->searchable(['vendor.name'])->sortable()->toggleable(),
+                Tables\Columns\TextColumn::make("vendor.name")->label('Vendor')->formatStateUsing(fn($state, $record) => $record->vendor ? "{$record->vendor->name} [{$record->vendor->code}]" : '-')->searchable(['vendor.name'])->sortable()->toggleable(),
                 Tables\Columns\TextColumn::make("date")->label('Payment Date')->date('d-m-Y')->searchable()->sortable(),
                 Tables\Columns\TextColumn::make("payment_advice_start_date")->label('Start Date')->date('d-m-Y')->searchable()->sortable()->toggleable(),
                 Tables\Columns\TextColumn::make("payment_advice_end_date")->label('End Date')->date('d-m-Y')->searchable()->sortable()->toggleable(),
+                Tables\Columns\TextColumn::make('items_count')->label('Total Advice Items')->counts('items')->sortable(),
+                Tables\Columns\TextColumn::make('items.payment_doc_no')->label('Payment Doc No.')->state(
+                    fn($record) => $record->items()
+                        ->whereNotNull('payment_doc_no')
+                        ->where('payment_doc_no', '!=', '')
+                        ->distinct()
+                        ->orderBy('payment_doc_no')
+                        ->pluck('payment_doc_no')
+                        ->implode(', ')
+                )
+                    ->placeholder('-')->wrap()->toggleable(),
+                Tables\Columns\TextColumn::make('items_sum_amount')->label('Total Payment Amount')->sum('items', 'amount')->money('INR')->sortable(),
             ])
             ->defaultSort('created_at', 'desc')
             ->filters([
