@@ -5,12 +5,15 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\AccountResource\Pages;
 use App\Models\Account;
+use App\Models\Store;
 use Filament\Forms;
 use Filament\Forms\Components\Grid;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Schema\Builder;
+use Illuminate\Support\Facades\Auth;
 
 class AccountResource extends BaseResource
 {
@@ -39,12 +42,14 @@ class AccountResource extends BaseResource
                             ->label('Account Type')
                             ->options([
                                 'cash' => 'Cash',
-                                'bank' => 'Bank',
+                                'current_bank' => 'Current Bank',
                                 'upi' => 'UPI',
+                                'imps' => 'IMPS',
+                                'neft' => 'NEFT',
                                 'credit_card' => 'Credit Card',
                                 'other' => 'Other',
                             ])
-                            ->default('bank')
+                            ->default('current_bank')
                             ->required()
                             ->live(),
                     ]),
@@ -55,17 +60,41 @@ class AccountResource extends BaseResource
                 ->description('Fill these details for bank accounts.')
                 ->schema([
                     Grid::make(2)->schema([
+                        Forms\Components\Select::make('store_id')
+                            ->relationship(
+                                name: 'store',
+                                titleAttribute: 'code',
+                                modifyQueryUsing: function (Builder $query) {
+                                    $user = Auth::user();
+                                    if (!$user) {
+                                        return $query->whereRaw('1 = 0');
+                                    }
+                                    if ($user->hasAnyRole(['Administrator', 'Developer', 'admin'])) {
+                                        return $query;
+                                    }
+                                    $storeIds = $user->multi_store_id ?? [];
+
+                                    return $query->whereIn('id', is_array($storeIds) ? $storeIds : []);
+                                }
+                            )
+                            ->preload()
+                            ->required()
+                            ->label('Branch')
+                            ->default(fn() => collect(Auth::user()?->multi_store_id ?? [])->first())
+                            ->live()
+                            ->afterStateUpdated(fn(callable $set) => $set('assigned_engineers', []))
+                            ->dehydrated(true)
+                            ->options(
+                                fn() => Store::query()
+                                    ->get()
+                                    ->mapWithKeys(fn($store) => [
+                                        $store->id => "{$store->name} ({$store->code})",
+                                    ])
+                                    ->toArray()
+                            ),
                         Forms\Components\TextInput::make('bank_name')
                             ->label('Bank Name')
                             ->placeholder('e.g. HDFC, SBI, ICICI')
-                            ->maxLength(191),
-
-                        Forms\Components\TextInput::make('branch_name')
-                            ->label('Branch Name')
-                            ->maxLength(191),
-
-                        Forms\Components\TextInput::make('branch_code')
-                            ->label('Branch Code')
                             ->maxLength(191),
 
                         Forms\Components\TextInput::make('ifsc_code')
@@ -138,6 +167,10 @@ class AccountResource extends BaseResource
     {
         return $table
             ->columns([
+                Tables\Columns\TextColumn::make('store.name')->label('Branch')->formatStateUsing(
+                    fn($state, $record) => $record->store ? "{$record->store->name} ({$record->store->code})" : '-'
+                )
+                    ->searchable(['store.name', 'store.code'])->sortable()->toggleable(),
                 Tables\Columns\TextColumn::make('account_name')
                     ->label('Account Name')
                     ->searchable()
@@ -146,8 +179,10 @@ class AccountResource extends BaseResource
                 Tables\Columns\BadgeColumn::make('account_type')
                     ->label('Account Type')
                     ->colors([
-                        'success' => 'bank',
+                        'primary' => 'imps',
                         'warning' => 'cash',
+                        'success' => 'current_bank',
+                        'secondary' => 'neft',
                         'info' => 'upi',
                         'danger' => 'credit_card',
                         'gray' => 'other',
@@ -157,9 +192,6 @@ class AccountResource extends BaseResource
                     ->label('Bank Name')
                     ->searchable()
                     ->sortable(),
-
-                Tables\Columns\TextColumn::make('branch_name')->label('Branch Name'),
-                Tables\Columns\TextColumn::make('branch_code')->label('Branch Code'),
 
                 Tables\Columns\TextColumn::make('account_number')
                     ->label('Account Number'),

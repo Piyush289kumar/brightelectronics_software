@@ -14,12 +14,16 @@ return new class extends Migration {
             $table->id();
 
             // General account details
+            $table->foreignId('store_id')->nullable()->constrained()->nullOnDelete();
             $table->string('account_name');                   // e.g., Cash, HDFC Bank, UPI
             $table->enum('account_type', [
                 'cash',
                 'bank',
+                'current_bank',
                 'upi',
                 'credit_card',
+                'imps',
+                'neft',
                 'other'
             ])->default('bank');                              // Type of account
 
