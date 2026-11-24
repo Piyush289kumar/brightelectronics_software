@@ -12,6 +12,7 @@ return new class extends Migration {
     {
         Schema::create('payment_advices', function (Blueprint $table) {
             $table->id();
+            $table->string('payment_advice_number')->nullable();
             $table->date('date');
             $table->date('payment_advice_start_date');
             $table->date('payment_advice_end_date');

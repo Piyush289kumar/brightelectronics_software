@@ -5,6 +5,8 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Spatie\Permission\Traits\HasRoles;
+use Illuminate\Support\Carbon;
+use Illuminate\Validation\ValidationException;
 
 class PaymentAdvice extends Model
 {
@@ -13,6 +15,7 @@ class PaymentAdvice extends Model
     protected $table = 'payment_advices';
 
     protected $fillable = [
+        'payment_advice_number',
         'date',
         'payment_advice_start_date',
         'payment_advice_end_date',
@@ -67,5 +70,39 @@ class PaymentAdvice extends Model
     | Auto-generate Payment Document No
     |--------------------------------------------------------------------------
     */
+
+    protected static function booted(): void
+    {
+        static::creating(function (PaymentAdvice $paymentAdvice) {
+
+            if (filled($paymentAdvice->payment_advice_number)) {
+                return;
+            }
+
+            $vendor = Vendor::find($paymentAdvice->vendor_id);
+
+            if (!$vendor || blank($vendor->code)) {
+                throw ValidationException::withMessages([
+                    'vendor_id' => 'Please select a vendor with a valid vendor code.',
+                ]);
+            }
+
+            $paymentDate = Carbon::parse($paymentAdvice->date ?? now())
+                ->format('d_m_Y');
+
+            $prefix = $vendor->code . '_' . $paymentDate;
+
+            // Get the last sequence number for this vendor and date
+            $lastNumber = static::where('payment_advice_number', 'like', $prefix . '_%')
+                ->orderByRaw('CAST(SUBSTRING_INDEX(payment_advice_number, "_", -1) AS UNSIGNED) DESC')
+                ->value('payment_advice_number');
+
+            $nextNumber = $lastNumber
+                ? ((int) substr($lastNumber, strrpos($lastNumber, '_') + 1)) + 1
+                : 1;
+
+            $paymentAdvice->payment_advice_number = $prefix . '_' . $nextNumber;
+        });
+    }
 
 }
