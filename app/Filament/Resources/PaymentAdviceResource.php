@@ -195,9 +195,7 @@ class PaymentAdviceResource extends BaseResource
                         ->whereNotNull('payment_doc_no')
                         ->where('payment_doc_no', '!=', '')
                         ->distinct()
-                        ->orderBy('payment_doc_no')
-                        ->pluck('payment_doc_no')
-                        ->implode(', ')
+                        ->orderBy('payment_doc_no')->pluck('payment_doc_no')->implode(', ')
                 )
                     ->placeholder('-')->wrap()->toggleable(),
                 Tables\Columns\TextColumn::make('items_sum_amount')->label('Total Payment Amount')->sum('items', 'amount')->money('INR')->sortable(),

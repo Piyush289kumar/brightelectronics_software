@@ -16,6 +16,7 @@ class PaymentAdvice extends Model
 
     protected $fillable = [
         'payment_advice_number',
+        'store_id',
         'date',
         'payment_advice_start_date',
         'payment_advice_end_date',
@@ -64,6 +65,10 @@ class PaymentAdvice extends Model
         return $this->hasMany(PaymentAdviceItem::class);
     }
 
+    public function store()
+    {
+        return $this->belongsTo(Store::class);
+    }
 
     /*
     |--------------------------------------------------------------------------
