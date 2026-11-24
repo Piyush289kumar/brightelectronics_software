@@ -1,0 +1,13 @@
+ALTER TABLE `payment_advices` ADD `store_id` BIGINT(20) UNSIGNED NOT NULL AFTER `payment_advice_number`;
+
+ALTER TABLE `accounts` ADD `store_id` BIGINT(20) UNSIGNED NOT NULL AFTER `id`;
+ALTER TABLE `accounts` CHANGE `account_type` `account_type` ENUM('cash','bank','upi','credit_card','other','imps','neft', 'current_bank') CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'bank';
+
+
+Defect -> LEDGER DEBIT MODE LOGIC FOR VENDOR PAYMENT(debit entry in narration from payment advice no.)
+
+Now requirement 
+We have 2 account per branch one is 1.Cash account 2.Current_bank account now all branch cash payment goes to cash account of that branch
+but after that all type of payment like upi, imps, chaque, card, bank transfer.
+
+And in Purchase Invoice module when we do payment use only payment method is IMPS only for payment to vendors if in that branch have balance in this branch current_bank account then do payment and make ledger entries with details and in norroation/note add purchase invocie number otherwise show popup error incepand balance.
