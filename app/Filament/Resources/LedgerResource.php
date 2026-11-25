@@ -51,59 +51,28 @@ class LedgerResource extends BaseResource
 
                 Forms\Components\Select::make('store_id')
                     ->label('Branch')
-                    ->relationship(
-                        name: 'store',
-                        titleAttribute: 'name',
-                        modifyQueryUsing: function ($query) {
-                            $user = Auth::user();
-
-                            if (! $user) {
-                                return $query->whereRaw('1 = 0');
-                            }
-
-                            if ($user->hasAnyRole([
-                                'Administrator',
-                                'Developer',
-                                'admin',
-                            ])) {
-                                return $query;
-                            }
-
-                            $storeIds = $user->multi_store_id ?? [];
-
-                            if (! is_array($storeIds) || empty($storeIds)) {
-                                return $query->whereRaw('1 = 0');
-                            }
-
-                            return $query->whereIn('id', array_map('intval', $storeIds));
-                        }
-                    )
-                    ->required()
+                    ->relationship('store', 'name')
                     ->searchable()
                     ->preload()
-                    ->default(function () {
-                        $user = Auth::user();
-
-                        if (! $user || $user->hasAnyRole([
-                            'Administrator',
-                            'Developer',
-                            'admin',
-                        ])) {
-                            return null;
+                    ->live()
+                    ->afterStateUpdated(function (Forms\Set $set, Forms\Get $get, $state) {
+                        if (!$state || !$get('payment_mode')) {
+                            $set('account_id', null);
+                            return;
                         }
 
-                        $storeIds = $user->multi_store_id ?? [];
+                        $accountType = $get('payment_mode') === 'Cash'
+                            ? 'cash'
+                            : 'current_bank';
 
-                        return is_array($storeIds) && count($storeIds) === 1
-                            ? $storeIds[0]
-                            : null;
-                    })
-                    ->disabled(fn() => ! Auth::user()?->hasAnyRole([
-                        'Administrator',
-                        'Developer',
-                        'admin',
-                    ]))
-                    ->dehydrated(true),
+                        $account = \App\Models\Account::query()
+                            ->where('store_id', $state)
+                            ->where('account_type', $accountType)
+                            ->where('is_active', true)
+                            ->first();
+
+                        $set('account_id', $account?->id);
+                    }),
 
                 Forms\Components\Select::make('account_id')
                     ->relationship('account', 'account_name') // ✅ Fix here
@@ -137,11 +106,27 @@ class LedgerResource extends BaseResource
                     ])
                     ->searchable()
                     ->live()
-                    ->afterStateUpdated(function (Forms\Set $set, ?string $state) {
-                        // Cash does not require a reference number
+                    ->afterStateUpdated(function (Forms\Set $set, Forms\Get $get, ?string $state) {
                         if ($state === 'Cash') {
                             $set('reference', null);
                         }
+
+                        $storeId = $get('store_id');
+
+                        if (!$storeId || !$state) {
+                            $set('account_id', null);
+                            return;
+                        }
+
+                        $accountType = $state === 'Cash' ? 'cash' : 'current_bank';
+
+                        $account = \App\Models\Account::query()
+                            ->where('store_id', $storeId)
+                            ->where('account_type', $accountType)
+                            ->where('is_active', true)
+                            ->first();
+
+                        $set('account_id', $account?->id);
                     }),
 
                 Forms\Components\TextInput::make('reference')
@@ -255,8 +240,8 @@ class LedgerResource extends BaseResource
                 Tables\Columns\BadgeColumn::make('transaction_type')
                     ->label('Type')
                     ->colors([
-                        'success' => 'credit',
-                        'danger' => 'debit',
+                        'danger' => 'credit',
+                        'success' => 'debit',
                     ]),
 
                 Tables\Columns\TextColumn::make('payment_mode')
@@ -418,12 +403,12 @@ class LedgerResource extends BaseResource
                             ->when(
                                 $data['from'] ?? null,
                                 fn(Builder $query, $date) =>
-                                $query->whereDate('date', '>=', $date)
+                                    $query->whereDate('date', '>=', $date)
                             )
                             ->when(
                                 $data['until'] ?? null,
                                 fn(Builder $query, $date) =>
-                                $query->whereDate('date', '<=', $date)
+                                    $query->whereDate('date', '<=', $date)
                             );
                     }),
 
@@ -495,23 +480,25 @@ class LedgerResource extends BaseResource
 
         $user = Auth::user();
 
-        if (! $user) {
+        if (!$user) {
             return $query->whereRaw('1 = 0');
         }
 
         // Admins can access all ledger entries.
-        if ($user->hasAnyRole([
-            'Administrator',
-            'Developer',
-            'admin',
-        ])) {
+        if (
+            $user->hasAnyRole([
+                'Administrator',
+                'Developer',
+                'admin',
+            ])
+        ) {
             return $query;
         }
 
         // Use ONLY multi_store_id.
         $storeIds = $user->multi_store_id ?? [];
 
-        if (! is_array($storeIds) || empty($storeIds)) {
+        if (!is_array($storeIds) || empty($storeIds)) {
             return $query->whereRaw('1 = 0');
         }
 
@@ -519,21 +506,25 @@ class LedgerResource extends BaseResource
         $userId = (int) $user->id;
 
         // Managers and team leaders: all ledger entries from assigned stores.
-        if ($user->hasAnyRole([
-            'Manager',
-            'Store Manager',
-            'Team Leader',
-            'Team Lead',
-        ])) {
+        if (
+            $user->hasAnyRole([
+                'Manager',
+                'Store Manager',
+                'Team Leader',
+                'Team Lead',
+            ])
+        ) {
             return $query->whereIn('store_id', $storeIds);
         }
 
         // Engineers and Machine Men:
         // Assigned stores + complaints assigned to the logged-in user.
-        if ($user->hasAnyRole([
-            'Engineer',
-            'Machine Men',
-        ])) {
+        if (
+            $user->hasAnyRole([
+                'Engineer',
+                'Machine Men',
+            ])
+        ) {
             return $query
                 ->whereIn('store_id', $storeIds)
                 ->where(function (Builder $q) use ($userId) {
@@ -549,12 +540,12 @@ class LedgerResource extends BaseResource
 
                         // Ledger linked through a Job Card -> Complaint.
                         ->orWhereHas('jobCard.complain', function (Builder $complain) use ($userId) {
-                            $complain->where(function (Builder $assignment) use ($userId) {
-                                $assignment
-                                    ->whereJsonContains('assigned_engineers', $userId)
-                                    ->orWhereJsonContains('assigned_engineers', (string) $userId);
-                            });
+                        $complain->where(function (Builder $assignment) use ($userId) {
+                            $assignment
+                                ->whereJsonContains('assigned_engineers', $userId)
+                                ->orWhereJsonContains('assigned_engineers', (string) $userId);
                         });
+                    });
                 });
         }
 
