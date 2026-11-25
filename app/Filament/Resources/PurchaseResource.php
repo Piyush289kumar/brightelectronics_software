@@ -37,6 +37,8 @@ use Filament\Tables\Actions\BulkAction;
 use Illuminate\Support\Collection;
 use Filament\Forms\Components\Hidden;
 use App\Models\StoreInventoryIn;
+use Illuminate\Support\Facades\DB;
+use Filament\Notifications\Notification;
 
 class PurchaseResource extends BaseResource
 {
@@ -930,14 +932,12 @@ class PurchaseResource extends BaseResource
                                     ->maxValue(fn($record) => number_format($record->total_amount - $record->payments()->where('status', 'completed')->sum('amount'), 2, '.', '')),
 
                                 Select::make('account_id')
-                                    ->label('Pay From Account')
+                                    ->label('Pay From Current Bank')
                                     ->options(
-                                        Account::where('is_active', true)
-                                            ->get()
-                                            ->mapWithKeys(fn($account) => [
-                                                $account->id => $account->account_name .
-                                                    ($account->bank_name ? ' - ' . $account->bank_name : ''),
-                                            ])
+                                        Account::query()
+                                            ->where('account_type', 'current_bank')
+                                            ->where('is_active', true)
+                                            ->pluck('account_name', 'id')
                                     )
                                     ->searchable()
                                     ->preload()
@@ -964,22 +964,55 @@ class PurchaseResource extends BaseResource
                                 TextInput::make('notes')->label('Notes'),
                             ]),
                         ])
-                        ->action(function ($record, array $data) {
-                            Payment::create([
-                                'invoice_id' => $record->id,
-                                'payable_id' => $record->id,
-                                'payable_type' => Invoice::class,
-                                'account_id' => $data['account_id'],
-                                'type' => 'outgoing', // for purchases
-                                'amount' => $data['amount'],
-                                'payment_date' => $data['payment_date'],
-                                'method' => $data['method'],
-                                'reference_no' => $data['reference_no'] ?? null,
-                                'notes' => $data['notes'] ?? null,
-                                'status' => 'completed',
-                                'received_by' => auth()->id(),
-                                'created_by' => auth()->id(),
-                            ]);
+                        ->action(function ($record, array $data, Action $action) {
+
+                            $error = DB::transaction(function () use ($record, $data) {
+
+                                $account = Account::query()
+                                    ->where('account_type', 'current_bank')
+                                    ->where('is_active', true)
+                                    ->lockForUpdate()
+                                    ->find($data['account_id']);
+
+                                if (!$account) {
+                                    return 'Please select a valid current bank account.';
+                                }
+
+                                $amount = (float) $data['amount'];
+                                $balance = (float) $account->current_balance;
+
+                                if ($amount > $balance) {
+                                    return 'Insufficient balance! Available balance: ₹' . number_format($balance, 2);
+                                }
+
+                                Payment::create([
+                                    'invoice_id' => $record->id,
+                                    'payable_id' => $record->id,
+                                    'payable_type' => Invoice::class,
+                                    'account_id' => $data['account_id'],
+                                    'type' => 'outgoing', // for purchases
+                                    'amount' => $data['amount'],
+                                    'payment_date' => $data['payment_date'],
+                                    'method' => $data['method'],
+                                    'reference_no' => $data['reference_no'] ?? null,
+                                    'notes' => $data['notes'] ?? null,
+                                    'status' => 'completed',
+                                    'received_by' => auth()->id(),
+                                    'created_by' => auth()->id(),
+                                ]);
+                                return null;
+                            });
+
+                            if ($error) {
+                                Notification::make()
+                                    ->danger()
+                                    ->title('Payment Failed')
+                                    ->body($error)
+                                    ->persistent()
+                                    ->send();
+
+                                $action->halt();
+                            }
                         })
                         //->visible(fn($record) => $record->status !== 'paid' && $record->document_type === 'purchase')
                         ->visible(function ($record) {
@@ -1064,9 +1097,11 @@ class PurchaseResource extends BaseResource
                                                 ->required(),
 
                                             Select::make('account_id')
-                                                ->label('Pay From Account')
+                                                ->label('Pay From Current Bank')
                                                 ->options(
-                                                    Account::where('is_active', true)
+                                                    Account::query()
+                                                        ->where('account_type', 'current_bank')
+                                                        ->where('is_active', true)
                                                         ->pluck('account_name', 'id')
                                                 )
                                                 ->searchable()
@@ -1108,43 +1143,100 @@ class PurchaseResource extends BaseResource
                         /* ---------------------------------
                             ACTION
                         --------------------------------- */
-                        ->action(function (?Collection $records, array $data) {
+                        ->action(function (?Collection $records, array $data, BulkAction $action) {
 
                             if (empty($data['payments'])) {
                                 return;
                             }
 
-                            foreach ($data['payments'] as $row) {
+                            $error = DB::transaction(function () use ($data) {
 
-                                $invoice = Invoice::find($row['invoice_id']);
+                                // Get all selected account IDs.
+                                $accountIds = collect($data['payments'])
+                                    ->pluck('account_id')
+                                    ->filter()
+                                    ->unique()
+                                    ->values();
 
-                                if (
-                                    !$invoice ||
-                                    $invoice->document_type !== 'purchase' ||
-                                    $invoice->status === 'paid'
-                                ) {
-                                    continue;
+                                // Lock accounts to prevent concurrent balance changes.
+                                $accounts = Account::query()
+                                    ->where('account_type', 'current_bank')
+                                    ->where('is_active', true)
+                                    ->whereIn('id', $accountIds)
+                                    ->lockForUpdate()
+                                    ->get()
+                                    ->keyBy('id');
+
+                                // Validate accounts and total payment amounts first.
+                                $requiredAmounts = [];
+
+                                foreach ($data['payments'] as $row) {
+
+                                    $accountId = $row['account_id'] ?? null;
+
+                                    if (!$accountId || !$accounts->has($accountId)) {
+                                        return 'Please select a valid current bank account for every invoice.';
+                                    }
+
+                                    $requiredAmounts[$accountId] =
+                                        ($requiredAmounts[$accountId] ?? 0) + (float) $row['amount'];
                                 }
 
-                                Payment::create([
-                                    'invoice_id' => $invoice->id,
-                                    'payable_id' => $invoice->id,
-                                    'payable_type' => Invoice::class,
-                                    'account_id' => $data['account_id'],
-                                    'type' => 'outgoing',
-                                    'amount' => $row['amount'],
-                                    'payment_date' => $row['payment_date'],
-                                    'method' => $row['method'],
-                                    'reference_no' => $row['reference_no'] ?? null,
-                                    'status' => 'completed',
-                                    'received_by' => auth()->id(),
-                                    'created_by' => auth()->id(),
-                                ]);
+                                foreach ($requiredAmounts as $accountId => $requiredAmount) {
+
+                                    $account = $accounts->get($accountId);
+                                    $balance = (float) $account->current_balance;
+
+                                    if ($requiredAmount > $balance) {
+                                        return 'Insufficient balance in ' . $account->account_name .
+                                            '. Available: ₹' . number_format($balance, 2) .
+                                            ', Required: ₹' . number_format($requiredAmount, 2);
+                                    }
+                                }
+
+                                // All accounts have sufficient balance. Now create payments.
+                                foreach ($data['payments'] as $row) {
+
+                                    $invoice = Invoice::find($row['invoice_id']);
+
+                                    if (
+                                        !$invoice ||
+                                        $invoice->document_type !== 'purchase' ||
+                                        $invoice->status === 'paid'
+                                    ) {
+                                        continue;
+                                    }
+
+                                    Payment::create([
+                                        'invoice_id' => $invoice->id,
+                                        'payable_id' => $invoice->id,
+                                        'payable_type' => Invoice::class,
+                                        'account_id' => $row['account_id'],
+                                        'type' => 'outgoing',
+                                        'amount' => $row['amount'],
+                                        'payment_date' => $row['payment_date'],
+                                        'method' => $row['method'],
+                                        'reference_no' => $row['reference_no'] ?? null,
+                                        'status' => 'completed',
+                                        'received_by' => auth()->id(),
+                                        'created_by' => auth()->id(),
+                                    ]);
+                                }
+
+                                return null;
+                            });
+
+                            if ($error) {
+                                Notification::make()
+                                    ->danger()
+                                    ->title('Bulk Payment Failed')
+                                    ->body($error)
+                                    ->persistent()
+                                    ->send();
+
+                                $action->halt();
                             }
                         }),
-
-
-
 
                     Tables\Actions\DeleteBulkAction::make(),
                     ExportBulkAction::make()

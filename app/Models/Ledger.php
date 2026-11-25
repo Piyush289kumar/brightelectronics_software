@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\Permission\Traits\HasRoles;
+use Illuminate\Support\Facades\DB;
 
 class Ledger extends Model
 {
@@ -58,31 +59,35 @@ class Ledger extends Model
     protected static function booted()
     {
         static::creating(function ($ledger) {
+
             if (auth()->check()) {
                 $ledger->created_by = auth()->id();
             }
 
-            // 🔹 Get related account
             $account = Account::find($ledger->account_id);
 
-            if ($account) {
-                // Calculate new balance
-                $currentBalance = $account->current_balance ?? $account->opening_balance;
-
-                if ($ledger->transaction_type === 'debit') {
-                    $ledger->balance = $currentBalance + $ledger->amount;
-                } elseif ($ledger->transaction_type === 'credit') {
-                    $ledger->balance = $currentBalance - $ledger->amount;
-                }
-
-                // Save back to account
-                $account->current_balance = $ledger->balance;
-                $account->save();
+            if (!$account) {
+                return;
             }
-        });
 
-        static::creating(function ($account) {
-            $account->current_balance = $account->opening_balance ?? 0;
+            $currentBalance = (float) (
+                $account->current_balance ?? $account->opening_balance ?? 0
+            );
+
+            $amount = (float) $ledger->amount;
+
+            if ($ledger->transaction_type === 'debit') {
+                $newBalance = $currentBalance + $amount;
+            } elseif ($ledger->transaction_type === 'credit') {
+                $newBalance = $currentBalance - $amount;
+            } else {
+                $newBalance = $currentBalance;
+            }
+
+            $ledger->balance = $newBalance;
+
+            $account->current_balance = $newBalance;
+            $account->save();
         });
     }
 
