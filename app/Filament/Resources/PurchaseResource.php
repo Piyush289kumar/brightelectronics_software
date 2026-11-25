@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\PurchaseResource\Pages;
 use App\Filament\Resources\EstimateResource\RelationManagers;
+use App\Models\Account;
 use App\Models\Estimate;
 use App\Models\Payment;
 use App\Models\Vendor;
@@ -190,7 +191,7 @@ class PurchaseResource extends BaseResource
                             ->reactive()
                             ->afterStateUpdated(function ($state, callable $set, callable $get) {
 
-                                if (! $state) {
+                                if (!$state) {
                                     $set('purchase_order_to_purchase_invoice_no', null);
                                     $set('billable_id', null);
                                     $set('gst_type', 'inclusive');
@@ -207,7 +208,7 @@ class PurchaseResource extends BaseResource
                                     ->where('document_type', 'purchase_order')
                                     ->find($state);
 
-                                if (! $po) {
+                                if (!$po) {
                                     return;
                                 }
 
@@ -753,7 +754,7 @@ class PurchaseResource extends BaseResource
                                 $discountAmount = $item->discount_amount_per_item ?? 0; // discount ₹
                                 $gstRate = $item->gst_rate ?? 0; // GST %
                                 $gstAmount = $item->gst_amount ?? 0; // GST ₹
-
+                
                                 return "<tr style='border-bottom: 1px solid #000;'>
                 <td style='padding:6px; text-align:center; font-weight: 900;'>" . ($index + 1) . "</td>
                 <td style='padding:6px;'>{$item->product->name}</td>
@@ -825,7 +826,7 @@ class PurchaseResource extends BaseResource
                                 $discountAmount = $item->discount_amount_per_item ?? 0; // discount ₹
                                 $gstRate = $item->gst_rate ?? 0; // GST %
                                 $gstAmount = $item->gst_amount ?? 0; // GST ₹
-
+                
                                 return "<tr style='border-bottom: 1px solid #000;'>
                 <td style='padding:6px; text-align:center; font-weight: 900;'>" . ($index + 1) . "</td>
                 <td style='padding:6px;'>{$item->product->name}</td>
@@ -917,15 +918,31 @@ class PurchaseResource extends BaseResource
                                     ->disabled()
                                     ->default(fn($record) => number_format($record->total_amount - $record->payments()->where('status', 'completed')->sum('amount'), 2)),
                             ]),
-                            // Amount to pay (default = remaining balance)
-                            TextInput::make('amount')
-                                ->label('Amount to Pay')
-                                ->numeric()
-                                ->readOnly()
-                                ->dehydrated(true)
-                                ->required()
-                                ->default(fn($record) => number_format($record->total_amount - $record->payments()->where('status', 'completed')->sum('amount'), 2, '.', ''))
-                                ->maxValue(fn($record) => number_format($record->total_amount - $record->payments()->where('status', 'completed')->sum('amount'), 2, '.', '')),
+                            Grid::make(2)->schema([
+                                // Amount to pay (default = remaining balance)
+                                TextInput::make('amount')
+                                    ->label('Amount to Pay')
+                                    ->numeric()
+                                    ->readOnly()
+                                    ->dehydrated(true)
+                                    ->required()
+                                    ->default(fn($record) => number_format($record->total_amount - $record->payments()->where('status', 'completed')->sum('amount'), 2, '.', ''))
+                                    ->maxValue(fn($record) => number_format($record->total_amount - $record->payments()->where('status', 'completed')->sum('amount'), 2, '.', '')),
+
+                                Select::make('account_id')
+                                    ->label('Pay From Account')
+                                    ->options(
+                                        Account::where('is_active', true)
+                                            ->get()
+                                            ->mapWithKeys(fn($account) => [
+                                                $account->id => $account->account_name .
+                                                    ($account->bank_name ? ' - ' . $account->bank_name : ''),
+                                            ])
+                                    )
+                                    ->searchable()
+                                    ->preload()
+                                    ->required(),
+                            ]),
                             Grid::make(4)->schema([
                                 DatePicker::make('payment_date')
                                     ->default(now())
@@ -934,10 +951,14 @@ class PurchaseResource extends BaseResource
                                     ->options([
                                         'cash' => 'Cash',
                                         'bank' => 'Bank Transfer',
+                                        'current_bank' => 'Current Bank',
+                                        'imps' => 'IMPS',
+                                        'neft' => 'NEFT',
                                         'upi' => 'UPI',
                                         'cheque' => 'Cheque',
                                         'card' => 'Card',
                                     ])
+                                    ->default('imps')
                                     ->required(),
                                 TextInput::make('reference_no')->label('Reference No.'),
                                 TextInput::make('notes')->label('Notes'),
@@ -948,6 +969,7 @@ class PurchaseResource extends BaseResource
                                 'invoice_id' => $record->id,
                                 'payable_id' => $record->id,
                                 'payable_type' => Invoice::class,
+                                'account_id' => $data['account_id'],
                                 'type' => 'outgoing', // for purchases
                                 'amount' => $data['amount'],
                                 'payment_date' => $data['payment_date'],
@@ -991,6 +1013,7 @@ class PurchaseResource extends BaseResource
                         ->icon('heroicon-m-banknotes')
                         ->color('warning')
                         ->requiresConfirmation()
+                        ->modalWidth('7xl')
 
                         /* ---------------------------------
                             FORM
@@ -1002,7 +1025,7 @@ class PurchaseResource extends BaseResource
                             $rows = $records
                                 ->filter(
                                     fn($r) =>
-                                    $r->document_type === 'purchase'
+                                        $r->document_type === 'purchase'
                                         && in_array($r->status, ['draft', 'pending'])
                                 )
                                 ->map(function ($record) {
@@ -1040,6 +1063,16 @@ class PurchaseResource extends BaseResource
                                                 ->dehydrated(true)
                                                 ->required(),
 
+                                            Select::make('account_id')
+                                                ->label('Pay From Account')
+                                                ->options(
+                                                    Account::where('is_active', true)
+                                                        ->pluck('account_name', 'id')
+                                                )
+                                                ->searchable()
+                                                ->preload()
+                                                ->required(),
+
                                             DatePicker::make('payment_date')
                                                 ->default(now())
                                                 ->required(),
@@ -1049,10 +1082,15 @@ class PurchaseResource extends BaseResource
                                                 ->options([
                                                     'cash' => 'Cash',
                                                     'bank' => 'Bank Transfer',
+                                                    'current_bank' => 'Current Bank',
+                                                    'imps' => 'IMPS',
+                                                    'neft' => 'NEFT',
                                                     'upi' => 'UPI',
                                                     'cheque' => 'Cheque',
                                                     'card' => 'Card',
-                                                ]),
+                                                ])
+                                                ->default('imps')
+                                                ->required(),
 
                                             TextInput::make('reference_no')
                                                 ->label('Reference No.')->columnSpanFull(),
@@ -1092,6 +1130,7 @@ class PurchaseResource extends BaseResource
                                     'invoice_id' => $invoice->id,
                                     'payable_id' => $invoice->id,
                                     'payable_type' => Invoice::class,
+                                    'account_id' => $data['account_id'],
                                     'type' => 'outgoing',
                                     'amount' => $row['amount'],
                                     'payment_date' => $row['payment_date'],

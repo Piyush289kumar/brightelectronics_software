@@ -39,4 +39,10 @@ class Account extends Model
     {
         return $this->hasMany(Ledger::class);
     }
+
+    // Required by AccountResource's relationship Select
+    public function store()
+    {
+        return $this->belongsTo(Store::class, 'store_id');
+    }
 }

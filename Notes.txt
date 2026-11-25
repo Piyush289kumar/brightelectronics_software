@@ -11,3 +11,8 @@ We have 2 account per branch one is 1.Cash account 2.Current_bank account now al
 but after that all type of payment like upi, imps, chaque, card, bank transfer.
 
 And in Purchase Invoice module when we do payment use only payment method is IMPS only for payment to vendors if in that branch have balance in this branch current_bank account then do payment and make ledger entries with details and in norroation/note add purchase invocie number otherwise show popup error incepand balance.
+
+
+------------------
+
+ALTER TABLE `payments` ADD `account_id` BIGINT(20) UNSIGNED NULL DEFAULT NULL AFTER `invoice_id`;

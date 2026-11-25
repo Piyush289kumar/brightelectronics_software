@@ -15,6 +15,7 @@ class Payment extends Model
         'payable_id',
         'payable_type',
         'invoice_id',
+        'account_id',
         'type',
         'amount',
         'payment_date',
@@ -44,6 +45,11 @@ class Payment extends Model
     public function invoice()
     {
         return $this->belongsTo(Invoice::class);
+    }
+
+    public function account()
+    {
+        return $this->belongsTo(Account::class);
     }
 
     /**
@@ -97,6 +103,36 @@ class Payment extends Model
                     $invoice->update(['status' => 'pending']);
                 }
             }
+        });
+
+        static::created(function ($payment) {
+
+            // Only create ledger for completed payments with an account.
+            if (
+                !$payment->account_id ||
+                $payment->status !== 'completed'
+            ) {
+                return;
+            }
+
+            $account = Account::find($payment->account_id);
+
+            if (!$account) {
+                return;
+            }
+
+            Ledger::create([
+                'account_id' => $account->id,
+                'store_id' => $account->store_id,
+                'date' => $payment->payment_date,
+                'transaction_type' => $payment->type === 'outgoing'
+                    ? 'credit'
+                    : 'debit',
+                'payment_mode' => $payment->method,
+                'amount' => $payment->amount,
+                'reference' => $payment->reference_no,
+                'narration' => 'Payment for Invoice #' . $payment->invoice_id,
+            ]);
         });
     }
 

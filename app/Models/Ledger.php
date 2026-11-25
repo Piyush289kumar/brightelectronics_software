@@ -80,6 +80,10 @@ class Ledger extends Model
                 $account->save();
             }
         });
+
+        static::creating(function ($account) {
+            $account->current_balance = $account->opening_balance ?? 0;
+        });
     }
 
 }

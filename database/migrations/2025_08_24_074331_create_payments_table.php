@@ -19,6 +19,9 @@ return new class extends Migration {
             // 🔹 Link to invoice (optional but useful for tracking)
             $table->foreignId('invoice_id')->nullable()->constrained()->cascadeOnDelete();
 
+            // 🔹 Link to account
+            $table->foreignId('account_id')->nullable()->constrained('accounts')->nullOnDelete();
+
             // 🔹 Direction of payment
             $table->enum('type', ['incoming', 'outgoing']);
             // incoming = receipt from customer, outgoing = vendor/supplier payment
