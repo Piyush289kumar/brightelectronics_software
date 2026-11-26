@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Process;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use ZipArchive;
 
@@ -34,7 +35,12 @@ class DBBackup extends Command
         $host = config('database.connections.mysql.host');
         $port = config('database.connections.mysql.port');
 
-        $backupDirectory = storage_path('app/private/database_backups');
+        Log::info('Database backup started', [
+            'database' => $database,
+            'started_at' => now()->toDateTimeString(),
+        ]);
+
+        $backupDirectory = storage_path('app/private/backups/database_backups');
 
         if (!is_dir($backupDirectory)) {
             mkdir($backupDirectory, 0755, true);
@@ -83,10 +89,14 @@ class DBBackup extends Command
         if (!file_exists($sqlPath) || filesize($sqlPath) === 0) {
             @unlink($sqlPath);
 
+            Log::error('Database backup failed', [
+                'error' => $process->errorOutput(),
+            ]);
             $this->error('SQL dump is empty.');
 
             return self::FAILURE;
         }
+
 
         // Create ZIP containing SQL file
         $zip = new ZipArchive();
@@ -94,21 +104,63 @@ class DBBackup extends Command
         if ($zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE) !== true) {
             @unlink($sqlPath);
 
+            Log::channel('daily')->error('Unable to create database backup ZIP', [
+                'file' => $zipPath,
+            ]);
+
             $this->error('Unable to create ZIP file.');
 
             return self::FAILURE;
         }
 
-        $zip->addFile($sqlPath, $fileName . '.sql');
-        $zip->close();
+        $sqlSize = filesize($sqlPath);
 
-        // Remove original SQL after successful ZIP creation
+        if (!$zip->addFile($sqlPath, $fileName . '.sql')) {
+            $zip->close();
+            @unlink($sqlPath);
+
+            Log::channel('daily')->error('Unable to add SQL file to ZIP');
+
+            return self::FAILURE;
+        }
+
+        if (!$zip->close()) {
+            @unlink($sqlPath);
+
+            Log::channel('daily')->error('Unable to finalize ZIP archive');
+
+            return self::FAILURE;
+        }
+
+        // Verify ZIP file
+        if (!file_exists($zipPath) || filesize($zipPath) === 0) {
+            @unlink($sqlPath);
+            @unlink($zipPath);
+
+            Log::channel('daily')->error('ZIP backup is empty or missing');
+
+            return self::FAILURE;
+        }
+
+        $zipSize = filesize($zipPath);
+
+        // Remove temporary SQL after ZIP verification
         @unlink($sqlPath);
+
+        // Log successful backup
+        Log::info('Database backup completed successfully', [
+            'database' => $database,
+            'sql_size_kb' => round($sqlSize / 1024, 2),
+            'zip_file' => $zipPath,
+            'zip_size_kb' => round($zipSize / 1024, 2),
+            'completed_at' => now()->toDateTimeString(),
+        ]);
 
         $this->info('Database backup created successfully!');
         $this->info('Backup file: ' . $zipPath);
-        $this->info('File size: ' . number_format(filesize($zipPath) / 1024, 2) . ' KB');
+        $this->info('File size: ' . number_format($zipSize / 1024, 2) . ' KB');
 
         return self::SUCCESS;
+
     }
 }
