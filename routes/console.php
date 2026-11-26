@@ -10,6 +10,4 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 
-Schedule::call(function () {
-    //Log::error(Carbon\Carbon::now());
-})->everyFiveSeconds();
+Schedule::command('app:db-backup')->everyFiveSeconds();
