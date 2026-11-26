@@ -14,13 +14,13 @@ class AppDownloadResource extends BaseResource
 {
     protected static ?string $model = User::class;
 
-    protected static ?string $navigationGroup = 'Mobile App';
+    protected static ?string $navigationGroup = 'Backup Management';
 
-    protected static ?string $navigationLabel = 'Download App';
+    protected static ?string $navigationLabel = 'Backup Download';
 
-    protected static ?string $label = 'Download App';
+    protected static ?string $label = 'Backup Download';
 
-    protected static ?string $pluralLabel = 'Download App';
+    protected static ?string $pluralLabel = 'Backup Downloads';
 
     protected static ?string $navigationIcon = 'heroicon-o-device-phone-mobile';
 
