@@ -10,4 +10,8 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 
-Schedule::command('app:db-backup')->everyFiveSeconds();
+// Database backup - Every day at 12:00 AM
+Schedule::command('app:db-backup')->dailyAt('00:00')->withoutOverlapping();
+
+// Complete project backup - Every Sunday at 12:00 AM
+Schedule::command('app:whole-project-server-backup')->weeklyOn(0, '00:00')->withoutOverlapping();
